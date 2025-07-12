@@ -14,8 +14,7 @@ add_library(core STATIC
 )
 
 # Tell CMake that our library needs CUDA features
-target_link_libraries(core PRIVATE ${CUDA_LIBRARIES})
-
+target_link_libraries(core PRIVATE CUDA::cudart)
 # Make sure the compiler can find your header files
 target_include_directories(core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

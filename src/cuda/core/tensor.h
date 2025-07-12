@@ -4,12 +4,14 @@
 #include <memory>
 #include <device.h>
 #include <dtype.h>
+#include "cuda/core/device.h"
+#include "cuda/core/dtype.h"
 
 class Tensor {
 public:
     // Tensor Constructors
     Tensor(const std::vector<__int64_t>& shape, DType dtype, Device device);
-    Tensor(const std::vector<__int64_t>& shape, const std::vector<__int64_t>& strides, DType dtype, Device device, void* data_ptr);
+    Tensor(const std::vector<__int64_t>& shape, const std::vector<__int64_t>& strides, DType dtype, Device device, std::shared_ptr<void> data_ptr);
     
     // Tensor Destructor
     ~Tensor();
@@ -37,6 +39,4 @@ private:
     std::vector<__int64_t> strides_;
     DType dtype_;
     Device device_;
-
-    bool owns_data_;
 };
