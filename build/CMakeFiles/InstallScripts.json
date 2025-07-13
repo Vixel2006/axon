@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/yushi/code/neura/build/cmake_install.cmake",
+		"/home/yushi/code/neura/build/vendor/pybind11/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
