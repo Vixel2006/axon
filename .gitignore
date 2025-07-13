@@ -1,3 +1,49 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+*.log
+
+# --- C++/Pybind build artifacts ---
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.dylib
+*.exe
+*.out
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+
+# --- venvs ---
 venv/
-neura.egg-info/
-vendor/
+.env/
+.venv/
+env/
+ENV/
+
+# --- IDE files ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Jupyter/IPython ---
+.ipynb_checkpoints/
+
+# --- pybind11 build outputs ---
+*.cpp_build/
+*.pybind11_build/
+neura*.so  # compiled module like `neura.cpython-312-x86_64-linux-gnu.so`
+
+# --- Misc ---
+.DS_Store
+Thumbs.db

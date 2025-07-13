@@ -5,20 +5,21 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(neura, m) {
+PYBIND11_MODULE(neura, m)
+{
     py::enum_<DType>(m, "DType")
-    .value("float16", DType::float16)
-    .value("float32", DType::float32)
-    .value("int8", DType::int8)
-    .value("int32", DType::int32)
-    .value("uint8", DType::uint8)
-    .export_values();
+        .value("float16", DType::float16)
+        .value("float32", DType::float32)
+        .value("int8", DType::int8)
+        .value("int32", DType::int32)
+        .value("uint8", DType::uint8)
+        .export_values();
 
     py::enum_<DeviceType>(m, "DeviceType")
         .value("CPU", DeviceType::CPU)
         .value("CUDA", DeviceType::CUDA)
         .export_values();
-    
+
     ;
 
     py::class_<Device>(m, "Device")
@@ -26,13 +27,12 @@ PYBIND11_MODULE(neura, m) {
         .def_readwrite("type", &Device::type)
         .def_readwrite("index", &Device::index)
         .def("__eq__", &Device::operator==)
-        .def("__repr__", [](const Device& d) {
-            return "<Device type=" + std::string(d.type == DeviceType::CPU ? "CPU" : "CUDA") +
-                   " index=" + std::to_string(d.index) + ">";
-        });
+        .def("__repr__", [](const Device &d)
+             { return "<Device type=" + std::string(d.type == DeviceType::CPU ? "CPU" : "CUDA") +
+                      " index=" + std::to_string(d.index) + ">"; });
 
     py::class_<Tensor>(m, "Tensor")
-        .def(py::init<const std::vector<int64_t>&, DType, Device>(),
+        .def(py::init<const std::vector<int64_t> &, DType, Device>(),
              py::arg("shape"), py::arg("dtype"), py::arg("device"))
 
         .def_property_readonly("shape", &Tensor::shape, py::return_value_policy::reference)

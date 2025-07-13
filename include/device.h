@@ -1,13 +1,19 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
-enum class DeviceType { CPU, CUDA };
+enum class DeviceType
+{
+    CPU,
+    CUDA
+};
 
-struct Device {
+struct Device
+{
     DeviceType type = DeviceType::CPU;
     int index = 0;
 
-    bool operator==(const Device& other) const {
+    bool operator==(const Device &other) const
+    {
         return type == other.type && index == other.index;
     }
 };
