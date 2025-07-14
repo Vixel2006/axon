@@ -32,11 +32,14 @@ public:
     size_t numel() const;
     bool is_contiguous() const;
 
-    // View method
-    Tensor view(const std::vector<__int64_t> &new_shape) const;
-
+    Tensor view(std::vector<__int64_t> &new_shape) const;
     Tensor squeeze(int dim);
     Tensor unsqueeze(int dim);
+    
+    Tensor permute(const std::vector<int> &order);
+    Tensor transpose();
+    Tensor expand();
+    Tensor flatten();
 
 private:
     // Tensor data
