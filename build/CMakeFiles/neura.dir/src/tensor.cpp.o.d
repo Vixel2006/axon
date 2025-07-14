@@ -189,4 +189,5 @@ CMakeFiles/neura.dir/src/tensor.cpp.o: \
  /opt/cuda/targets/x86_64-linux/include/vector_functions.hpp \
  /usr/include/c++/15.1.1/utility \
  /usr/include/c++/15.1.1/bits/stl_relops.h \
- /home/yushi/code/neura/include/device.h
+ /home/yushi/code/neura/include/device.h \
+ /home/yushi/code/neura/include/helpers.h

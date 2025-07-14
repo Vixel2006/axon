@@ -3,8 +3,11 @@
 #include <stdexcept>
 #include "tensor.h"
 #include "allocator/allocatorFactory.h"
+#include "helpers.h"
 #include <vector>
 #include <cuda_runtime.h>
+
+
 
 std::vector<__int64_t> compute_strides_(const std::vector<__int64_t> &shape)
 {
@@ -266,6 +269,37 @@ Tensor Tensor::transpose(int n, int m) const
 
     std::swap(new_shape[n], new_shape[m]);
     std::swap(new_strides[n], new_strides[m]);
+
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
+}
+
+Tensor Tensor::expand(const std::vector<__int64_t> &new_shape) const {
+    if (new_shape.size() != shape_.size()) {
+        throw std::runtime_error(
+            "Tensor::expand error: Dimensionality mismatch. "
+            "Tried to expand from shape " + shapeToString(shape_) +
+            " to shape " + shapeToString(new_shape) + ". "
+            "Both shapes must have the same number of dimensions (" +
+            std::to_string(shape_.size()) + " expected, got " +
+            std::to_string(new_shape.size()) + ")."
+        );
+    }
+
+    std::vector<__int64_t> new_strides = strides_;
+
+    for (size_t i = 0; i < new_shape.size(); ++i) {
+        if (new_shape[i] != shape_[i] && shape_[i] != 1) {
+            throw std::runtime_error(
+                "Tensor::expand error: Cannot expand dimension " + std::to_string(i) +
+                " from size " + std::to_string(shape_[i]) + " to " +
+                std::to_string(new_shape[i]) + ". "
+                "Only dimensions of size 1 can be expanded."
+            );
+        } else if (new_shape[i] != shape_[i]) {
+            new_strides[i] = 0;
+        }
+    }
+
 
     return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
 }

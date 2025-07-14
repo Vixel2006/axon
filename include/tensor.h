@@ -35,10 +35,9 @@ public:
     Tensor view(std::vector<__int64_t> &new_shape) const;
     Tensor squeeze(int dim);
     Tensor unsqueeze(int dim);
-    
     Tensor permute(const std::vector<int> &order);
     Tensor transpose(int n, int m) const;
-    Tensor expand();
+    Tensor expand(const std::vector<__int64_t> &new_shape) const;
     Tensor flatten();
 
 private:

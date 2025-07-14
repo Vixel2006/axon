@@ -512,6 +512,7 @@ CMakeFiles/neura.dir/src/tensor.cpp.o
  /home/yushi/code/neura/include/allocator/cudaAllocator.h
  /home/yushi/code/neura/include/device.h
  /home/yushi/code/neura/include/dtype.h
+ /home/yushi/code/neura/include/helpers.h
  /home/yushi/code/neura/include/tensor.h
  /opt/cuda/targets/x86_64-linux/include/builtin_types.h
  /opt/cuda/targets/x86_64-linux/include/channel_descriptor.h
