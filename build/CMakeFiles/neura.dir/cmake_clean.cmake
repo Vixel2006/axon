@@ -4,7 +4,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/neura.dir/bindings/bindings.cpp.o.d"
   "CMakeFiles/neura.dir/src/tensor.cpp.o"
   "CMakeFiles/neura.dir/src/tensor.cpp.o.d"
-  "neura.cpython-312-x86_64-linux-gnu.so"
+  "neura.cpython-313-x86_64-linux-gnu.so"
   "neura.pdb"
 )
 

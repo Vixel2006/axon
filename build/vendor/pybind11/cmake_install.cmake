@@ -1,4 +1,4 @@
-# Install script for directory: /home/yushi/code/neura/vendor/pybind11
+# Install script for directory: /home/yushi/code/nawah/vendor/pybind11
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,6 +45,6 @@ endif()
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
 if(CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "/home/yushi/code/neura/build/vendor/pybind11/install_local_manifest.txt"
+  file(WRITE "/home/yushi/code/nawah/build/vendor/pybind11/install_local_manifest.txt"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()

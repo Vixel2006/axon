@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project(neura LANGUAGES CXX CUDA)
+project(nawah LANGUAGES CXX CUDA)
 
 message(STATUS "Using C++ compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "Using CUDA compiler: ${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION}")

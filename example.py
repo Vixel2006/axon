@@ -1,6 +1,6 @@
-import neura
+import nawah
 
-t = neura.Tensor([2, 3, 9], neura.DType.float32, neura.Device(neura.DeviceType.CUDA, 0))
+t = nawah.Tensor([2, 3, 9], nawah.DType.float32, nawah.Device(nawah.DeviceType.CUDA, 0))
 print(f"Shape before broadcast: {t.shape}")
 print(f"Strides before broadcast: {t.strides}")
 t = t.flatten(start=0, end=-2)

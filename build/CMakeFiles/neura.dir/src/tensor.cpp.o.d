@@ -1,5 +1,5 @@
 CMakeFiles/neura.dir/src/tensor.cpp.o: \
- /home/yushi/code/neura/src/tensor.cpp /usr/include/stdc-predef.h \
+ /home/yushi/code/nawah/src/tensor.cpp /usr/include/stdc-predef.h \
  /usr/include/c++/15.1.1/numeric \
  /usr/include/c++/15.1.1/x86_64-pc-linux-gnu/bits/c++config.h \
  /usr/include/c++/15.1.1/x86_64-pc-linux-gnu/bits/os_defines.h \
@@ -127,7 +127,7 @@ CMakeFiles/neura.dir/src/tensor.cpp.o: \
  /usr/include/bits/types/error_t.h \
  /usr/include/c++/15.1.1/bits/charconv.h \
  /usr/include/c++/15.1.1/bits/basic_string.tcc \
- /home/yushi/code/neura/include/tensor.h /usr/include/c++/15.1.1/memory \
+ /home/yushi/code/nawah/include/tensor.h /usr/include/c++/15.1.1/memory \
  /usr/include/c++/15.1.1/bits/stl_tempbuf.h \
  /usr/include/c++/15.1.1/bits/stl_raw_storage_iter.h \
  /usr/include/c++/15.1.1/bits/align.h \
@@ -159,12 +159,12 @@ CMakeFiles/neura.dir/src/tensor.cpp.o: \
  /usr/include/c++/15.1.1/bits/atomic_lockfree_defines.h \
  /usr/include/c++/15.1.1/backward/auto_ptr.h \
  /usr/include/c++/15.1.1/pstl/glue_memory_defs.h \
- /home/yushi/code/neura/include/device.h \
- /home/yushi/code/neura/include/dtype.h \
- /home/yushi/code/neura/include/allocator/allocatorFactory.h \
- /home/yushi/code/neura/include/allocator/cpuAllocator.h \
- /home/yushi/code/neura/include/allocator/allocator.h \
- /home/yushi/code/neura/include/allocator/cudaAllocator.h \
+ /home/yushi/code/nawah/include/device.h \
+ /home/yushi/code/nawah/include/dtype.h \
+ /home/yushi/code/nawah/include/allocator/allocatorFactory.h \
+ /home/yushi/code/nawah/include/allocator/cpuAllocator.h \
+ /home/yushi/code/nawah/include/allocator/allocator.h \
+ /home/yushi/code/nawah/include/allocator/cudaAllocator.h \
  /opt/cuda/targets/x86_64-linux/include/cuda_runtime.h \
  /opt/cuda/targets/x86_64-linux/include/crt/host_config.h \
  /opt/cuda/targets/x86_64-linux/include/builtin_types.h \
@@ -189,5 +189,5 @@ CMakeFiles/neura.dir/src/tensor.cpp.o: \
  /opt/cuda/targets/x86_64-linux/include/vector_functions.hpp \
  /usr/include/c++/15.1.1/utility \
  /usr/include/c++/15.1.1/bits/stl_relops.h \
- /home/yushi/code/neura/include/device.h \
- /home/yushi/code/neura/include/helpers.h
+ /home/yushi/code/nawah/include/device.h \
+ /home/yushi/code/nawah/include/helpers.h

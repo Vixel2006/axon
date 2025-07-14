@@ -8,9 +8,9 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/yushi/code/neura/bindings/bindings.cpp" "CMakeFiles/neura.dir/bindings/bindings.cpp.o" "gcc" "CMakeFiles/neura.dir/bindings/bindings.cpp.o.d"
-  "/home/yushi/code/neura/src/tensor.cpp" "CMakeFiles/neura.dir/src/tensor.cpp.o" "gcc" "CMakeFiles/neura.dir/src/tensor.cpp.o.d"
-  "" "neura.cpython-312-x86_64-linux-gnu.so" "gcc" "CMakeFiles/neura.dir/link.d"
+  "/home/yushi/code/nawah/bindings/bindings.cpp" "CMakeFiles/neura.dir/bindings/bindings.cpp.o" "gcc" "CMakeFiles/neura.dir/bindings/bindings.cpp.o.d"
+  "/home/yushi/code/nawah/src/tensor.cpp" "CMakeFiles/neura.dir/src/tensor.cpp.o" "gcc" "CMakeFiles/neura.dir/src/tensor.cpp.o.d"
+  "" "neura.cpython-313-x86_64-linux-gnu.so" "gcc" "CMakeFiles/neura.dir/link.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

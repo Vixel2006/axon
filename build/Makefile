@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/yushi/code/neura
+CMAKE_SOURCE_DIR = /home/yushi/code/nawah
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/yushi/code/neura/build
+CMAKE_BINARY_DIR = /home/yushi/code/nawah/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yushi/code/neura/build/CMakeFiles /home/yushi/code/neura/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yushi/code/nawah/build/CMakeFiles /home/yushi/code/nawah/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/yushi/code/neura/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/yushi/code/nawah/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target

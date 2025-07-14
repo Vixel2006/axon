@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = -Dneura_EXPORTS
 
-CXX_INCLUDES = -I/home/yushi/code/neura/include -isystem /home/yushi/.pyenv/versions/3.12.2/include/python3.12 -isystem /home/yushi/code/neura/vendor/pybind11/include -isystem /opt/cuda/targets/x86_64-linux/include
+CXX_INCLUDES = -I/home/yushi/code/nawah/include -isystem /usr/include/python3.13 -isystem /home/yushi/code/nawah/vendor/pybind11/include -isystem /opt/cuda/targets/x86_64-linux/include
 
 CXX_FLAGS = -std=gnu++17 -fPIC -fvisibility=hidden -flto -fno-fat-lto-objects
 

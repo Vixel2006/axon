@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/yushi/code/neura
+CMAKE_SOURCE_DIR = /home/yushi/code/nawah
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/yushi/code/neura/build
+CMAKE_BINARY_DIR = /home/yushi/code/nawah/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/neura.dir/depend.make
@@ -73,32 +73,32 @@ CMakeFiles/neura.dir/codegen:
 .PHONY : CMakeFiles/neura.dir/codegen
 
 CMakeFiles/neura.dir/bindings/bindings.cpp.o: CMakeFiles/neura.dir/flags.make
-CMakeFiles/neura.dir/bindings/bindings.cpp.o: /home/yushi/code/neura/bindings/bindings.cpp
+CMakeFiles/neura.dir/bindings/bindings.cpp.o: /home/yushi/code/nawah/bindings/bindings.cpp
 CMakeFiles/neura.dir/bindings/bindings.cpp.o: CMakeFiles/neura.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/yushi/code/neura/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/neura.dir/bindings/bindings.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/neura.dir/bindings/bindings.cpp.o -MF CMakeFiles/neura.dir/bindings/bindings.cpp.o.d -o CMakeFiles/neura.dir/bindings/bindings.cpp.o -c /home/yushi/code/neura/bindings/bindings.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/yushi/code/nawah/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/neura.dir/bindings/bindings.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/neura.dir/bindings/bindings.cpp.o -MF CMakeFiles/neura.dir/bindings/bindings.cpp.o.d -o CMakeFiles/neura.dir/bindings/bindings.cpp.o -c /home/yushi/code/nawah/bindings/bindings.cpp
 
 CMakeFiles/neura.dir/bindings/bindings.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/neura.dir/bindings/bindings.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/yushi/code/neura/bindings/bindings.cpp > CMakeFiles/neura.dir/bindings/bindings.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/yushi/code/nawah/bindings/bindings.cpp > CMakeFiles/neura.dir/bindings/bindings.cpp.i
 
 CMakeFiles/neura.dir/bindings/bindings.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/neura.dir/bindings/bindings.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/yushi/code/neura/bindings/bindings.cpp -o CMakeFiles/neura.dir/bindings/bindings.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/yushi/code/nawah/bindings/bindings.cpp -o CMakeFiles/neura.dir/bindings/bindings.cpp.s
 
 CMakeFiles/neura.dir/src/tensor.cpp.o: CMakeFiles/neura.dir/flags.make
-CMakeFiles/neura.dir/src/tensor.cpp.o: /home/yushi/code/neura/src/tensor.cpp
+CMakeFiles/neura.dir/src/tensor.cpp.o: /home/yushi/code/nawah/src/tensor.cpp
 CMakeFiles/neura.dir/src/tensor.cpp.o: CMakeFiles/neura.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/yushi/code/neura/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/neura.dir/src/tensor.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/neura.dir/src/tensor.cpp.o -MF CMakeFiles/neura.dir/src/tensor.cpp.o.d -o CMakeFiles/neura.dir/src/tensor.cpp.o -c /home/yushi/code/neura/src/tensor.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/yushi/code/nawah/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/neura.dir/src/tensor.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/neura.dir/src/tensor.cpp.o -MF CMakeFiles/neura.dir/src/tensor.cpp.o.d -o CMakeFiles/neura.dir/src/tensor.cpp.o -c /home/yushi/code/nawah/src/tensor.cpp
 
 CMakeFiles/neura.dir/src/tensor.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/neura.dir/src/tensor.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/yushi/code/neura/src/tensor.cpp > CMakeFiles/neura.dir/src/tensor.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/yushi/code/nawah/src/tensor.cpp > CMakeFiles/neura.dir/src/tensor.cpp.i
 
 CMakeFiles/neura.dir/src/tensor.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/neura.dir/src/tensor.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/yushi/code/neura/src/tensor.cpp -o CMakeFiles/neura.dir/src/tensor.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/yushi/code/nawah/src/tensor.cpp -o CMakeFiles/neura.dir/src/tensor.cpp.s
 
 # Object files for target neura
 neura_OBJECTS = \
@@ -108,17 +108,17 @@ neura_OBJECTS = \
 # External object files for target neura
 neura_EXTERNAL_OBJECTS =
 
-neura.cpython-312-x86_64-linux-gnu.so: CMakeFiles/neura.dir/bindings/bindings.cpp.o
-neura.cpython-312-x86_64-linux-gnu.so: CMakeFiles/neura.dir/src/tensor.cpp.o
-neura.cpython-312-x86_64-linux-gnu.so: CMakeFiles/neura.dir/build.make
-neura.cpython-312-x86_64-linux-gnu.so: CMakeFiles/neura.dir/compiler_depend.ts
-neura.cpython-312-x86_64-linux-gnu.so: CMakeFiles/neura.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/yushi/code/neura/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX shared module neura.cpython-312-x86_64-linux-gnu.so"
+neura.cpython-313-x86_64-linux-gnu.so: CMakeFiles/neura.dir/bindings/bindings.cpp.o
+neura.cpython-313-x86_64-linux-gnu.so: CMakeFiles/neura.dir/src/tensor.cpp.o
+neura.cpython-313-x86_64-linux-gnu.so: CMakeFiles/neura.dir/build.make
+neura.cpython-313-x86_64-linux-gnu.so: CMakeFiles/neura.dir/compiler_depend.ts
+neura.cpython-313-x86_64-linux-gnu.so: CMakeFiles/neura.dir/link.txt
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/yushi/code/nawah/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX shared module neura.cpython-313-x86_64-linux-gnu.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/neura.dir/link.txt --verbose=$(VERBOSE)
-	/usr/bin/strip /home/yushi/code/neura/build/neura.cpython-312-x86_64-linux-gnu.so
+	/usr/bin/strip /home/yushi/code/nawah/build/neura.cpython-313-x86_64-linux-gnu.so
 
 # Rule to build all files generated by this target.
-CMakeFiles/neura.dir/build: neura.cpython-312-x86_64-linux-gnu.so
+CMakeFiles/neura.dir/build: neura.cpython-313-x86_64-linux-gnu.so
 .PHONY : CMakeFiles/neura.dir/build
 
 CMakeFiles/neura.dir/clean:
@@ -126,6 +126,6 @@ CMakeFiles/neura.dir/clean:
 .PHONY : CMakeFiles/neura.dir/clean
 
 CMakeFiles/neura.dir/depend:
-	cd /home/yushi/code/neura/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/yushi/code/neura /home/yushi/code/neura /home/yushi/code/neura/build /home/yushi/code/neura/build /home/yushi/code/neura/build/CMakeFiles/neura.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/yushi/code/nawah/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/yushi/code/nawah /home/yushi/code/nawah /home/yushi/code/nawah/build /home/yushi/code/nawah/build /home/yushi/code/nawah/build/CMakeFiles/neura.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/neura.dir/depend
 
