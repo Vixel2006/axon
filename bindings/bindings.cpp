@@ -47,5 +47,7 @@ PYBIND11_MODULE(neura, m)
         .def("unsqueeze", &Tensor::unsqueeze, py::arg("dim") = 0)
         .def("permute", &Tensor::permute, py::arg("order"))
         .def("transpose", &Tensor::transpose, py::arg("n"), py::arg("m"))
-        .def("expand", &Tensor::expand, py::arg("shape"));
+        .def("expand", &Tensor::expand, py::arg("shape"))
+        .def("broadcast", &Tensor::broadcast, py::arg("shape"))
+        .def("flatten", &Tensor::flatten, py::arg("start") = 1, py::arg("end") = -1);
 }

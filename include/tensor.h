@@ -38,7 +38,8 @@ public:
     Tensor permute(const std::vector<int> &order);
     Tensor transpose(int n, int m) const;
     Tensor expand(const std::vector<__int64_t> &new_shape) const;
-    Tensor flatten();
+    Tensor broadcast(const std::vector<__int64_t> &new_shape) const;
+    Tensor flatten(int start, int end) const;
 
 private:
     // Tensor data

@@ -7,8 +7,6 @@
 #include <vector>
 #include <cuda_runtime.h>
 
-
-
 std::vector<__int64_t> compute_strides_(const std::vector<__int64_t> &shape)
 {
     __int64_t acc = 1;
@@ -273,35 +271,126 @@ Tensor Tensor::transpose(int n, int m) const
     return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
 }
 
-Tensor Tensor::expand(const std::vector<__int64_t> &new_shape) const {
-    if (new_shape.size() != shape_.size()) {
+Tensor Tensor::expand(const std::vector<__int64_t> &new_shape) const
+{
+    if (new_shape.size() != shape_.size())
+    {
         throw std::runtime_error(
-            "Tensor::expand error: Dimensionality mismatch. "
-            "Tried to expand from shape " + shapeToString(shape_) +
+            "expand() error: Dimensionality mismatch. "
+            "Tried to expand from shape " +
+            shapeToString(shape_) +
             " to shape " + shapeToString(new_shape) + ". "
-            "Both shapes must have the same number of dimensions (" +
+                                                      "Both shapes must have the same number of dimensions (" +
             std::to_string(shape_.size()) + " expected, got " +
-            std::to_string(new_shape.size()) + ")."
-        );
+            std::to_string(new_shape.size()) + ").");
     }
 
     std::vector<__int64_t> new_strides = strides_;
 
-    for (size_t i = 0; i < new_shape.size(); ++i) {
-        if (new_shape[i] != shape_[i] && shape_[i] != 1) {
+    for (size_t i = 0; i < new_shape.size(); ++i)
+    {
+        if (new_shape[i] != shape_[i] && shape_[i] != 1)
+        {
             throw std::runtime_error(
-                "Tensor::expand error: Cannot expand dimension " + std::to_string(i) +
+                "expand() error: Cannot expand dimension " + std::to_string(i) +
                 " from size " + std::to_string(shape_[i]) + " to " +
                 std::to_string(new_shape[i]) + ". "
-                "Only dimensions of size 1 can be expanded."
-            );
-        } else if (new_shape[i] != shape_[i]) {
+                                               "Only dimensions of size 1 can be expanded.");
+        }
+        else if (new_shape[i] != shape_[i])
+        {
             new_strides[i] = 0;
         }
     }
 
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
+}
+
+Tensor Tensor::broadcast(const std::vector<__int64_t> &new_shape) const
+{
+    const size_t ndim = shape_.size();
+    const size_t new_ndim = new_shape.size();
+
+    if (ndim > new_ndim)
+    {
+        throw std::runtime_error("Cannot broadcast: source tensor has higher rank than target shape.");
+    }
+
+    std::vector<__int64_t> reshaped_shape = shape_;
+    std::vector<__int64_t> reshaped_strides = strides_;
+
+    size_t diff = new_ndim - ndim;
+    reshaped_shape.insert(reshaped_shape.begin(), diff, 1);
+    reshaped_strides.insert(reshaped_strides.begin(), diff, 0);
+
+    std::vector<__int64_t> final_strides(new_ndim);
+
+    for (size_t i = 0; i < new_ndim; ++i)
+    {
+        if (reshaped_shape[i] == new_shape[i])
+        {
+            final_strides[i] = reshaped_strides[i];
+        }
+        else if (reshaped_shape[i] == 1)
+        {
+            final_strides[i] = 0; // broadcast
+        }
+        else
+        {
+            throw std::runtime_error(
+                "broadcast() error: cannot broadcast dim " + std::to_string(i) +
+                " from " + std::to_string(reshaped_shape[i]) + " to " + std::to_string(new_shape[i]) +
+                ". Only dims of size 1 can be broadcast.");
+        }
+    }
+
+    return Tensor(new_shape, final_strides, dtype_, device_, data_ptr_);
+}
+
+Tensor Tensor::flatten(int start, int end) const {
+    int ndim = shape_.size();
+
+    if (start < 0) start += ndim;
+    if (end < 0) end += ndim;
+
+    if (start < 0 || start >= ndim) {
+        throw std::out_of_range(
+            "flatten() error: 'start' dimension " + std::to_string(start) +
+            " is out of bounds for tensor with " + std::to_string(ndim) + " dimensions.");
+    }
+
+    if (end < 0 || end >= ndim) {
+        throw std::out_of_range(
+            "flatten() error: 'end' dimension " + std::to_string(end) +
+            " is out of bounds for tensor with " + std::to_string(ndim) + " dimensions.");
+    }
+
+    if (start > end) {
+        throw std::invalid_argument(
+            "flatten() error: 'start' index (" + std::to_string(start) +
+            ") cannot be greater than 'end' index (" + std::to_string(end) + ").");
+    }
+
+    std::vector<__int64_t> new_shape;
+
+    for (int i = 0; i < start; ++i) {
+        new_shape.push_back(shape_[i]);
+    }
+
+    __int64_t flattened_dim = 1;
+    for (int i = start; i <= end; ++i) {
+        flattened_dim *= shape_[i];
+    }
+    new_shape.push_back(flattened_dim);
+
+    for (int i = end + 1; i < ndim; ++i) {
+        new_shape.push_back(shape_[i]);
+    }
+
+    std::vector<__int64_t> new_strides = compute_strides_(new_shape);
 
     return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
 }
+
 
 Tensor::~Tensor() {}
