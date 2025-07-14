@@ -1,6 +1,6 @@
-# 🧠 Neura — A Minimal Deep Learning Framework (WIP)
+# 🧠 Nawah — A Minimal Deep Learning Framework (WIP)
 
-**Neura** is a lightweight, from-scratch deep learning framework built with one thing in mind:
+**Nawah** is a lightweight, from-scratch deep learning framework built with one thing in mind:
 
 > 🧩 **Developer Experience First.**
 
@@ -8,7 +8,7 @@ Not just raw performance or completeness — but a code *interface* that feels l
 
 ---
 
-## ✨ What's Special About Neura?
+## ✨ What's Special About Nawah?
 
 > Modern DL libraries are powerful, but cluttered. Neura flips the script.
 
@@ -72,9 +72,9 @@ This is a **developer-first**, not “enterprise-first” framework.
 ## 📦 Example: Training a Model (Minimal Style)
 
 ```python
-import neura.nn as nn
-import neura.optim as optim
-from neura.data import Dataset, DataLoader
+import nawah.nn as nn
+import nawah.optim as optim
+from nawah.data import Dataset, DataLoader
 
 class MLP(nn.Module):
     def __init__(self):
@@ -119,7 +119,7 @@ for epoch in range(5):
 AI Researcher | ML Engineer | Open-source Builder  
 
 - Creator of **GRF** (Gated Recursive Fusion)  
-- Building **Neura** as a clean-slate deep learning framework  
+- Building **Nawah** as a clean-slate deep learning framework  
 - Contributor at **Hugging Face**  
 
 📎 [GitHub – @yushi2006](https://github.com/yushi2006)  

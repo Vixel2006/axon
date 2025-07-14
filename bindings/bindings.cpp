@@ -49,5 +49,34 @@ PYBIND11_MODULE(nawah, m)
         .def("transpose", &Tensor::transpose, py::arg("n"), py::arg("m"))
         .def("expand", &Tensor::expand, py::arg("shape"))
         .def("broadcast", &Tensor::broadcast, py::arg("shape"))
-        .def("flatten", &Tensor::flatten, py::arg("start") = 1, py::arg("end") = -1);
+        .def("flatten", &Tensor::flatten, py::arg("start") = 1, py::arg("end") = -1)
+        .def("__getitem__", [](const Tensor &t, py::object obj)
+             {
+            std::vector<std::shared_ptr<IndexStrategy>> strategies;
+
+            if (py::isinstance<py::tuple>(obj)) {
+                auto tuple = obj.cast<py::tuple>();
+                for (auto item : tuple) {
+                    if (py::isinstance<py::int_>(item)) {
+                        strategies.push_back(std::make_shared<IntegerIndex>(item.cast<int64_t>()));
+                    } else if (py::isinstance<py::slice>(item)) {
+                        py::slice s = item.cast<py::slice>();
+                        int64_t start, stop, step, length;
+                        s.compute(t.shape().size(), &start, &stop, &step, &length);
+                        strategies.push_back(std::make_shared<SliceIndex>(start, stop, step));
+                    } else {
+                        throw std::runtime_error("Unsupported index type");
+                    }
+                }
+            }
+            else if (py::isinstance<py::int_>(obj)) {
+                strategies.push_back(std::make_shared<IntegerIndex>(obj.cast<int64_t>()));
+            } else if (py::isinstance<py::slice>(obj)) {
+                py::slice s = obj.cast<py::slice>();
+                int64_t start, stop, step, length;
+                s.compute(t.shape().size(), &start, &stop, &step, &length);
+                strategies.push_back(std::make_shared<SliceIndex>(start, stop, step));
+            }
+
+            return t.get_item(strategies); });
 }

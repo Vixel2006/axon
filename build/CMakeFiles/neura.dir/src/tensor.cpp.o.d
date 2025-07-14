@@ -161,6 +161,7 @@ CMakeFiles/neura.dir/src/tensor.cpp.o: \
  /usr/include/c++/15.1.1/pstl/glue_memory_defs.h \
  /home/yushi/code/nawah/include/device.h \
  /home/yushi/code/nawah/include/dtype.h \
+ /home/yushi/code/nawah/include/indexing.h \
  /home/yushi/code/nawah/include/allocator/allocatorFactory.h \
  /home/yushi/code/nawah/include/allocator/cpuAllocator.h \
  /home/yushi/code/nawah/include/allocator/allocator.h \

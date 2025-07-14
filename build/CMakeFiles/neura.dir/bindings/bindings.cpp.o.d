@@ -403,4 +403,5 @@ CMakeFiles/neura.dir/bindings/bindings.cpp.o: \
  /usr/include/c++/15.1.1/variant /usr/include/c++/15.1.1/bits/monostate.h \
  /home/yushi/code/nawah/include/tensor.h \
  /home/yushi/code/nawah/include/device.h \
- /home/yushi/code/nawah/include/dtype.h
+ /home/yushi/code/nawah/include/dtype.h \
+ /home/yushi/code/nawah/include/indexing.h

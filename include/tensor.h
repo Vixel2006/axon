@@ -4,13 +4,16 @@
 #include <memory>
 #include "device.h"
 #include "dtype.h"
+#include "indexing.h"
 
 class Tensor
 {
 public:
     // Tensor Constructors
     Tensor(const std::vector<__int64_t> &shape, DType dtype, Device device);
-    Tensor(const std::vector<__int64_t> &shape, const std::vector<__int64_t> &strides, DType dtype, Device device, std::shared_ptr<void> data_ptr);
+    Tensor(const std::vector<__int64_t> &shape, const std::vector<__int64_t> &strides, DType dtype, Device device, std::shared_ptr<void> data_ptr, __int64_t offset);
+
+    void* raw_ptr() const;
 
     // Tensor Destructor
     ~Tensor();
@@ -32,6 +35,8 @@ public:
     size_t numel() const;
     bool is_contiguous() const;
 
+    Tensor get_item(const std::vector<std::shared_ptr<IndexStrategy>> &strategies) const;
+
     Tensor view(std::vector<__int64_t> &new_shape) const;
     Tensor squeeze(int dim);
     Tensor unsqueeze(int dim);
@@ -48,4 +53,5 @@ private:
     std::vector<__int64_t> strides_;
     DType dtype_;
     Device device_;
+    __int64_t offset_;
 };

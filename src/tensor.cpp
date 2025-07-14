@@ -62,12 +62,18 @@ Tensor::Tensor(const std::vector<__int64_t> &shape, DType dtype, Device device)
     data_ptr_ = std::shared_ptr<void>(raw_ptr, deleter);
 }
 
-Tensor::Tensor(const std::vector<__int64_t> &shape, const std::vector<__int64_t> &strides, DType dtype, Device device, std::shared_ptr<void> data_ptr) : shape_(shape), strides_(strides), dtype_(dtype), device_(device), data_ptr_(data_ptr)
+Tensor::Tensor(const std::vector<__int64_t> &shape, const std::vector<__int64_t> &strides, DType dtype, Device device, std::shared_ptr<void> data_ptr, __int64_t offset) : shape_(shape), strides_(strides), dtype_(dtype), device_(device), data_ptr_(data_ptr), offset_(offset)
 {
     if (this->strides_.size() != this->shape_.size())
     {
         throw std::runtime_error("Shape and stride dimensions mismatch in Tensor constructor.");
     }
+}
+
+void* Tensor::raw_ptr() const {
+    return static_cast<void*>(
+        static_cast<char*>(data_ptr_.get()) + offset_ * DtypeToSize(dtype_)
+    );
 }
 
 size_t Tensor::numel() const
@@ -78,6 +84,20 @@ size_t Tensor::numel() const
     }
 
     return std::accumulate(shape_.begin(), shape_.end(), 1LL, std::multiplies<__int64_t>());
+}
+
+Tensor Tensor::get_item(const std::vector<std::shared_ptr<IndexStrategy>> &strategies) const
+{
+    std::vector<int64_t> new_shape;
+    std::vector<int64_t> new_strides;
+    int64_t offset = 0;
+
+    for (int i = 0; i < strategies.size(); ++i)
+    {
+        strategies[i]->apply(i, shape_, strides_, offset, new_shape, new_strides);
+    }
+
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_ + offset);
 }
 
 Tensor Tensor::view(std::vector<__int64_t> &new_shape) const
@@ -138,7 +158,7 @@ Tensor Tensor::view(std::vector<__int64_t> &new_shape) const
     }
 
     std::vector<__int64_t> new_strides = compute_strides_(new_shape);
-    return Tensor(new_shape, new_strides, this->dtype_, this->device_, this->data_ptr_);
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_);
 }
 
 Tensor Tensor::squeeze(int dim)
@@ -167,7 +187,7 @@ Tensor Tensor::squeeze(int dim)
     new_shape.erase(new_shape.begin() + dim);
     new_strides.erase(new_strides.begin() + dim);
 
-    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_);
 }
 
 Tensor Tensor::unsqueeze(int dim)
@@ -192,7 +212,7 @@ Tensor Tensor::unsqueeze(int dim)
     }
 
     std::vector<__int64_t> new_strides = compute_strides_(new_shape);
-    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_);
 }
 
 Tensor Tensor::permute(const std::vector<int> &order)
@@ -231,7 +251,7 @@ Tensor Tensor::permute(const std::vector<int> &order)
         new_strides[i] = strides_[order[i]];
     }
 
-    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_);
 }
 
 Tensor Tensor::transpose(int n, int m) const
@@ -268,7 +288,7 @@ Tensor Tensor::transpose(int n, int m) const
     std::swap(new_shape[n], new_shape[m]);
     std::swap(new_strides[n], new_strides[m]);
 
-    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_);
 }
 
 Tensor Tensor::expand(const std::vector<__int64_t> &new_shape) const
@@ -303,7 +323,7 @@ Tensor Tensor::expand(const std::vector<__int64_t> &new_shape) const
         }
     }
 
-    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_);
 }
 
 Tensor Tensor::broadcast(const std::vector<__int64_t> &new_shape) const
@@ -344,28 +364,34 @@ Tensor Tensor::broadcast(const std::vector<__int64_t> &new_shape) const
         }
     }
 
-    return Tensor(new_shape, final_strides, dtype_, device_, data_ptr_);
+    return Tensor(new_shape, final_strides, dtype_, device_, data_ptr_, offset_);
 }
 
-Tensor Tensor::flatten(int start, int end) const {
+Tensor Tensor::flatten(int start, int end) const
+{
     int ndim = shape_.size();
 
-    if (start < 0) start += ndim;
-    if (end < 0) end += ndim;
+    if (start < 0)
+        start += ndim;
+    if (end < 0)
+        end += ndim;
 
-    if (start < 0 || start >= ndim) {
+    if (start < 0 || start >= ndim)
+    {
         throw std::out_of_range(
             "flatten() error: 'start' dimension " + std::to_string(start) +
             " is out of bounds for tensor with " + std::to_string(ndim) + " dimensions.");
     }
 
-    if (end < 0 || end >= ndim) {
+    if (end < 0 || end >= ndim)
+    {
         throw std::out_of_range(
             "flatten() error: 'end' dimension " + std::to_string(end) +
             " is out of bounds for tensor with " + std::to_string(ndim) + " dimensions.");
     }
 
-    if (start > end) {
+    if (start > end)
+    {
         throw std::invalid_argument(
             "flatten() error: 'start' index (" + std::to_string(start) +
             ") cannot be greater than 'end' index (" + std::to_string(end) + ").");
@@ -373,24 +399,26 @@ Tensor Tensor::flatten(int start, int end) const {
 
     std::vector<__int64_t> new_shape;
 
-    for (int i = 0; i < start; ++i) {
+    for (int i = 0; i < start; ++i)
+    {
         new_shape.push_back(shape_[i]);
     }
 
     __int64_t flattened_dim = 1;
-    for (int i = start; i <= end; ++i) {
+    for (int i = start; i <= end; ++i)
+    {
         flattened_dim *= shape_[i];
     }
     new_shape.push_back(flattened_dim);
 
-    for (int i = end + 1; i < ndim; ++i) {
+    for (int i = end + 1; i < ndim; ++i)
+    {
         new_shape.push_back(shape_[i]);
     }
 
     std::vector<__int64_t> new_strides = compute_strides_(new_shape);
 
-    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_);
 }
-
 
 Tensor::~Tensor() {}
