@@ -6,7 +6,6 @@
 #include <vector>
 #include <cuda_runtime.h>
 
-
 std::vector<__int64_t> compute_strides_(const std::vector<__int64_t> &shape)
 {
     __int64_t acc = 1;
@@ -85,50 +84,55 @@ Tensor Tensor::view(std::vector<__int64_t> &new_shape) const
     __int64_t known_product = 1;
     __int64_t inferred_index = -1;
 
-    for (size_t i = 0; i < new_shape.size(); ++i) {
+    for (size_t i = 0; i < new_shape.size(); ++i)
+    {
         __int64_t dim = new_shape[i];
 
-        if (dim == -1) {
-            if (inferred_index != -1) {
+        if (dim == -1)
+        {
+            if (inferred_index != -1)
+            {
                 throw std::invalid_argument(
-                    "view(): only one dimension can be inferred (-1), but got another at index " + std::to_string(i)
-                );
+                    "view(): only one dimension can be inferred (-1), but got another at index " + std::to_string(i));
             }
             inferred_index = i;
         }
-        else if (dim <= 0) {
+        else if (dim <= 0)
+        {
             throw std::invalid_argument(
-                "view(): shape dimension at index " + std::to_string(i) + " must be > 0 or -1 for inference, but got " + std::to_string(dim)
-            );
+                "view(): shape dimension at index " + std::to_string(i) + " must be > 0 or -1 for inference, but got " + std::to_string(dim));
         }
-        else {
+        else
+        {
             known_product *= dim;
         }
     }
 
     __int64_t total = this->numel();
 
-    if (inferred_index != -1) {
-        if (total % known_product != 0) {
+    if (inferred_index != -1)
+    {
+        if (total % known_product != 0)
+        {
             throw std::invalid_argument(
                 "view(): cannot infer missing dimension at index " + std::to_string(inferred_index) +
                 " — product of known dims = " + std::to_string(known_product) +
-                " does not divide total elements = " + std::to_string(total)
-            );
+                " does not divide total elements = " + std::to_string(total));
         }
 
         new_shape[inferred_index] = total / known_product;
     }
 
     __int64_t new_numel = std::accumulate(new_shape.begin(), new_shape.end(), 1LL, std::multiplies<__int64_t>());
-    if (new_numel != total) {
+    if (new_numel != total)
+    {
         throw std::invalid_argument(
             "view(): mismatch — original numel = " + std::to_string(total) +
-            ", new shape produces = " + std::to_string(new_numel)
-        );
+            ", new shape produces = " + std::to_string(new_numel));
     }
 
-    if (!this->is_contiguous()) {
+    if (!this->is_contiguous())
+    {
         throw std::runtime_error("view(): tensor must be contiguous to be reshaped.");
     }
 
@@ -190,26 +194,29 @@ Tensor Tensor::unsqueeze(int dim)
     return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
 }
 
-Tensor Tensor::permute(const std::vector<int> &order) {
-    if (order.size() != shape_.size()) {
+Tensor Tensor::permute(const std::vector<int> &order)
+{
+    if (order.size() != shape_.size())
+    {
         throw std::invalid_argument(
             "permute(): `order` must have the same number of dimensions as tensor shape. "
-            "Expected " + std::to_string(shape_.size()) + ", got " + std::to_string(order.size()) + "."
-        );
+            "Expected " +
+            std::to_string(shape_.size()) + ", got " + std::to_string(order.size()) + ".");
     }
 
     std::vector<bool> seen(order.size(), false);
-    for (int i: order) {
-        if (i < 0 || i > shape_.size()) {
+    for (int i : order)
+    {
+        if (i < 0 || i > shape_.size())
+        {
             throw std::out_of_range(
-                "permute(): each index in `order` must be in range [0, " + 
-                std::to_string(shape_.size() - 1) + "], but got " + std::to_string(i) + "."
-            );
+                "permute(): each index in `order` must be in range [0, " +
+                std::to_string(shape_.size() - 1) + "], but got " + std::to_string(i) + ".");
         }
-        if (seen[i]) {
+        if (seen[i])
+        {
             throw std::invalid_argument(
-                "permute(): duplicate index " + std::to_string(i) + " in `order`."
-            );
+                "permute(): duplicate index " + std::to_string(i) + " in `order`.");
         }
         seen[i] = true;
     }
@@ -217,10 +224,48 @@ Tensor Tensor::permute(const std::vector<int> &order) {
     std::vector<int64_t> new_shape(shape_.size());
     std::vector<int64_t> new_strides(shape_.size());
 
-    for (size_t i = 0; i < order.size(); ++i) {
+    for (size_t i = 0; i < order.size(); ++i)
+    {
         new_shape[i] = shape_[order[i]];
         new_strides[i] = strides_[order[i]];
     }
+
+    return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
+}
+
+Tensor Tensor::transpose(int n, int m) const
+{
+    const size_t rank = shape_.size();
+
+    if (n < 0)
+        n += rank;
+    if (m < 0)
+        m += rank;
+
+    if (n < 0 || n >= rank)
+    {
+        throw std::out_of_range(
+            "transpose(): dimension `n` is out of bounds. Got " + std::to_string(n) +
+            ", but tensor has rank " + std::to_string(rank) + ".");
+    }
+    if (m < 0 || m >= rank)
+    {
+        throw std::out_of_range(
+            "transpose(): dimension `m` is out of bounds. Got " + std::to_string(m) +
+            ", but tensor has rank " + std::to_string(rank) + ".");
+    }
+
+    if (n == m)
+    {
+        throw std::invalid_argument(
+            "transpose(): dimensions `n` and `m` must be different, but both are " + std::to_string(n) + ".");
+    }
+
+    std::vector<__int64_t> new_shape = shape_;
+    std::vector<__int64_t> new_strides = strides_;
+
+    std::swap(new_shape[n], new_shape[m]);
+    std::swap(new_strides[n], new_strides[m]);
 
     return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_);
 }

@@ -45,5 +45,6 @@ PYBIND11_MODULE(neura, m)
         .def("view", &Tensor::view, py::arg("new_shape"))
         .def("squeeze", &Tensor::squeeze, py::arg("dim") = 0)
         .def("unsqueeze", &Tensor::unsqueeze, py::arg("dim") = 0)
-        .def("permute", &Tensor::permute, py::arg("order"));
+        .def("permute", &Tensor::permute, py::arg("order"))
+        .def("transpose", &Tensor::transpose, py::arg("n"), py::arg("m"));
 }

@@ -37,7 +37,7 @@ public:
     Tensor unsqueeze(int dim);
     
     Tensor permute(const std::vector<int> &order);
-    Tensor transpose();
+    Tensor transpose(int n, int m) const;
     Tensor expand();
     Tensor flatten();
 
