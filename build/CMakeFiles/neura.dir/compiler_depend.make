@@ -4,6 +4,7 @@
 CMakeFiles/neura.dir/bindings/bindings.cpp.o: /home/yushi/code/nawah/bindings/bindings.cpp \
   /home/yushi/code/nawah/include/device.h \
   /home/yushi/code/nawah/include/dtype.h \
+  /home/yushi/code/nawah/include/helpers.h \
   /home/yushi/code/nawah/include/indexing.h \
   /home/yushi/code/nawah/include/tensor.h \
   /home/yushi/code/nawah/vendor/pybind11/include/pybind11/attr.h \
@@ -907,10 +908,6 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 
 /opt/cuda/targets/x86_64-linux/include/builtin_types.h:
 
-/usr/include/c++/15.1.1/cassert:
-
-/usr/include/python3.13/pyhash.h:
-
 /usr/include/c++/15.1.1/bits/indirect_array.h:
 
 /usr/include/c++/15.1.1/bits/hash_bytes.h:
@@ -987,6 +984,10 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 
 /usr/include/bits/math-vector.h:
 
+/usr/include/c++/15.1.1/bits/monostate.h:
+
+/usr/include/bits/posix2_lim.h:
+
 /usr/include/python3.13/cpython/complexobject.h:
 
 /usr/include/c++/15.1.1/bits/parse_numbers.h:
@@ -1018,10 +1019,6 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 /usr/include/c++/15.1.1/bits/stl_bvector.h:
 
 /usr/include/bits/cpu-set.h:
-
-/usr/include/c++/15.1.1/bits/monostate.h:
-
-/usr/include/bits/posix2_lim.h:
 
 /usr/include/bits/confname.h:
 
@@ -1063,6 +1060,8 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/15.1.1/include/limits.h:
 
+/home/yushi/code/nawah/include/helpers.h:
+
 /home/yushi/code/nawah/vendor/pybind11/include/pybind11/pytypes.h:
 
 /usr/include/bits/byteswap.h:
@@ -1074,6 +1073,16 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 /usr/include/bits/environments.h:
 
 /home/yushi/code/nawah/vendor/pybind11/include/pybind11/options.h:
+
+/usr/include/c++/15.1.1/array:
+
+/usr/include/c++/15.1.1/bits/stl_function.h:
+
+/usr/include/python3.13/cpython/fileobject.h:
+
+/usr/include/c++/15.1.1/bits/stl_pair.h:
+
+/usr/include/c++/15.1.1/cstddef:
 
 /usr/include/c++/15.1.1/bits/basic_string.tcc:
 
@@ -1101,35 +1110,9 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 
 /usr/include/bits/libm-simd-decl-stubs.h:
 
-/usr/include/bits/select.h:
+/usr/include/bits/pthreadtypes-arch.h:
 
-/home/yushi/code/nawah/vendor/pybind11/include/pybind11/conduit/wrap_include_python_h.h:
-
-/usr/include/bits/time64.h:
-
-/usr/include/python3.13/codecs.h:
-
-/usr/include/bits/types/wint_t.h:
-
-/usr/include/c++/15.1.1/bits/invoke.h:
-
-/home/yushi/code/nawah/vendor/pybind11/include/pybind11/detail/cpp_conduit.h:
-
-/usr/include/c++/15.1.1/bits/gslice.h:
-
-/usr/include/python3.13/unicodeobject.h:
-
-/usr/include/c++/15.1.1/bits/basic_ios.h:
-
-/usr/include/bits/uintn-identity.h:
-
-/home/yushi/code/nawah/include/device.h:
-
-/usr/include/bits/wchar.h:
-
-/usr/include/python3.13/cpython/object.h:
-
-/usr/include/bits/struct_mutex.h:
+/home/yushi/code/nawah/vendor/pybind11/include/pybind11/detail/struct_smart_holder.h:
 
 /usr/include/c++/15.1.1/bits/stl_iterator.h:
 
@@ -1161,6 +1144,32 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 
 /usr/include/c++/15.1.1/math.h:
 
+/usr/include/bits/select.h:
+
+/home/yushi/code/nawah/vendor/pybind11/include/pybind11/conduit/wrap_include_python_h.h:
+
+/usr/include/bits/time64.h:
+
+/usr/include/python3.13/codecs.h:
+
+/usr/include/bits/types/wint_t.h:
+
+/usr/include/c++/15.1.1/bits/gslice.h:
+
+/usr/include/python3.13/unicodeobject.h:
+
+/usr/include/c++/15.1.1/bits/basic_ios.h:
+
+/usr/include/bits/uintn-identity.h:
+
+/home/yushi/code/nawah/include/device.h:
+
+/usr/include/bits/wchar.h:
+
+/usr/include/python3.13/cpython/object.h:
+
+/usr/include/bits/struct_mutex.h:
+
 /home/yushi/code/nawah/include/indexing.h:
 
 /usr/include/c++/15.1.1/bits/hashtable.h:
@@ -1169,15 +1178,11 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 
 /usr/include/c++/15.1.1/x86_64-pc-linux-gnu/bits/cpu_defines.h:
 
+/usr/include/c++/15.1.1/bits/invoke.h:
+
+/home/yushi/code/nawah/vendor/pybind11/include/pybind11/detail/cpp_conduit.h:
+
 /usr/include/asm-generic/errno-base.h:
-
-/usr/include/c++/15.1.1/bits/stl_pair.h:
-
-/home/yushi/code/nawah/vendor/pybind11/include/pybind11/detail/struct_smart_holder.h:
-
-/usr/include/bits/pthreadtypes-arch.h:
-
-/usr/include/c++/15.1.1/cstddef:
 
 /home/yushi/code/nawah/vendor/pybind11/include/pybind11/conduit/pybind11_platform_abi_id.h:
 
@@ -1207,12 +1212,6 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 
 /usr/include/python3.13/weakrefobject.h:
 
-/usr/include/bits/flt-eval-method.h:
-
-/usr/include/bits/types/FILE.h:
-
-/usr/include/linux/posix_types.h:
-
 /home/yushi/code/nawah/vendor/pybind11/include/pybind11/detail/class.h:
 
 /home/yushi/code/nawah/vendor/pybind11/include/pybind11/detail/value_and_holder.h:
@@ -1237,11 +1236,11 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 
 /usr/include/c++/15.1.1/backward/auto_ptr.h:
 
-/usr/include/c++/15.1.1/array:
+/usr/include/bits/types/FILE.h:
 
-/usr/include/c++/15.1.1/bits/stl_function.h:
+/usr/include/linux/posix_types.h:
 
-/usr/include/python3.13/cpython/fileobject.h:
+/usr/include/bits/flt-eval-method.h:
 
 /usr/lib/libc.so.6:
 
@@ -1437,6 +1436,10 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 
 /usr/include/python3.13/cpython/pylifecycle.h:
 
+/usr/include/c++/15.1.1/cassert:
+
+/usr/include/python3.13/pyhash.h:
+
 /usr/include/c++/15.1.1/cctype:
 
 /usr/include/c++/15.1.1/bits/slice_array.h:
@@ -1592,8 +1595,6 @@ CMakeFiles/neura.dir/src/tensor.cpp.o:
 /usr/include/bits/stdint-intn.h:
 
 /usr/include/c++/15.1.1/typeinfo:
-
-/home/yushi/code/nawah/include/helpers.h:
 
 /usr/include/c++/15.1.1/unordered_set:
 

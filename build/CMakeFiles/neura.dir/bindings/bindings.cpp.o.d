@@ -404,4 +404,5 @@ CMakeFiles/neura.dir/bindings/bindings.cpp.o: \
  /home/yushi/code/nawah/include/tensor.h \
  /home/yushi/code/nawah/include/device.h \
  /home/yushi/code/nawah/include/dtype.h \
- /home/yushi/code/nawah/include/indexing.h
+ /home/yushi/code/nawah/include/indexing.h \
+ /home/yushi/code/nawah/include/helpers.h
