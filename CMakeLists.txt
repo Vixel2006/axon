@@ -21,13 +21,13 @@ find_package(CUDAToolkit REQUIRED)
 
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
 
-pybind11_add_module(neura bindings/bindings.cpp ${SOURCES})
+pybind11_add_module(Nawah bindings/bindings.cpp ${SOURCES})
 
-target_include_directories(neura PRIVATE 
+target_include_directories(Nawah PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
-target_link_libraries(neura PRIVATE
+target_link_libraries(Nawah PRIVATE
     pybind11::module
     CUDA::toolkit
 )

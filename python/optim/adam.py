@@ -1,5 +1,5 @@
 import numpy as np
-from neura import Tensor
+from Nawah import Tensor
 
 from .optimizer import Optimizer
 
