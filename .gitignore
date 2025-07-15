@@ -43,7 +43,7 @@ ENV/
 # --- pybind11 build outputs ---
 *.cpp_build/
 *.pybind11_build/
-nawah*.so  # compiled module like `neura.cpython-312-x86_64-linux-gnu.so`
+nawah*.so  # compiled module like `Nawah.cpython-312-x86_64-linux-gnu.so`
 
 # --- Misc ---
 .DS_Store
