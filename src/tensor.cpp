@@ -7,7 +7,6 @@
 #include <vector>
 #include <cuda_runtime.h>
 
-
 bool Tensor::is_contiguous() const
 {
     if (shape_.size() <= 1)
@@ -66,6 +65,115 @@ Tensor::Tensor(const std::vector<__int64_t> &shape, const std::vector<__int64_t>
     if (this->strides_.size() != this->shape_.size())
     {
         throw std::runtime_error("Shape and stride dimensions mismatch in Tensor constructor.");
+    }
+}
+
+void Tensor::get_shape(const py::list &data, std::vector<__int64_t> &shape, size_t depth = 0)
+{
+    __int64_t len = data.size();
+    if (len == 0) {
+        shape.clear(); // Treat empty list as a scalar or zero-sized tensor
+        return;
+    }
+
+    if (depth == shape.size()) {
+        shape.push_back(len);
+    } else if (shape[depth] != len) {
+        throw std::runtime_error("Inconsistent tensor dimensions");
+    }
+
+    // Check if the elements are lists or numbers
+    if (py::isinstance<py::list>(data[0])) {
+        for (const auto& item : data) {
+            if (!py::isinstance<py::list>(item)) {
+                throw std::runtime_error("Mixed types in tensor list");
+            }
+            get_shape(item.cast<py::list>(), shape, depth + 1);
+        }
+    } else {
+        // Leaf level: validate elements are numbers
+        for (const auto& item : data) {
+            if (!py::isinstance<py::float_>(item) && !py::isinstance<py::int_>(item)) {
+                throw std::runtime_error("Tensor elements must be numbers");
+            }
+        }
+    }
+}
+
+template<typename T>
+void Tensor::flatten_list(const py::list &data, T *ptr)
+{
+    if (data.empty())
+        return;
+    if (py::isinstance<py::list>(data[0]))
+    {
+        for (const auto &item : data)
+        {
+            flatten_list<T>(item.cast<py::list>(), ptr);
+        }
+    }
+    else
+    {
+        for (const auto &item : data)
+        {
+            *ptr++ = item.cast<T>();
+        }
+    }
+}
+
+Tensor::Tensor(const py::list& data, DType dtype, const std::string& device_str, bool requires_grad)
+    : dtype_(dtype), device_(parse_device(device_str)), offset_(0), requires_grad_(requires_grad), grad_(nullptr) {
+    // Compute shape and total size
+    get_shape(data, shape_);
+    size_t total_size = numel();
+
+    // Get allocator based on device
+    std::shared_ptr<Allocator> allocator = AllocatorFactory::get(device_);
+
+    // Allocate data_ptr_ using the allocator
+    if (total_size > 0) {
+        if (dtype_ == DType::float32) {
+            void* raw_ptr = allocator->allocate(total_size * sizeof(float));
+            data_ptr_ = std::shared_ptr<void>(raw_ptr, [allocator](void* ptr) { allocator->deallocate(ptr); });
+        } else if (dtype_ == DType::int32) {
+            void* raw_ptr = allocator->allocate(total_size * sizeof(int));
+            data_ptr_ = std::shared_ptr<void>(raw_ptr, [allocator](void* ptr) { allocator->deallocate(ptr); });
+        } else {
+            throw std::runtime_error("Unsupported DType");
+        }
+    }
+
+    // Compute strides
+    strides_ = compute_strides_(shape_);
+
+    // Flatten and copy data (only for CPU; CUDA requires special handling)
+    if (device_.type == DeviceType::CPU) {
+        if (dtype_ == DType::float32) {
+            float* ptr = static_cast<float*>(data_ptr_.get());
+            flatten_list<float>(data, ptr);
+            
+        } else if (dtype_ == DType::int32) {
+            int* ptr = static_cast<int*>(data_ptr_.get());
+            flatten_list<int>(data, ptr);
+        }
+    } else if (device_.type == DeviceType::CUDA) {
+        if (dtype_ == DType::float32) {
+            std::vector<float> temp(total_size);
+            float* ptr = temp.data();
+            flatten_list<float>(data, ptr);
+            cudaError_t err = cudaMemcpy(data_ptr_.get(), temp.data(), total_size * sizeof(float), cudaMemcpyHostToDevice);
+            if (err != cudaSuccess) {
+                throw std::runtime_error("CUDA memcpy failed: " + std::string(cudaGetErrorString(err)));
+            }
+        } else if (dtype_ == DType::int32) {
+            std::vector<int> temp(total_size);
+            int* ptr = temp.data();
+            flatten_list<int>(data, ptr);
+            cudaError_t err = cudaMemcpy(data_ptr_.get(), temp.data(), total_size * sizeof(int), cudaMemcpyHostToDevice);
+            if (err != cudaSuccess) {
+                throw std::runtime_error("CUDA memcpy failed: " + std::string(cudaGetErrorString(err)));
+            }
+        }
     }
 }
 
