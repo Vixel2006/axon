@@ -19,7 +19,4 @@ WORKDIR /nawah
 
 COPY . .
 
-RUN make init
-RUN make build
-
-CMD ["make", "test"]
+CMD ["make"]
