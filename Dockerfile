@@ -3,8 +3,8 @@ FROM nvidia/cuda:11.2.2-devel-ubuntu20.04
 ENV DEBIAN_FRONTEND = noninteractive
 
 RUN apt-get update && apt-get install -y \
-    python3.13 \
-    python3.13-dev \
+    python3 \
+    python3-dev \
     python3-pip \
     cmake \
     g++ \
