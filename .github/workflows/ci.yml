@@ -19,7 +19,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == '<your-username>'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -50,6 +50,6 @@ jobs:
           retention-days: 7
 
       - name: Push Docker image to Docker Hub
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == '<your-username>'
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/nawah:latest
