@@ -27,19 +27,19 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/nawah:latest .
+          docker build -t ${{ secrets.DOCKER_USERNAME }} nawah:latest .
 
       - name: Run tests
         run: |
-          docker run --gpus all ${{ secrets.DOCKER_USERNAME }}/nawah:latest make test
+          docker run --gpus all ${{ secrets.DOCKER_USERNAME }} nawah:latest make test
 
       - name: Run linting
         run: |
-          docker run ${{ secrets.DOCKER_USERNAME }}/nawah:latest make lint
+          docker run ${{ secrets.DOCKER_USERNAME }} nawah:latest make lint
 
       - name: Run style checks
         run: |
-          docker run ${{ secrets.DOCKER_USERNAME }}/nawah:latest make style
+          docker run ${{ secrets.DOCKER_USERNAME }} nawah:latest make style
 
       - name: Upload linting errors
         if: always()
