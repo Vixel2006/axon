@@ -1,2 +1,49 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+*.log
+vendor/
+
+# --- C++/Pybind build artifacts ---
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.dylib
+*.exe
+*.out
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# --- venvs ---
 venv/
-neura.egg-info/
+.env/
+.venv/
+env/
+ENV/
+
+# --- IDE files ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Jupyter/IPython ---
+.ipynb_checkpoints/
+
+# --- pybind11 build outputs ---
+*.cpp_build/
+*.pybind11_build/
+nawah*.so  # compiled module like `Nawah.cpython-312-x86_64-linux-gnu.so`
+
+# --- Misc ---
+.DS_Store
+Thumbs.db

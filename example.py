@@ -1,9 +1,9 @@
-import neura
+import nawah
 
-a = neura.Tensor([1.0, 2.0, 4.0])
-b = a.log().sum()
-print(b)
-
-b.backward()
-
-print(a.grad)
+t = nawah.Tensor([2, 3, 9], nawah.DType.float32, device="cpu", requires_grad=True)
+print(f"Shape before broadcast: {t.shape}")
+print(f"Strides before broadcast: {t.strides}")
+print(t[1, 1, 1])
+t = t.unsqueeze(dim=1).expand([2, 5, 3, 9])
+print(f"Shape after expand: {t.shape}")
+print(f"Strides after expand: {t.strides}")

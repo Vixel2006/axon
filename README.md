@@ -1,16 +1,16 @@
-# 🧠 Neura — A Minimal Deep Learning Framework (WIP)
+# 🧠 Nawah — A Minimal Deep Learning Framework (WIP)
 
-**Neura** is a lightweight, from-scratch deep learning framework built with one thing in mind:
+**Nawah** is a lightweight, from-scratch deep learning framework built with one thing in mind:
 
 > 🧩 **Developer Experience First.**
 
-Not just raw performance or completeness — but a code *interface* that feels like you're building a neural system, not wrestling with a jungle of wrappers.
+Not just raw performance or completeness — but a code *interface* that feels like you're building a Nawahl system, not wrestling with a jungle of wrappers.
 
 ---
 
-## ✨ What's Special About Neura?
+## ✨ What's Special About Nawah?
 
-> Modern DL libraries are powerful, but cluttered. Neura flips the script.
+> Modern DL libraries are powerful, but cluttered. Nawah flips the script.
 
 It introduces a **clean, expressive API** for defining models — chaining layers like functions, composing blocks with decorators, and keeping your code readable at scale.
 
@@ -50,9 +50,9 @@ def conv_block(self, x):
 
 ## 💡 Philosophy
 
-> Neura is built for *builders* — not abstract users.
+> Nawah is built for *builders* — not abstract users.
 
-Most frameworks prioritize massive scale and generalization. Neura prioritizes **clarity, hackability, and control**.
+Most frameworks prioritize massive scale and generalization. Nawah prioritizes **clarity, hackability, and control**.
 
 - You *see* the gradient flow  
 - You *define* the ops  
@@ -72,9 +72,9 @@ This is a **developer-first**, not “enterprise-first” framework.
 ## 📦 Example: Training a Model (Minimal Style)
 
 ```python
-import neura.nn as nn
-import neura.optim as optim
-from neura.data import Dataset, DataLoader
+import nawah.nn as nn
+import nawah.optim as optim
+from nawah.data import Dataset, DataLoader
 
 class MLP(nn.Module):
     def __init__(self):
@@ -108,7 +108,7 @@ for epoch in range(5):
 - [ ] Model saving/loading  
 - [ ] Transformer blocks (Multihead Attention, LayerNorm)  
 - [ ] CLI launcher + config system  
-- [ ] `neurascript`: a DSL for defining models in 3 lines or less  
+- [ ] `Nawahscript`: a DSL for defining models in 3 lines or less  
 - [ ] Training benchmark suite (compare against PyTorch, NumPy baselines)  
 
 ---
@@ -119,7 +119,7 @@ for epoch in range(5):
 AI Researcher | ML Engineer | Open-source Builder  
 
 - Creator of **GRF** (Gated Recursive Fusion)  
-- Building **Neura** as a clean-slate deep learning framework  
+- Building **Nawah** as a clean-slate deep learning framework  
 - Contributor at **Hugging Face**  
 
 📎 [GitHub – @yushi2006](https://github.com/yushi2006)  
@@ -129,7 +129,7 @@ AI Researcher | ML Engineer | Open-source Builder
 
 ## 🤝 Contributing
 
-Neura is currently a one-man project, but it's open for contributions.
+Nawah is currently a one-man project, but it's open for contributions.
 
 You can help with:
 - Writing CUDA kernels  
@@ -143,9 +143,9 @@ If you're passionate about low-level DL tooling, compiler design, or building cu
 
 ---
 
-## 🧠 Neura’s Vision
+## 🧠 Nawah’s Vision
 
-Neura isn’t trying to be the next PyTorch — it’s a rethink of how we *build* and *interface with* neural networks.
+Nawah isn’t trying to be the next PyTorch — it’s a rethink of how we *build* and *interface with* Nawahl networks.
 
 ### It’s built to:
 - Let you define models as **semantic, readable pipelines**  
@@ -153,7 +153,7 @@ Neura isn’t trying to be the next PyTorch — it’s a rethink of how we *buil
 - Give you control from **Python to CUDA**  
 - Be a real tool for research and experimentation, not just deployment
 
-> If PyTorch is a spaceship, Neura is the blueprint, the engine, and the wrench.
+> If PyTorch is a spaceship, Nawah is the blueprint, the engine, and the wrench.
 
 Use it to learn. Use it to build. Use it to push the limits.
 

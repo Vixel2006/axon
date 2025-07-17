@@ -1,14 +1,25 @@
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 from setuptools import setup
 
+cuda_include = "/opt/cuda/include"
+cuda_lib = "/opt/cuda/lib64"
+
+ext_modules = [
+    Pybind11Extension(
+        "nawah",
+        ["bindings/bindings.cpp", "src/tensor.cpp"],
+        include_dirs=["include", cuda_include],
+        library_dirs=[cuda_lib],
+        libraries=["cudart"],
+        language="c++",
+    ),
+]
 
 setup(
-    name="neura",
-    version="0.1.0",
-    description="A deep learning library with Python and CUDA",
-    packages=["neura", "neura.nn", "neura.cuda", "neura.utils", "neura.api"],
-    package_dir={"neura": "src"},
-    install_requires=["numpy", "pytest"],
-    author="Yusuf Shihata",
-    author_email="yusufshihata2006@gmail.com",
-    license="MIT",
+    name="nawah",
+    version="0.1",
+    packages=["nawah"],
+    package_dir={"nawah": "python"},
+    ext_modules=ext_modules,
+    cmdclass={"build_ext": build_ext},
 )
