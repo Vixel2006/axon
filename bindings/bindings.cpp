@@ -35,6 +35,12 @@ PYBIND11_MODULE(nawah, m)
              py::arg("dtype") = DType::float32,
              py::arg("device") = "cpu",
              py::arg("requires_grad") = true)
+        .def(py::init<py::list, DType, std::string, bool>(),
+             py::arg("data"),
+             py::arg("dtype") = DType::float32,
+             py::arg("device") = "cpu",
+             py::arg("requires_grad") = false,
+             "Initialize Tensor from a Python list")
 
         .def_property_readonly("shape", &Tensor::shape, py::return_value_policy::reference_internal)
         .def_property_readonly("strides", &Tensor::strides, py::return_value_policy::reference_internal)

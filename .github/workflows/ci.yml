@@ -27,7 +27,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }} --no-cache -t nawah:latest .
+          docker build -t ${{ secrets.DOCKER_USERNAME }} nawah:latest .
 
       - name: Run tests
         run: |

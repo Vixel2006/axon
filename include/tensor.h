@@ -5,13 +5,17 @@
 #include "device.h"
 #include "dtype.h"
 #include "indexing.h"
+#include <pybind11/pybind11.h>
+
+namespace py = pybind11;
 
 class Tensor
 {
 public:
     Tensor(const std::vector<__int64_t> &shape, DType dtype, const std::string &device_str = "cpu", bool requires_grad = false);
     Tensor(const std::vector<__int64_t> &shape, const std::vector<__int64_t> &strides, DType dtype, Device device, std::shared_ptr<void> data_ptr, __int64_t offset, bool requires_grad, std::shared_ptr<void> grad);
-
+    Tensor(const py::list& data, DType dtype = DType::float32, const std::string& device_str = "cpu", bool requires_grad = false);
+     
     void *raw_ptr() const;
 
     ~Tensor();
@@ -42,6 +46,11 @@ public:
     Tensor expand(const std::vector<__int64_t> &new_shape) const;
     Tensor broadcast(const std::vector<__int64_t> &new_shape) const;
     Tensor flatten(int start, int end) const;
+
+    template<typename T>
+    void flatten_list(const py::list &data, T *ptr);
+    void get_shape(const py::list &data, std::vector<__int64_t> &shape, size_t depth);
+
 
 private:
     std::shared_ptr<void> data_ptr_;
