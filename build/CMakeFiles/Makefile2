@@ -63,12 +63,12 @@ CMAKE_BINARY_DIR = /home/yushi/code/nawah/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/neura.dir/all
+all: CMakeFiles/Nawah.dir/all
 all: vendor/pybind11/all
 .PHONY : all
 
 # The main recursive "codegen" target.
-codegen: CMakeFiles/neura.dir/codegen
+codegen: CMakeFiles/Nawah.dir/codegen
 codegen: vendor/pybind11/codegen
 .PHONY : codegen
 
@@ -77,7 +77,7 @@ preinstall: vendor/pybind11/preinstall
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/neura.dir/clean
+clean: CMakeFiles/Nawah.dir/clean
 clean: vendor/pybind11/clean
 .PHONY : clean
 
@@ -101,36 +101,36 @@ vendor/pybind11/clean:
 .PHONY : vendor/pybind11/clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/neura.dir
+# Target rules for target CMakeFiles/Nawah.dir
 
 # All Build rule for target.
-CMakeFiles/neura.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yushi/code/nawah/build/CMakeFiles --progress-num=1,2,3 "Built target neura"
-.PHONY : CMakeFiles/neura.dir/all
+CMakeFiles/Nawah.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yushi/code/nawah/build/CMakeFiles --progress-num=1,2,3 "Built target Nawah"
+.PHONY : CMakeFiles/Nawah.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/neura.dir/rule: cmake_check_build_system
+CMakeFiles/Nawah.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/yushi/code/nawah/build/CMakeFiles 3
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/neura.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/Nawah.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/yushi/code/nawah/build/CMakeFiles 0
-.PHONY : CMakeFiles/neura.dir/rule
+.PHONY : CMakeFiles/Nawah.dir/rule
 
 # Convenience name for target.
-neura: CMakeFiles/neura.dir/rule
-.PHONY : neura
+Nawah: CMakeFiles/Nawah.dir/rule
+.PHONY : Nawah
 
 # codegen rule for target.
-CMakeFiles/neura.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yushi/code/nawah/build/CMakeFiles --progress-num=1,2,3 "Finished codegen for target neura"
-.PHONY : CMakeFiles/neura.dir/codegen
+CMakeFiles/Nawah.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/yushi/code/nawah/build/CMakeFiles --progress-num=1,2,3 "Finished codegen for target Nawah"
+.PHONY : CMakeFiles/Nawah.dir/codegen
 
 # clean rule for target.
-CMakeFiles/neura.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/clean
-.PHONY : CMakeFiles/neura.dir/clean
+CMakeFiles/Nawah.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/clean
+.PHONY : CMakeFiles/Nawah.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

@@ -172,5 +172,5 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
-  "CMakeFiles/neura.dir/DependInfo.cmake"
+  "CMakeFiles/Nawah.dir/DependInfo.cmake"
   )

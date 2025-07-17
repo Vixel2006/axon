@@ -1,1 +1,0 @@
-/usr/bin/c++ -fPIC -flto -Wl,--dependency-file=CMakeFiles/neura.dir/link.d -shared  -o neura.cpython-313-x86_64-linux-gnu.so CMakeFiles/neura.dir/bindings/bindings.cpp.o CMakeFiles/neura.dir/src/tensor.cpp.o   -L/opt/cuda/lib  -Wl,-rpath,/opt/cuda/lib

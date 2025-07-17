@@ -527,7 +527,7 @@ PYBIND11_TEST:BOOL=OFF
 PYBIND11_USE_CROSSCOMPILING:BOOL=OFF
 
 //Python Interpreter
-Python_EXECUTABLE:FILEPATH=/usr/bin/python3.13
+Python_EXECUTABLE:FILEPATH=/home/yushi/code/nawah/venv/bin/python3.13
 
 //Python Include Directory
 Python_INCLUDE_DIR:FILEPATH=/usr/include/python3.13
@@ -892,14 +892,14 @@ CUDA_pcsamplingutil_LIBRARY-ADVANCED:INTERNAL=1
 //Details about finding CUDAToolkit
 FIND_PACKAGE_MESSAGE_DETAILS_CUDAToolkit:INTERNAL=[/opt/cuda/targets/x86_64-linux/include][/opt/cuda/lib/libcudart.so][/opt/cuda/bin][v12.9.86()]
 //Details about finding Python
-FIND_PACKAGE_MESSAGE_DETAILS_Python:INTERNAL=[/usr/bin/python3.13][/usr/include/python3.13][found components: Interpreter Development.Module Development.Embed ][v3.13.3(3.8)]
+FIND_PACKAGE_MESSAGE_DETAILS_Python:INTERNAL=[/home/yushi/code/nawah/venv/bin/python3.13][/usr/include/python3.13][found components: Interpreter Development.Module Development.Embed ][v3.13.3(3.8)]
 //Details about finding Threads
 FIND_PACKAGE_MESSAGE_DETAILS_Threads:INTERNAL=[TRUE][v()]
 //Test HAS_FLTO
 HAS_FLTO:INTERNAL=1
 PYBIND11_INCLUDE_DIR:INTERNAL=/home/yushi/code/nawah/vendor/pybind11/include
 //Python executable during the last CMake run
-PYBIND11_PYTHON_EXECUTABLE_LAST:INTERNAL=/usr/bin/python3.13
+PYBIND11_PYTHON_EXECUTABLE_LAST:INTERNAL=/home/yushi/code/nawah/venv/bin/python3.13
 //Python debug status
 PYTHON_IS_DEBUG:INTERNAL=0
 PYTHON_MODULE_DEBUG_POSTFIX:INTERNAL=
@@ -919,12 +919,12 @@ _Python_DEVELOPMENT_MODULE_SIGNATURE:INTERNAL=6f0175d9e8ed3e54995668f6d998ba7f
 //Development reason failure
 _Python_Development_REASON_FAILURE:INTERNAL=
 //Path to a program.
-_Python_EXECUTABLE:INTERNAL=/usr/bin/python3.13
+_Python_EXECUTABLE:INTERNAL=/home/yushi/code/nawah/venv/bin/python3.13
 //Path to a file.
 _Python_INCLUDE_DIR:INTERNAL=/usr/include/python3.13
 //Python Properties
-_Python_INTERPRETER_PROPERTIES:INTERNAL=Python;3;13;3;64;<none>;cpython-313-x86_64-linux-gnu;abi3;/usr/lib/python3.13;/usr/lib/python3.13;/usr/lib/python3.13/site-packages;/usr/lib/python3.13/site-packages
-_Python_INTERPRETER_SIGNATURE:INTERNAL=b7b126d8e883dd8f8ba554922042e13f
+_Python_INTERPRETER_PROPERTIES:INTERNAL=Python;3;13;3;64;<none>;cpython-313-x86_64-linux-gnu;abi3;/usr/lib/python3.13;/home/yushi/code/nawah/venv/lib/python3.13;/home/yushi/code/nawah/venv/lib/python3.13/site-packages;/home/yushi/code/nawah/venv/lib/python3.13/site-packages
+_Python_INTERPRETER_SIGNATURE:INTERNAL=4ce39ce568cfcbaf93b8fbb377ce6f7c
 //Path to a library.
 _Python_LIBRARY_RELEASE:INTERNAL=/usr/lib/libpython3.13.so
 //NumPy reason failure

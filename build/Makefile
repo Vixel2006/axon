@@ -117,24 +117,24 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named neura
+# Target rules for targets named Nawah
 
 # Build rule for target.
-neura: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 neura
-.PHONY : neura
+Nawah: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 Nawah
+.PHONY : Nawah
 
 # fast build rule for target.
-neura/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/build
-.PHONY : neura/fast
+Nawah/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/build
+.PHONY : Nawah/fast
 
 bindings/bindings.o: bindings/bindings.cpp.o
 .PHONY : bindings/bindings.o
 
 # target to build an object file
 bindings/bindings.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/bindings/bindings.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/bindings/bindings.cpp.o
 .PHONY : bindings/bindings.cpp.o
 
 bindings/bindings.i: bindings/bindings.cpp.i
@@ -142,7 +142,7 @@ bindings/bindings.i: bindings/bindings.cpp.i
 
 # target to preprocess a source file
 bindings/bindings.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/bindings/bindings.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/bindings/bindings.cpp.i
 .PHONY : bindings/bindings.cpp.i
 
 bindings/bindings.s: bindings/bindings.cpp.s
@@ -150,7 +150,7 @@ bindings/bindings.s: bindings/bindings.cpp.s
 
 # target to generate assembly for a file
 bindings/bindings.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/bindings/bindings.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/bindings/bindings.cpp.s
 .PHONY : bindings/bindings.cpp.s
 
 src/tensor.o: src/tensor.cpp.o
@@ -158,7 +158,7 @@ src/tensor.o: src/tensor.cpp.o
 
 # target to build an object file
 src/tensor.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/src/tensor.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/src/tensor.cpp.o
 .PHONY : src/tensor.cpp.o
 
 src/tensor.i: src/tensor.cpp.i
@@ -166,7 +166,7 @@ src/tensor.i: src/tensor.cpp.i
 
 # target to preprocess a source file
 src/tensor.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/src/tensor.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/src/tensor.cpp.i
 .PHONY : src/tensor.cpp.i
 
 src/tensor.s: src/tensor.cpp.s
@@ -174,7 +174,7 @@ src/tensor.s: src/tensor.cpp.s
 
 # target to generate assembly for a file
 src/tensor.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/neura.dir/build.make CMakeFiles/neura.dir/src/tensor.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Nawah.dir/build.make CMakeFiles/Nawah.dir/src/tensor.cpp.s
 .PHONY : src/tensor.cpp.s
 
 # Help Target
@@ -185,7 +185,7 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... neura"
+	@echo "... Nawah"
 	@echo "... bindings/bindings.o"
 	@echo "... bindings/bindings.i"
 	@echo "... bindings/bindings.s"
