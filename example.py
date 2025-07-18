@@ -1,6 +1,7 @@
 import nawah
 
 t = nawah.Tensor([2, 3, 9], nawah.DType.float32, device="cpu", requires_grad=True)
+print(t)
 print(f"Shape before broadcast: {t.shape}")
 print(f"Strides before broadcast: {t.strides}")
 print(t[1, 1, 1])
@@ -17,4 +18,5 @@ t1 = nawah.Tensor(
     ],
     device="cuda:0",
 )
-print(t1)
+
+print(t1.data)

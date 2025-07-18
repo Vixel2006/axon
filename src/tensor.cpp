@@ -193,6 +193,30 @@ size_t Tensor::numel() const
     return std::accumulate(shape_.begin(), shape_.end(), 1LL, std::multiplies<__int64_t>());
 }
 
+void Tensor::fill(py::list &list, size_t depth = 1, int idx = 0) const {
+    if (depth > shape_.size()) { return ; }
+    if (depth == shape_.size()) {
+        for (int i = 0; i < shape_[depth - 1]; ++i) {
+            float *data = static_cast<float*>(data_ptr_.get());
+            list.append(data[i]); ++idx;
+        }
+        fill(list, depth+1, idx);
+    }
+    if (depth < shape_.size()) {
+        for (int i = 0; i < shape_[depth - 1]; ++i) {
+            py::list new_list;
+            list.append(new_list);
+            fill(new_list, depth+1, idx);
+        }
+    }
+}
+
+py::list Tensor::data() const {
+    py::list list;
+    fill(list);
+    return list;
+}
+
 Tensor Tensor::get_item(const std::vector<std::shared_ptr<IndexStrategy>> &strategies) const
 {
     std::vector<int64_t> new_shape;
