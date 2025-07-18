@@ -26,7 +26,7 @@ public:
     Tensor(Tensor &&other) noexcept = default;
     Tensor &operator=(Tensor &&other) noexcept = default;
 
-    std::shared_ptr<void> data() const { return data_ptr_; }
+    py::list data() const;
     const std::vector<__int64_t> &shape() const { return shape_; }
     const std::vector<__int64_t> &strides() const { return strides_; }
     DType dtype() const { return dtype_; }
@@ -35,6 +35,8 @@ public:
     std::shared_ptr<void> grad() const { return grad_; }
     size_t numel() const;
     bool is_contiguous() const;
+
+    void fill(py::list &output, size_t depth, int idx) const;
 
     Tensor get_item(const std::vector<std::shared_ptr<IndexStrategy>> &strategies) const;
 

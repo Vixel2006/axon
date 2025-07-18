@@ -47,6 +47,7 @@ PYBIND11_MODULE(nawah, m)
         .def_property_readonly("dtype", &Tensor::dtype)
         .def_property_readonly("device", &Tensor::device, py::return_value_policy::reference_internal)
         .def_property_readonly("requires_grad", &Tensor::requires_grad)
+        .def_property_readonly("data", &Tensor::data)
 
         .def("numel", &Tensor::numel)
         .def("is_contiguous", &Tensor::is_contiguous)
@@ -113,7 +114,9 @@ PYBIND11_MODULE(nawah, m)
         .def("__repr__", [](const Tensor &t)
              {
             std::stringstream ss;
-            ss << "Tensor(" << shapeToString(t.shape())
+            ss << "Tensor("
+               << "data=" << t.data()
+               << ", shape=" << shapeToString(t.shape())
                << ", dtype=" << dtypeToString(t.dtype())
                << ", device='" << deviceToString(t.device()) << "'"
                << ", requires_grad=" << (t.requires_grad() ? "True" : "False")
