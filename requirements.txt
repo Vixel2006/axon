@@ -1,4 +1,5 @@
-numpy
-setuptools
 pytest
-sklearn
+flake8
+black
+pybind11
+cpplint
