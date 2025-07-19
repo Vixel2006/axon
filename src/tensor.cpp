@@ -71,109 +71,119 @@ Tensor::Tensor(const std::vector<__int64_t> &shape, const std::vector<__int64_t>
 void Tensor::get_shape(const py::list &data, std::vector<__int64_t> &shape, size_t depth = 0)
 {
     __int64_t len = data.size();
-    if (len == 0) {
-        shape.clear(); // Treat empty list as a scalar or zero-sized tensor
+    if (len == 0)
+    {
+        shape.clear();
         return;
     }
 
-    if (depth == shape.size()) {
+    if (depth == shape.size())
+    {
         shape.push_back(len);
-    } else if (shape[depth] != len) {
+    }
+    else if (shape[depth] != len)
+    {
         throw std::runtime_error("Inconsistent tensor dimensions");
     }
 
-    // Check if the elements are lists or numbers
-    if (py::isinstance<py::list>(data[0])) {
-        for (const auto& item : data) {
-            if (!py::isinstance<py::list>(item)) {
-                throw std::runtime_error("Mixed types in tensor list");
-            }
-            get_shape(item.cast<py::list>(), shape, depth + 1);
-        }
-    } else {
-        // Leaf level: validate elements are numbers
-        for (const auto& item : data) {
-            if (!py::isinstance<py::float_>(item) && !py::isinstance<py::int_>(item)) {
-                throw std::runtime_error("Tensor elements must be numbers");
-            }
-        }
-    }
-}
-
-template<typename T>
-void Tensor::flatten_list(const py::list &data, T *ptr)
-{
-    if (data.empty())
-        return;
     if (py::isinstance<py::list>(data[0]))
     {
         for (const auto &item : data)
         {
-            flatten_list<T>(item.cast<py::list>(), ptr);
+            if (!py::isinstance<py::list>(item))
+            {
+                throw std::runtime_error("Mixed types in tensor list");
+            }
+            get_shape(item.cast<py::list>(), shape, depth + 1);
         }
     }
     else
     {
         for (const auto &item : data)
         {
-            *ptr++ = item.cast<T>();
+            if (!py::isinstance<py::float_>(item) && !py::isinstance<py::int_>(item))
+            {
+                throw std::runtime_error("Tensor elements must be numbers");
+            }
         }
     }
 }
 
-Tensor::Tensor(const py::list& data, DType dtype, const std::string& device_str, bool requires_grad)
-    : dtype_(dtype), device_(parse_device(device_str)), offset_(0), requires_grad_(requires_grad), grad_(nullptr) {
-    // Compute shape and total size
+Tensor::Tensor(const py::list &data, DType dtype, const std::string &device_str, bool requires_grad)
+    : dtype_(dtype), device_(parse_device(device_str)), offset_(0), requires_grad_(requires_grad), grad_(nullptr)
+{
+    // 1. Determine the tensor's shape and total number of elements from the nested list.
     get_shape(data, shape_);
     size_t total_size = numel();
 
-    // Get allocator based on device
-    std::shared_ptr<Allocator> allocator = AllocatorFactory::get(device_);
-
-    // Allocate data_ptr_ using the allocator
-    if (total_size > 0) {
-        if (dtype_ == DType::float32) {
-            void* raw_ptr = allocator->allocate(total_size * sizeof(float));
-            data_ptr_ = std::shared_ptr<void>(raw_ptr, [allocator](void* ptr) { allocator->deallocate(ptr); });
-        } else if (dtype_ == DType::int32) {
-            void* raw_ptr = allocator->allocate(total_size * sizeof(int));
-            data_ptr_ = std::shared_ptr<void>(raw_ptr, [allocator](void* ptr) { allocator->deallocate(ptr); });
-        } else {
-            throw std::runtime_error("Unsupported DType");
+    // Handle creation of an empty tensor (e.g., from an empty list).
+    if (total_size == 0)
+    {
+        if (!data.empty())
+        {
+            // This case happens for lists like [[]] or [[], []]
+            strides_ = compute_strides_(shape_);
         }
+        return; // Nothing more to do for an empty tensor.
     }
 
-    // Compute strides
+    // 2. Compute strides for a new, contiguous tensor.
     strides_ = compute_strides_(shape_);
 
-    // Flatten and copy data (only for CPU; CUDA requires special handling)
-    if (device_.type == DeviceType::CPU) {
-        if (dtype_ == DType::float32) {
-            float* ptr = static_cast<float*>(data_ptr_.get());
-            flatten_list<float>(data, ptr);
-            
-        } else if (dtype_ == DType::int32) {
-            int* ptr = static_cast<int*>(data_ptr_.get());
-            flatten_list<int>(data, ptr);
+    // 3. Get the appropriate memory allocator for the target device.
+    std::shared_ptr<Allocator> allocator = AllocatorFactory::get(device_);
+    size_t size_in_bytes = total_size * DtypeToSize(dtype_);
+
+    // 4. Allocate the final memory for the tensor's data on the target device.
+    void *raw_data_ptr = allocator->allocate(size_in_bytes);
+    if (!raw_data_ptr)
+    {
+        throw std::runtime_error("Memory allocation failed for tensor data.");
+    }
+    data_ptr_ = std::shared_ptr<void>(raw_data_ptr, [allocator](void *ptr)
+                                      { allocator->deallocate(ptr); });
+
+    // 5. Allocate memory for the gradient if required.
+    if (requires_grad_)
+    {
+        void *raw_grad_ptr = allocator->allocate(size_in_bytes);
+        if (!raw_grad_ptr)
+        {
+            throw std::runtime_error("Memory allocation failed for gradient.");
         }
-    } else if (device_.type == DeviceType::CUDA) {
-        if (dtype_ == DType::float32) {
-            std::vector<float> temp(total_size);
-            float* ptr = temp.data();
-            flatten_list<float>(data, ptr);
-            cudaError_t err = cudaMemcpy(data_ptr_.get(), temp.data(), total_size * sizeof(float), cudaMemcpyHostToDevice);
-            if (err != cudaSuccess) {
+        grad_ = std::shared_ptr<void>(raw_grad_ptr, [allocator](void *ptr)
+                                      { allocator->deallocate(ptr); });
+    }
+
+    // 6. Populate the tensor with data from the Python list.
+    if (dtype_ == DType::float32)
+    {
+        // Step A: Create a temporary buffer on the HOST (CPU) memory.
+        std::vector<float> temp_host_buffer(total_size);
+
+        // Step B: Fill this host buffer by "flattening" the nested Python list.
+        // This requires the `flatten_list` helper function.
+        this->flatten_list(data, temp_host_buffer.data());
+
+        // Step C: Copy the data from the prepared host buffer to the final destination.
+        if (device_.type == DeviceType::CPU)
+        {
+            // Destination is CPU memory, so use memcpy.
+            std::memcpy(data_ptr_.get(), temp_host_buffer.data(), size_in_bytes);
+        }
+        else if (device_.type == DeviceType::CUDA)
+        {
+            // Destination is GPU memory, so use cudaMemcpy.
+            cudaError_t err = cudaMemcpy(data_ptr_.get(), temp_host_buffer.data(), size_in_bytes, cudaMemcpyHostToDevice);
+            if (err != cudaSuccess)
+            {
                 throw std::runtime_error("CUDA memcpy failed: " + std::string(cudaGetErrorString(err)));
             }
-        } else if (dtype_ == DType::int32) {
-            std::vector<int> temp(total_size);
-            int* ptr = temp.data();
-            flatten_list<int>(data, ptr);
-            cudaError_t err = cudaMemcpy(data_ptr_.get(), temp.data(), total_size * sizeof(int), cudaMemcpyHostToDevice);
-            if (err != cudaSuccess) {
-                throw std::runtime_error("CUDA memcpy failed: " + std::string(cudaGetErrorString(err)));
-            }
         }
+    }
+    else
+    {
+        throw std::runtime_error("Unsupported DType for Python list initialization.");
     }
 }
 
@@ -193,28 +203,168 @@ size_t Tensor::numel() const
     return std::accumulate(shape_.begin(), shape_.end(), 1LL, std::multiplies<__int64_t>());
 }
 
-void Tensor::fill(py::list &list, size_t depth = 1, int idx = 0) const {
-    if (depth > shape_.size()) { return ; }
-    if (depth == shape_.size()) {
-        for (int i = 0; i < shape_[depth - 1]; ++i) {
-            float *data = static_cast<float*>(data_ptr_.get());
-            list.append(data[i]); ++idx;
+void Tensor::fill_helper(py::list &output, size_t depth, std::vector<size_t> &indices) const
+{
+    // Use raw_ptr() which correctly accounts for the tensor's offset.
+    // All calculated indices will be relative to this pointer.
+    float *data = static_cast<float *>(this->raw_ptr());
+
+    // Base case: We are at the last dimension of the tensor.
+    // We should now fill the 'output' list with the actual numbers.
+    if (depth == shape_.size() - 1)
+    {
+        for (size_t i = 0; i < shape_[depth]; ++i)
+        {
+            indices[depth] = i;
+            size_t data_idx = 0;
+            // Calculate the final linear index using the full multidimensional index and strides.
+            for (size_t d = 0; d < shape_.size(); ++d)
+            {
+                data_idx += indices[d] * strides_[d];
+            }
+            output.append(data[data_idx]);
         }
-        fill(list, depth+1, idx);
     }
-    if (depth < shape_.size()) {
-        for (int i = 0; i < shape_[depth - 1]; ++i) {
-            py::list new_list;
-            list.append(new_list);
-            fill(new_list, depth+1, idx);
+    // Recursive case: We are not at the last dimension yet.
+    // We need to create a nested list for the next dimension.
+    else
+    {
+        for (size_t i = 0; i < shape_[depth]; ++i)
+        {
+            py::list nested_list;
+            indices[depth] = i;
+            fill_helper(nested_list, depth + 1, indices);
+            output.append(nested_list);
         }
     }
 }
 
-py::list Tensor::data() const {
-    py::list list;
-    fill(list);
-    return list;
+void Tensor::fill(py::list &output) const
+{
+    // Handle 0-dimensional (scalar) tensor as a special case.
+    if (shape_.empty())
+    {
+        if (numel() == 1)
+        {
+            float *data = static_cast<float *>(this->raw_ptr());
+            output.append(data[0]);
+        }
+        return;
+    }
+
+    // For other tensors, start the recursion.
+    std::vector<size_t> indices(shape_.size(), 0);
+    fill_helper(output, 0, indices);
+}
+
+void Tensor::fill_ptr_helper(const py::list &list, size_t depth, std::vector<size_t> &indices)
+{
+    // Use raw_ptr() which correctly accounts for the tensor's offset.
+    float *data = static_cast<float *>(this->raw_ptr());
+
+    // Base case: We are at the last dimension.
+    // The 'list' parameter should be a flat list of numbers.
+    if (depth == shape_.size() - 1)
+    {
+        if (static_cast<size_t>(shape_[depth]) != list.size())
+        {
+            throw std::runtime_error("List size does not match shape at depth " + std::to_string(depth));
+        }
+        for (size_t i = 0; i < shape_[depth]; ++i)
+        {
+            indices[depth] = i;
+            size_t data_idx = 0;
+            // Calculate the final linear index from the full multidimensional index and strides.
+            for (size_t d = 0; d < shape_.size(); ++d)
+            {
+                data_idx += indices[d] * strides_[d];
+            }
+            try
+            {
+                data[data_idx] = py::cast<float>(list[i]);
+            }
+            catch (const py::cast_error &e)
+            {
+                throw std::runtime_error("Element at index " + std::to_string(i) + " is not convertible to float at depth " + std::to_string(depth));
+            }
+        }
+    }
+    // Recursive case: Traverse the nested lists.
+    else
+    {
+        if (static_cast<size_t>(shape_[depth]) != list.size())
+        {
+            throw std::runtime_error("List size does not match shape at depth " + std::to_string(depth));
+        }
+        for (size_t i = 0; i < shape_[depth]; ++i)
+        {
+            if (!py::isinstance<py::list>(list[i]))
+            {
+                throw std::runtime_error("Expected nested list at index " + std::to_string(i) + " at depth " + std::to_string(depth));
+            }
+            indices[depth] = i;
+            fill_ptr_helper(py::cast<py::list>(list[i]), depth + 1, indices);
+        }
+    }
+}
+
+void Tensor::fill_ptr(const py::list &list)
+{
+    // Handle 0-dimensional (scalar) tensor as a special case.
+    if (shape_.empty())
+    {
+        if (list.size() != 1)
+        {
+            // For a scalar, we expect the input to be a list with a single element, e.g., [5.0]
+            throw std::runtime_error("Expected a list with one element for a 0D tensor, but got size " + std::to_string(list.size()));
+        }
+        try
+        {
+            float *data = static_cast<float *>(this->raw_ptr());
+            data[0] = py::cast<float>(list[0]);
+        }
+        catch (const py::cast_error &e)
+        {
+            throw std::runtime_error("Scalar element is not convertible to float");
+        }
+    }
+    // For other tensors, start the recursion.
+    else
+    {
+        std::vector<size_t> indices(shape_.size(), 0);
+        fill_ptr_helper(list, 0, indices);
+    }
+}
+
+template <typename T>
+void flatten_list_recursive(const py::list &list, T *&ptr)
+{
+    for (const auto &item : list)
+    {
+        if (py::isinstance<py::list>(item))
+        {
+            flatten_list_recursive(item.cast<py::list>(), ptr);
+        }
+        else
+        {
+            // Cast, write to the current pointer location, and then advance the pointer
+            *ptr = item.cast<T>();
+            ptr++;
+        }
+    }
+}
+
+template <typename T>
+void Tensor::flatten_list(const py::list &data, T *ptr)
+{
+    flatten_list_recursive(data, ptr);
+}
+
+py::list Tensor::data() const
+{
+    py::list output;
+    fill(output);
+    return output;
 }
 
 Tensor Tensor::get_item(const std::vector<std::shared_ptr<IndexStrategy>> &strategies) const
@@ -328,18 +478,24 @@ Tensor Tensor::squeeze(int dim)
 Tensor Tensor::unsqueeze(int dim)
 {
     const int ndim = shape_.size();
+
     if (dim < 0)
+    {
         dim = ndim + 1 + dim;
+    }
+
     if (dim < 0 || dim > ndim)
-        throw std::out_of_range("unsqueeze(): Dimension out of range.");
+    {
+        throw std::out_of_range("unsqueeze(): Dimension out of range. Got " + std::to_string(dim) +
+                                " but expected to be in range [-" + std::to_string(ndim + 1) + ", " +
+                                std::to_string(ndim) + "].");
+    }
 
     std::vector<int64_t> new_shape = shape_;
-    std::vector<int64_t> new_strides = strides_;
+
     new_shape.insert(new_shape.begin() + dim, 1);
-    if (dim == ndim)
-        new_strides.insert(new_strides.begin() + dim, 1);
-    else
-        new_strides.insert(new_strides.begin() + dim, strides_[dim]);
+
+    std::vector<int64_t> new_strides = compute_strides_(new_shape);
 
     return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_, requires_grad_, grad_);
 }
