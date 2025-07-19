@@ -25,11 +25,10 @@ COPY . .
 RUN python3 -m venv /nawah/venv \
     && . /nawah/venv/bin/activate \
     && pip install --upgrade pip \
-    && pip install pytest \
-    && if [ -f requirements.txt ]; then pip install -r requirements.txt; fi \
-    && pip install -e . --break-system-packages
-
 # Ensure virtual environment is used in CMD
 ENV PATH="/nawah/venv/bin:$PATH"
 
-CMD ["make"]
+RUN make init
+RUN make build
+
+CMD ["make", "test"]
