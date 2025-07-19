@@ -61,55 +61,86 @@ PYBIND11_MODULE(nawah, m)
         .def("flatten", &Tensor::flatten, py::arg("start") = 0, py::arg("end") = -1)
 
         .def("__getitem__", [](const Tensor &t, py::object obj)
-             {
-            std::vector<std::shared_ptr<IndexStrategy>> strategies;
-            const auto& shape = t.shape();
+            {
+                std::vector<std::shared_ptr<IndexStrategy>> strategies;
+                const auto& shape = t.shape();
 
-            if (py::isinstance<py::tuple>(obj)) {
-                auto tuple = obj.cast<py::tuple>();
-                if (tuple.size() > shape.size()) {
-                    throw py::index_error("too many indices for tensor: tensor is " +
-                                        std::to_string(shape.size()) + "-dimensional, but " +
-                                        std::to_string(tuple.size()) + " indices were given");
-                }
-
-                for (size_t i = 0; i < tuple.size(); ++i) {
-                    py::handle item = tuple[i];
-                    if (py::isinstance<py::int_>(item)) {
-                        strategies.push_back(std::make_shared<IntegerIndex>(item.cast<int64_t>()));
-                    } else if (py::isinstance<py::slice>(item)) {
-                        py::slice s = item.cast<py::slice>();
-                        int64_t start, stop, step, length;
-                        if (!s.compute(shape[i], &start, &stop, &step, &length)) {
-                            throw py::error_already_set();
-                        }
-                        strategies.push_back(std::make_shared<SliceIndex>(start, step, length));
-                    } else {
-                        throw py::type_error("Unsupported index type in tuple");
+                // Helper lambda to correctly parse a Python slice and create a SliceIndex strategy.
+                // This is the core of the improved logic.
+                auto process_slice = [&](py::slice s, size_t dim_index) {
+                    if (dim_index >= shape.size()) {
+                        throw py::index_error("too many indices for tensor");
                     }
-                }
-            }
-            else if (py::isinstance<py::int_>(obj)) {
-                if (shape.empty()) {
-                    throw py::index_error("invalid index of a 0-dim tensor.");
-                }
-                strategies.push_back(std::make_shared<IntegerIndex>(obj.cast<int64_t>()));
-            }
-            else if (py::isinstance<py::slice>(obj)) {
-                if (shape.empty()) {
-                    throw py::index_error("Cannot slice a 0-dimensional tensor");
-                }
-                py::slice s = obj.cast<py::slice>();
-                int64_t start, stop, step, length;
-                if (!s.compute(shape[0], &start, &stop, &step, &length)) {
-                    throw py::error_already_set();
-                }
-                strategies.push_back(std::make_shared<SliceIndex>(start, step, length));
-            } else {
-                throw py::type_error("Unsupported index type");
-            }
+                    const __int64_t dim_size = shape[dim_index];
 
-            return t.get_item(strategies); })
+                    // Manually extract start, stop, and step, handling the case where they are `None`.
+                    // This passes the raw, un-normalized values to our powerful C++ `SliceIndex`.
+                    __int64_t start, stop, step;
+
+                    // Step 1: Get step, defaulting to 1 if None.
+                    step = s.attr("step").is_none() ? 1 : s.attr("step").cast<__int64_t>();
+
+                    if (step == 0) {
+                        throw py::value_error("slice step cannot be zero");
+                    }
+
+                    // Step 2: Get start, providing the correct default if None (depends on step direction).
+                    if (s.attr("start").is_none()) {
+                        start = (step > 0) ? 0 : dim_size - 1;
+                    } else {
+                        start = s.attr("start").cast<__int64_t>();
+                    }
+
+                    // Step 3: Get stop, providing the correct default if None (depends on step direction).
+                    if (s.attr("stop").is_none()) {
+                        // Use `dim_size` for forward slicing and `-1` for backward slicing.
+                        // Our C++ code is designed to understand these sentinels.
+                        stop = (step > 0) ? dim_size : -1; 
+                    } else {
+                        stop = s.attr("stop").cast<__int64_t>();
+                    }
+                    
+                    // Create the strategy with the raw, un-normalized values.
+                    strategies.push_back(std::make_shared<SliceIndex>(start, stop, step));
+                };
+
+                // --- Main Logic ---
+
+                if (py::isinstance<py::tuple>(obj)) {
+                    auto tuple = obj.cast<py::tuple>();
+                    if (tuple.size() > shape.size()) {
+                        throw py::index_error("too many indices for tensor: tensor is " +
+                                            std::to_string(shape.size()) + "-dimensional, but " +
+                                            std::to_string(tuple.size()) + " indices were given");
+                    }
+
+                    for (size_t i = 0; i < tuple.size(); ++i) {
+                        py::handle item = tuple[i];
+                        if (py::isinstance<py::int_>(item)) {
+                            strategies.push_back(std::make_shared<IntegerIndex>(item.cast<int64_t>()));
+                        } else if (py::isinstance<py::slice>(item)) {
+                            process_slice(item.cast<py::slice>(), i);
+                        } else {
+                            // Note: A production library would also handle `None` (for new axes) 
+                            // and `Ellipsis` (...) here. This implementation focuses on the core types.
+                            throw py::type_error("Unsupported index type in tuple");
+                        }
+                    }
+                } else if (py::isinstance<py::int_>(obj)) {
+                    if (shape.empty()) {
+                        throw py::index_error("invalid index of a 0-dim tensor.");
+                    }
+                    strategies.push_back(std::make_shared<IntegerIndex>(obj.cast<int64_t>()));
+                } else if (py::isinstance<py::slice>(obj)) {
+                    if (shape.empty()) {
+                        throw py::index_error("Cannot slice a 0-dimensional tensor");
+                    }
+                    process_slice(obj.cast<py::slice>(), 0);
+                } else {
+                    throw py::type_error("Unsupported index type");
+                }
+
+                return t.get_item(strategies); })
 
         .def("__repr__", [](const Tensor &t)
              {

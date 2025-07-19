@@ -195,13 +195,17 @@ void *Tensor::raw_ptr() const
 
 size_t Tensor::numel() const
 {
+    // A tensor with an empty shape is a scalar, which has 1 element.
     if (this->shape_.empty())
     {
-        return 0;
+        return 1;
     }
 
+    // For non-scalar tensors, multiply the dimensions.
+    // This correctly returns 0 if any dimension is 0.
     return std::accumulate(shape_.begin(), shape_.end(), 1LL, std::multiplies<__int64_t>());
 }
+
 
 void Tensor::fill_helper(py::list &output, size_t depth, std::vector<size_t> &indices) const
 {
@@ -373,13 +377,75 @@ Tensor Tensor::get_item(const std::vector<std::shared_ptr<IndexStrategy>> &strat
     std::vector<int64_t> new_strides;
     int64_t offset = offset_;
 
-    for (int i = 0; i < strategies.size(); ++i)
-    {
-        strategies[i]->apply(i, shape_, strides_, offset, new_shape, new_strides);
+    int ellipsis_pos = -1;
+    int num_new_axes = 0;
+    
+    // --- Pre-computation Step ---
+    // First, find the ellipsis and count new axes
+    for (int i = 0; i < strategies.size(); ++i) {
+        if (dynamic_cast<EllipsisIndex*>(strategies[i].get())) {
+            if (ellipsis_pos != -1) {
+                throw std::runtime_error("an index can only have one ellipsis ('...')");
+            }
+            ellipsis_pos = i;
+        } else if (dynamic_cast<NewAxisIndex*>(strategies[i].get())) {
+            num_new_axes++;
+        }
+    }
+
+    // Number of dimensions the Ellipsis needs to expand into
+    int num_ellipsis_dims = 0;
+    if (ellipsis_pos != -1) {
+        // The number of strategies that are NOT Ellipsis or NewAxis must match
+        // the number of dimensions they are applied to.
+        int non_special_strategies = strategies.size() - 1 - num_new_axes;
+        if (non_special_strategies > shape_.size()) {
+             throw std::out_of_range("Too many indices for tensor");
+        }
+        num_ellipsis_dims = shape_.size() - non_special_strategies;
+    } else {
+        // No ellipsis, so number of "real" indices must be <= number of dims
+        if (strategies.size() - num_new_axes > shape_.size()) {
+            throw std::out_of_range("Too many indices for tensor");
+        }
+    }
+
+
+    // --- Main Application Loop ---
+    size_t dim_idx = 0; // Tracks the current dimension of the *original* tensor
+    for (const auto& strategy : strategies) {
+        if (auto p = dynamic_cast<NewAxisIndex*>(strategy.get())) {
+            // NewAxis adds a dimension without consuming an original one.
+            p->apply(0, shape_, strides_, offset, new_shape, new_strides);
+        } else if (auto p = dynamic_cast<EllipsisIndex*>(strategy.get())) {
+            // Ellipsis expands into N full slices.
+            FullSlice full_slice_strategy;
+            for (int k = 0; k < num_ellipsis_dims; ++k) {
+                if (dim_idx >= shape_.size()) break; // Should not happen with correct logic
+                full_slice_strategy.apply(dim_idx, shape_, strides_, offset, new_shape, new_strides);
+                dim_idx++;
+            }
+        } else {
+            // Regular index (Integer, Slice) that consumes a dimension.
+            if (dim_idx >= shape_.size()) {
+                throw std::out_of_range("Too many indices for tensor");
+            }
+            strategy->apply(dim_idx, shape_, strides_, offset, new_shape, new_strides);
+            dim_idx++;
+        }
+    }
+
+    // Handle any remaining, un-indexed dimensions (implicit trailing full slices)
+    while (dim_idx < shape_.size()) {
+        new_shape.push_back(shape_[dim_idx]);
+        new_strides.push_back(strides_[dim_idx]);
+        dim_idx++;
     }
 
     return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset, requires_grad_, grad_);
 }
+
+
 
 Tensor Tensor::view(std::vector<__int64_t> &new_shape) const
 {

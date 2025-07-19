@@ -14,7 +14,6 @@ t1 = nawah.Tensor(
     device="cpu",
 )
 
-print(t1)
+print(t1[0, 1:3, :])
 
 t2 = nawah.Tensor(data=[[1.0], [2.0], [3.0]])  # shape (3, 1)
-print(t2)
