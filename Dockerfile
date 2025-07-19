@@ -31,4 +31,4 @@ RUN python3 -m venv /nawah/venv \
 # Ensure virtual environment is used in CMD
 ENV PATH="/nawah/venv/bin:$PATH"
 
-CMD ["make", "test"]
+CMD ["make"]
