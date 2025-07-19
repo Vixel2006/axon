@@ -1,5 +1,0 @@
-/home/yushi/code/nawah/build/CMakeFiles/Nawah.dir
-/home/yushi/code/nawah/build/CMakeFiles/edit_cache.dir
-/home/yushi/code/nawah/build/CMakeFiles/rebuild_cache.dir
-/home/yushi/code/nawah/build/vendor/pybind11/CMakeFiles/edit_cache.dir
-/home/yushi/code/nawah/build/vendor/pybind11/CMakeFiles/rebuild_cache.dir
