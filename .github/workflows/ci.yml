@@ -31,7 +31,7 @@ jobs:
 
       - name: Run tests
         run: |
-          docker run --gpus all ${{ secrets.DOCKER_USERNAME }} nawah:latest make test
+          docker run ${{ secrets.DOCKER_USERNAME }} nawah:latest make test
 
       - name: Run linting
         run: |

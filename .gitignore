@@ -35,6 +35,7 @@ ENV/
 .idea/
 *.swp
 *.swo
+.pytest_cache
 
 # --- Jupyter/IPython ---
 .ipynb_checkpoints/
