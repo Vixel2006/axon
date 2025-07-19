@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.2.2-devel-ubuntu20.04
+FROM nvidia/cuda:11.2.2-devel-ubuntu22.04
 
 # Use correct ENV syntax
 ENV DEBIAN_FRONTEND=noninteractive
