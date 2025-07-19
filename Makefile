@@ -1,4 +1,4 @@
-PYTHON = python3.13
+PYTHON = python3
 VENV = venv
 PIP = $(VENV)/bin/pip
 CUDA = /opt/cuda/bin/nvcc
