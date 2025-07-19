@@ -21,13 +21,6 @@ WORKDIR /nawah
 # Copy project files
 COPY . .
 
-# Create and activate virtual environment
-RUN python3 -m venv /nawah/venv \
-    && . /nawah/venv/bin/activate \
-    && pip install --upgrade pip \
-# Ensure virtual environment is used in CMD
-ENV PATH="/nawah/venv/bin:$PATH"
-
 RUN make init
 RUN make build
 
