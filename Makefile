@@ -19,6 +19,7 @@ all: prepare init build test lint style
 
 prepare:
 	rm -rf build
+	rm -rf build dist nawah.egg-info
 
 init:
 	$(PYTHON) -m venv $(VENV)
@@ -31,7 +32,7 @@ $(BUILD_DIR)/$(MODULE):
 	mkdir -p $(BUILD_DIR)
 	$(CMAKE) -S . -B $(BUILD_DIR) $(CMAKE_FLAGS) && cd $(BUILD_DIR) && $(MAKE)
 	cd ..
-	pip install -e . --break-system-packages
+	pip install -e .  -v
 
 test:
 	$(PYTEST) $(TEST_DIR) -v

@@ -157,4 +157,6 @@ PYBIND11_MODULE(nawah, m)
         .def("__add__", &Tensor::add)
         .def("__sub__", &Tensor::sub)
         .def("__mul__", &Tensor::mul);
+    
+    m.def("cuda_synchronize", &cuda_synchronize, "Synchronize CUDA device");
 }
