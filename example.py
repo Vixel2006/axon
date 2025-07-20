@@ -30,7 +30,6 @@ print(tensor1 * 5)
 
 t1 = nawah.Tensor([1000, 1000], device="cuda:0")
 t2 = nawah.Tensor([1000, 1000], device="cuda:0")
-t3 = t1 + t2
 
 
 def benchmark_addition(shape=(1000, 1000), runs=100):
@@ -54,7 +53,7 @@ def benchmark_addition(shape=(1000, 1000), runs=100):
     nawah.cuda_synchronize()
     start_gpu = time.perf_counter()
     for _ in range(runs):
-        _ = t_gpu1 + t_gpu2
+        _ = t_gpu1 - t_gpu2
     nawah.cuda_synchronize()
     end_gpu = time.perf_counter()
 
@@ -62,4 +61,34 @@ def benchmark_addition(shape=(1000, 1000), runs=100):
     print(f"CUDA avg time: {(end_gpu - start_gpu) / runs * 1000:.4f} ms")
 
 
-# benchmark_addition(shape=[1000, 1000])
+benchmark_addition(shape=[1000, 1000])
+
+
+def benchmark_mul(shape=(1000, 1000), runs=100):
+    t_cpu1 = nawah.Tensor(shape, device="cpu")
+
+    t_gpu1 = nawah.Tensor(shape, device="cuda:0")
+
+    # Warm-up (important for fair timing)
+    _ = t_cpu1 * 3.0
+    _ = t_gpu1 * 3.0
+
+    # CPU Benchmark
+    start_cpu = time.perf_counter()
+    for _ in range(runs):
+        _ = t_cpu1 * 3.0
+    end_cpu = time.perf_counter()
+
+    # CUDA Benchmark (sync first!)
+    nawah.cuda_synchronize()
+    start_gpu = time.perf_counter()
+    for _ in range(runs):
+        _ = t_gpu1 * 3.0
+    nawah.cuda_synchronize()
+    end_gpu = time.perf_counter()
+
+    print(f"CPU avg time: {(end_cpu - start_cpu) / runs * 1000:.4f} ms")
+    print(f"CUDA avg time: {(end_gpu - start_gpu) / runs * 1000:.4f} ms")
+
+
+benchmark_mul()

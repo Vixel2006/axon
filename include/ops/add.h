@@ -1,7 +1,6 @@
 #ifndef NAWAH_OPS_ADD_H
 #define NAWAH_OPS_ADD_H
 
-#include <immintrin.h>
 #include <stdexcept>
 #include <vector>
 

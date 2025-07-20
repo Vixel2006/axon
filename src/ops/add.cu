@@ -4,6 +4,7 @@
 #include "device.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
+#include "allocator/allocatorFactory.h"
 
 #define CUDA_CHECK(err) { \
     cudaError_t err_ = (err); \
@@ -58,9 +59,16 @@ Tensor add_gpu(const Tensor &a, const Tensor &b) {
     std::vector<__int64_t> c_shape = a.shape();
     std::vector<__int64_t> c_strides = compute_strides_(c_shape);
     bool c_requries_grad = a.requires_grad() || b.requires_grad();
-    std::shared_ptr<void> data(c_data, [](void* ptr) {
-        delete[] static_cast<float*>(ptr);
-    });
+
+    auto allocator = AllocatorFactory::get(c.device());
+    void* raw_ptr = allocator->allocate(num_elements);
+
+    if (raw_ptr == nullptr) {
+        throw std::runtime_error("Memory allocation failed for tensor on device cuda. The device might be out of memory.");
+    }
+    
+    auto deleter = [allocator](void* ptr) { allocator->deallocate(ptr); };
+    c.set_data_ptr(std::shared_ptr<void>(raw_ptr, deleter));
 
     return c;
 }
