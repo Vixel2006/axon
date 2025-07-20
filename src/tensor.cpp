@@ -36,21 +36,30 @@ Tensor::Tensor(const std::vector<__int64_t> &shape, DType dtype, const std::stri
       grad_(nullptr)
 {
     size_t num_elements = this->numel();
-    if (num_elements == 0)
+    if (num_elements == 0) {
+        data_ptr_ = nullptr;
         return;
+    }
 
     size_t size_in_bytes = num_elements * DtypeToSize(dtype_);
-
+    
     auto allocator = AllocatorFactory::get(device_);
-    auto deleter = [allocator](void *ptr)
-    { allocator->deallocate(ptr); };
+    void* raw_data_ptr = allocator->allocate(size_in_bytes);
 
-    void *raw_data_ptr = allocator->allocate(size_in_bytes);
+
+    if (raw_data_ptr == nullptr) {
+        throw std::runtime_error("Memory allocation failed for tensor on device " + device_str +
+                               ". The device might be out of memory.");
+    }
+    
+    auto deleter = [allocator](void* ptr) { allocator->deallocate(ptr); };
     data_ptr_ = std::shared_ptr<void>(raw_data_ptr, deleter);
 
-    if (requires_grad_)
-    {
-        void *raw_grad_ptr = allocator->allocate(size_in_bytes);
+    if (requires_grad_) {
+        void* raw_grad_ptr = allocator->allocate(size_in_bytes);
+        if (raw_grad_ptr == nullptr) {
+             throw std::runtime_error("Memory allocation failed for gradient on device " + device_str);
+        }
         grad_ = std::shared_ptr<void>(raw_grad_ptr, deleter);
     }
 }
@@ -786,7 +795,7 @@ Tensor Tensor::add(const Tensor& other) const {
     if (device_.type == DeviceType::CPU) {
         return add_cpu(t, other);
     } else {
-        throw std::runtime_error("Not implemented yet.");
+        return add_gpu(t, other);
     }
 }
 

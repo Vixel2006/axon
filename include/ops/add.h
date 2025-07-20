@@ -8,4 +8,5 @@
 class Tensor;
 
 Tensor add_cpu(const Tensor &a, const Tensor &b);
+Tensor add_gpu(const Tensor &a, const Tensor &b);
 #endif

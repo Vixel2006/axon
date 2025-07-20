@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <cuda_runtime.h>
 
 inline std::vector<__int64_t> compute_strides_(const std::vector<__int64_t> &shape)
 {
@@ -96,5 +97,13 @@ inline Device parse_device(const std::string &device_str)
 
     throw std::invalid_argument("Unsupported device string: '" + device_str + "'. Use 'cpu' or 'cuda:N'.");
 }
+
+inline void cuda_synchronize() {
+    cudaError_t err = cudaDeviceSynchronize();
+    if (err != cudaSuccess) {
+        throw std::runtime_error(cudaGetErrorString(err));
+    }
+}
+
 
 #endif
