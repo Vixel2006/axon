@@ -16,4 +16,13 @@ t1 = nawah.Tensor(
 
 print(t1[0, 1:3, :])
 
-t2 = nawah.Tensor(data=[[1.0], [2.0], [3.0]])  # shape (3, 1)
+tensor_2d = nawah.Tensor(data=[[1, 2, 3], [4, 5, 6]])
+tensor1 = nawah.Tensor(data=[[1, 23, 4], [1, 3, 4]])
+tensor2 = nawah.Tensor(data=[[1, 3, 4], [2, 3, 54]])
+print(tensor1.shape)
+print(tensor2.shape)
+tensor3 = tensor1 + tensor2
+print(tensor3)
+tensor4 = tensor1 - tensor2
+print(tensor4)
+print(tensor1 * 5)

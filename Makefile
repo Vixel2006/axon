@@ -15,7 +15,10 @@ CMAKE_FLAGS = -D CMAKE_CUDA_COMPILER=$(CUDA)
 SOURCES = $(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*.cu)
 MODULE = nawah.cpython-313-x86_64-linux-gnu.so
 
-all: init build test lint style
+all: prepare init build test lint style
+
+prepare:
+	rm -rf build
 
 init:
 	$(PYTHON) -m venv $(VENV)
