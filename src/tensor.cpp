@@ -804,7 +804,7 @@ Tensor Tensor::sub(const Tensor& other) const {
     if (device_.type == DeviceType::CPU) {
         return sub_cpu(t, other);
     } else {
-        throw std::runtime_error("Not implemented yet.");
+        return sub_gpu(t, other);
     }
 }
 
@@ -813,7 +813,7 @@ Tensor Tensor::mul(float b) const {
     if (device_.type == DeviceType::CPU) {
         return mul_cpu(t, b);
     } else {
-        throw std::runtime_error("Not implemented yet.");
+        return mul_gpu(t, b);
     }
 }
 
