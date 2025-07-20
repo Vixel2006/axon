@@ -6,6 +6,9 @@
 #include "helpers.h"
 #include <vector>
 #include <cuda_runtime.h>
+#include "ops/add.h"
+#include "ops/sub.h"
+#include "ops/mul.h"
 
 bool Tensor::is_contiguous() const
 {
@@ -777,4 +780,33 @@ Tensor Tensor::flatten(int start, int end) const
     return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_, requires_grad_, grad_);
 }
 
+Tensor Tensor::add(const Tensor& other) const {
+    // Here we use the add based on the backend used
+    const Tensor &t = *this;
+    if (device_.type == DeviceType::CPU) {
+        return add_cpu(t, other);
+    } else {
+        throw std::runtime_error("Not implemented yet.");
+    }
+}
+
+Tensor Tensor::sub(const Tensor& other) const {
+    const Tensor &t = *this;
+    if (device_.type == DeviceType::CPU) {
+        return sub_cpu(t, other);
+    } else {
+        throw std::runtime_error("Not implemented yet.");
+    }
+}
+
+Tensor Tensor::mul(float b) const {
+    const Tensor &t = *this;
+    if (device_.type == DeviceType::CPU) {
+        return mul_cpu(t, b);
+    } else {
+        throw std::runtime_error("Not implemented yet.");
+    }
+}
+
 Tensor::~Tensor() {}
+

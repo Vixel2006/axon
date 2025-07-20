@@ -19,15 +19,21 @@ add_subdirectory(vendor/pybind11)
 
 find_package(CUDAToolkit REQUIRED)
 
+
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
 
-pybind11_add_module(Nawah bindings/bindings.cpp ${SOURCES})
 
-target_include_directories(Nawah PRIVATE 
+
+pybind11_add_module(nawah bindings/bindings.cpp ${SOURCES})
+
+
+target_include_directories(nawah PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
-target_link_libraries(Nawah PRIVATE
+target_link_libraries(nawah PRIVATE
     pybind11::module
     CUDA::toolkit
 )
+
+target_compile_options(nawah PRIVATE -mavx2)

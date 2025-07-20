@@ -152,5 +152,9 @@ PYBIND11_MODULE(nawah, m)
                << ", device='" << deviceToString(t.device()) << "'"
                << ", requires_grad=" << (t.requires_grad() ? "True" : "False")
                << ")";
-            return ss.str(); });
+            return ss.str(); })
+
+        .def("__add__", &Tensor::add)
+        .def("__sub__", &Tensor::sub)
+        .def("__mul__", &Tensor::mul);
 }

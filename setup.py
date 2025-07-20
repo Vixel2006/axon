@@ -7,7 +7,13 @@ cuda_lib = "/opt/cuda/lib64"
 ext_modules = [
     Pybind11Extension(
         "nawah",
-        ["bindings/bindings.cpp", "src/tensor.cpp"],
+        [
+            "bindings/bindings.cpp",
+            "src/tensor.cpp",
+            "src/ops/add.cpp",
+            "src/ops/sub.cpp",
+            "src/ops/mul.cpp",
+        ],
         include_dirs=["include", cuda_include],
         library_dirs=[cuda_lib],
         libraries=["cudart"],

@@ -92,29 +92,14 @@ class TestTensor:
         expected = [[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3]]
         assert t_expanded.data == expected, f"Data mismatch: {t_expanded.data}"
 
-    """
     def test_getitem(self):
-        Test the __getitem__() method for indexing and slicing
         t = self.tensor_2d
-        assert t[0, 0] == 1, "Indexing failed at [0, 0]"
-        assert t[1, 2] == 6, "Indexing failed at [1, 2]"
+        assert t[0, 0].data[0] == 1, "Indexing failed at [0, 0]"
+        assert t[1, 2].data[0] == 6, "Indexing failed at [1, 2]"
         assert t[0, :].data == [1, 2, 3], "Slicing failed for row 0"
         assert t[:, 1].data == [2, 5], "Slicing failed for column 1"
         t_slice = t[0:2, 1:3]
         assert t_slice.shape == [2, 2], (
             f"Expected slice shape (2, 2), got {t_slice.shape}"
         )
-        assert t_slice.data == [[2, 3], [5, 6]], (
-            f"Slice data mismatch: {t_slice.data}"
-        )
-
-    def test_getitem_offset(self):
-        Test that __getitem__() adjusts offset correctly when slicing
-        t = self.tensor_2d
-        t_slice = t[1:, 1:]
-        assert t_slice.shape == [1, 2], f"Expected shape (1, 2), got {t_slice.shape}"
-        assert t_slice.data == [[5, 6]], f"Data mismatch: {t_slice.data}"
-        # Offset testing assumes it's exposed; adjust based on actual implementation
-        if hasattr(t_slice, "offset"):
-            assert t_slice.offset != t.offset, "Offset should change after slicing"
-    """
+        assert t_slice.data == [[2, 3], [5, 6]], f"Slice data mismatch: {t_slice.data}"

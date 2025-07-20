@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef TENSOR_H
+#define TENSOR_H
+
 #include <vector>
 #include <memory>
 #include "device.h"
@@ -31,6 +34,7 @@ public:
     const std::vector<__int64_t> &strides() const { return strides_; }
     DType dtype() const { return dtype_; }
     Device device() const { return device_; }
+    std::shared_ptr<void> data_ptr() const { return data_ptr_; }
     bool requires_grad() const { return requires_grad_; }
     std::shared_ptr<void> grad() const { return grad_; }
     size_t numel() const;
@@ -57,6 +61,9 @@ public:
     void flatten_list(const py::list &data, T *ptr);
     void get_shape(const py::list &data, std::vector<__int64_t> &shape, size_t depth);
 
+    Tensor add(const Tensor& other) const;
+    Tensor sub(const Tensor& other) const;
+    Tensor mul(float b) const;
 private:
     std::shared_ptr<void> data_ptr_;
     std::vector<__int64_t> shape_;
@@ -67,3 +74,5 @@ private:
     bool requires_grad_;
     std::shared_ptr<void> grad_;
 };
+
+#endif
