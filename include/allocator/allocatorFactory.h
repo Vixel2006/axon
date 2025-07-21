@@ -3,6 +3,7 @@
 #include "cpuAllocator.h"
 #include "cudaAllocator.h"
 #include "device.h"
+#include "allocator.h"
 
 struct AllocatorFactory
 {

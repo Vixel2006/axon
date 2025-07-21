@@ -92,3 +92,8 @@ def benchmark_mul(shape=(1000, 1000), runs=100):
 
 
 benchmark_mul()
+
+t1 = nawah.Tensor(data=[[1, 2, 3]], device="cuda:0")
+t2 = nawah.Tensor(data=[[1], [2], [3]], device="cuda:0")
+print(t1.shape, t2.shape)
+print(t1 @ t2)
