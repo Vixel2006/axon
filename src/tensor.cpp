@@ -9,6 +9,7 @@
 #include "ops/add.h"
 #include "ops/sub.h"
 #include "ops/mul.h"
+#include "ops/matmul.h"
 
 bool Tensor::is_contiguous() const
 {
@@ -814,6 +815,15 @@ Tensor Tensor::mul(float b) const {
         return mul_cpu(t, b);
     } else {
         return mul_gpu(t, b);
+    }
+}
+
+Tensor Tensor::matmul(const Tensor& other) const {
+    const Tensor &t = *this;
+    if (device_.type == DeviceType::CPU) {
+        return matmul_cpu(t, other);
+    } else {
+        return matmul_gpu(t, other);
     }
 }
 

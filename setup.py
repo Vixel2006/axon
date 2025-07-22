@@ -116,9 +116,11 @@ ext_modules = [
             "src/ops/add.cpp",
             "src/ops/sub.cpp",
             "src/ops/mul.cpp",
+            "src/ops/matmul.cpp",
             "src/ops/add.cu",
             "src/ops/sub.cu",
-            "src/ops/mul.cu",  # CUDA source file
+            "src/ops/mul.cu",
+            "src/ops/matmul.cu",
         ],
         include_dirs=["include", os.path.join(CUDA_PATH, "include")],
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],

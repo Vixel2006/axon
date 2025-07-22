@@ -37,7 +37,8 @@ public:
     std::shared_ptr<void> data_ptr() const { return data_ptr_; }
     bool requires_grad() const { return requires_grad_; }
     std::shared_ptr<void> grad() const { return grad_; }
-    
+    __int64_t offset() const { return offset_; }
+    size_t ndim() const { return shape_.size(); }
     
     void set_data_ptr(std::shared_ptr<void> data) { data_ptr_ = data; }
 
@@ -68,6 +69,7 @@ public:
     Tensor add(const Tensor& other) const;
     Tensor sub(const Tensor& other) const;
     Tensor mul(float b) const;
+    Tensor matmul(const Tensor& other) const;
 private:
     std::shared_ptr<void> data_ptr_;
     std::vector<__int64_t> shape_;
