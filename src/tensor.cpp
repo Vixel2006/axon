@@ -13,7 +13,7 @@
 #include "ops/matmul.h"
 #include "ops/mul.h"
 #include "ops/sub.h"
-
+#include "ops/
 bool Tensor::is_contiguous() const {
   if (shape_.size() <= 1) return true;
   __int64_t expected_stride = 1;
@@ -763,5 +763,34 @@ Tensor Tensor::matmul(const Tensor &other) const {
     return matmul_gpu(t, other);
   }
 }
+
+template<typename T>
+Tensor<T> Tensor<T>::add(const Tensor<T>& other) const {
+    Union<T> a(*this);
+    Union<T> b(other);
+    return AddTrait<T>::apply(a, b);
+}
+
+template<typename T>
+Tensor<T> Tensor<T>::sub(const Tensor<T>& other) const {
+    Union<T> a(*this);
+    Union<T> b(other);
+    return SubTrait<T>::apply(a, b);
+}
+
+template<typename T>
+Tensor<T> Tensor<T>::mul(T scalar) const {
+    Union<T> a(*this);
+    Union<T> b(scalar);
+    return MulTrait<T>::apply(a, b);
+}
+
+template<typename T>
+Tensor<T> Tensor<T>::matmul(const Tensor<T>& other) const {
+    Union<T> a(*this);
+    Union<T> b(other);
+    return MatMulTrait<T>::apply(a, b);
+}
+
 
 Tensor::~Tensor() {}
