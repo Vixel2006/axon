@@ -9,7 +9,8 @@
 
 #include "allocator/allocatorFactory.h"
 #include "helpers.h"
-#include "ops/ops.h"
+#include "engine/ops/traits/ops_trait.h"
+#include "engine/ops.h"
 
 bool Tensor::is_contiguous() const
 {
@@ -325,22 +326,20 @@ void Tensor::fill_ptr(const py::list &list) {
   }
 }
 
-template <typename T>
-void flatten_list_recursive(const py::list &list, T *&ptr) {
+void flatten_list_recursive(const py::list &list, float *&ptr) {
   for (const auto &item : list) {
     if (py::isinstance<py::list>(item)) {
       flatten_list_recursive(item.cast<py::list>(), ptr);
     } else {
       // Cast, write to the current pointer location, and then advance the
       // pointer
-      *ptr = item.cast<T>();
+      *ptr = item.cast<float>();
       ptr++;
     }
   }
 }
 
-template <typename T>
-void Tensor::flatten_list(const py::list &data, T *ptr) {
+void Tensor::flatten_list(const py::list &data, float *ptr) {
   flatten_list_recursive(data, ptr);
 }
 
@@ -730,24 +729,19 @@ Tensor Tensor::flatten(int start, int end) const {
 }
 
 Tensor Tensor::add(const Tensor& other) const {
-  AddTrait add_trait;
-  return add_trait.apply(*this, other);
+  return OpTrait<AddImpl>::forward(*this, other);
 }
 
 Tensor Tensor::sub(const Tensor& other) const {
-  SubTrait sub_trait;
-  return sub_trait.apply(*this, other);
+  return OpTrait<SubImpl>::forward(*this, other);
 }
 
-/*
-Tensor Tensor::mul(float scalar) const {
-    return MulTrait::apply(*this, scalar);
+Tensor Tensor::mul(const Tensor& other) const {
+    return OpTrait<MulImpl>::forward(*this, other);
 }
-*/
 
 Tensor Tensor::matmul(const Tensor& other) const {
-  MatMulTrait matmul_trait; 
-  return matmul_trait.apply(*this, other);
+  return OpTrait<MatmulImpl>::forward(*this, other);
 }
 
 Tensor::~Tensor() {}

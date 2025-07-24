@@ -62,13 +62,12 @@ public:
     Tensor broadcast(const std::vector<__int64_t> &new_shape) const;
     Tensor flatten(int start, int end) const;
 
-    template <typename T>
-    void flatten_list(const py::list &data, T *ptr);
+    void flatten_list(const py::list &data, float *ptr);
     void get_shape(const py::list &data, std::vector<__int64_t> &shape, size_t depth);
 
     Tensor add(const Tensor& other) const;
     Tensor sub(const Tensor& other) const;
-    Tensor mul(float b) const;
+    Tensor mul(const Tensor& other) const;
     Tensor matmul(const Tensor& other) const;
 private:
     std::shared_ptr<void> data_ptr_;

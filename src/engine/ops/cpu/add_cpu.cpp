@@ -1,8 +1,8 @@
 #include "tensor.h"
-#include "ops/add.h"
+#include "engine/ops/impl/add.h"
 #include "helpers.h"
 
-Tensor sub_cpu(const Tensor &a, const Tensor &b) {
+Tensor add_cpu(const Tensor &a, const Tensor &b) {
     if (a.shape().size() != b.shape().size()) { throw std::runtime_error("the ndim of first tensor is not the same for the second one"); }
     
     for (size_t i = 0; i < a.shape().size(); ++i) {
@@ -15,7 +15,7 @@ Tensor sub_cpu(const Tensor &a, const Tensor &b) {
 
     #pragma omp simd
     for (int i = 0; i < a.numel(); ++i) {
-        c_data[i] = a_data[i] - b_data[i];
+        c_data[i] = a_data[i] + b_data[i];
     }
 
     std::vector<__int64_t> c_shape = a.shape();

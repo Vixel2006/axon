@@ -6,7 +6,7 @@
 
 class Tensor;
 
-Tensor mul_cpu(const Tensor &a, float b);
-Tensor mul_gpu(const Tensor &a, float b);
+Tensor mul_cpu(const Tensor &a, const Tensor& b);
+Tensor mul_gpu(const Tensor &a, const Tensor& b);
 
 #endif

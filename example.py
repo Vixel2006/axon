@@ -1,5 +1,3 @@
-import time
-
 import nawah
 
 t = nawah.Tensor(data=[[3.0, 4.0, 5.0], [3.0, 4.0, 5.0]], device="cpu")
@@ -25,9 +23,9 @@ tensor3 = tensor1 + tensor2
 print(tensor3)
 tensor4 = tensor1 - tensor2
 print(tensor4)
-print(tensor1 * 5)
+print(tensor1 * tensor2)
 
-
+"""
 t1 = nawah.Tensor([1000, 1000], device="cuda:0")
 t2 = nawah.Tensor([1000, 1000], device="cuda:0")
 
@@ -133,3 +131,4 @@ print(n @ m)
 n = nawah.Tensor(data=[[1, 2, 3]], device="cuda:0")
 m = nawah.Tensor(data=[[1], [2], [3]], device="cuda:0")
 print(n @ m)
+"""
