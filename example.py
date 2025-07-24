@@ -93,7 +93,43 @@ def benchmark_mul(shape=(1000, 1000), runs=100):
 
 benchmark_mul()
 
-t1 = nawah.Tensor(data=[[1, 2, 3]], device="cuda:0")
-t2 = nawah.Tensor(data=[[1], [2], [3]], device="cuda:0")
-print(t1.shape, t2.shape)
-print(t1 @ t2)
+
+def benchmark_matmul(shape=(1000, 1000), runs=100):
+    t_cpu1 = nawah.Tensor(shape, device="cpu")
+    t_cpu2 = nawah.Tensor(shape, device="cpu")
+
+    t_gpu1 = nawah.Tensor(shape, device="cuda:0")
+    t_gpu2 = nawah.Tensor(shape, device="cuda:0")
+
+    # Warm-up (important for fair timing)
+    _ = t_cpu1 @ t_cpu2
+    _ = t_gpu1 @ t_gpu2
+
+    # CPU Benchmark
+    start_cpu = time.perf_counter()
+    for _ in range(runs):
+        _ = t_cpu1 @ t_cpu2
+    end_cpu = time.perf_counter()
+
+    # CUDA Benchmark (sync first!)
+    nawah.cuda_synchronize()
+    start_gpu = time.perf_counter()
+    for _ in range(runs):
+        _ = t_gpu1 @ t_gpu2
+    nawah.cuda_synchronize()
+    end_gpu = time.perf_counter()
+
+    print(f"CPU avg time (matmul): {(end_cpu - start_cpu) / runs * 1000:.4f} ms")
+    print(f"CUDA avg time (matmul): {(end_gpu - start_gpu) / runs * 1000:.4f} ms")
+
+
+benchmark_matmul(shape=[100, 100])
+
+
+n = nawah.Tensor(data=[[1, 2, 3]], device="cpu")
+m = nawah.Tensor(data=[[1], [2], [3]], device="cpu")
+print(n @ m)
+
+n = nawah.Tensor(data=[[1, 2, 3]], device="cuda:0")
+m = nawah.Tensor(data=[[1], [2], [3]], device="cuda:0")
+print(n @ m)

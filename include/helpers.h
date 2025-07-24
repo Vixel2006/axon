@@ -9,39 +9,6 @@
 #include <cuda_runtime.h>
 #include "tensor.h"
 
-inline std::vector<int64_t> compute_broadcast_matmul_shape(const Tensor& a, const Tensor& b) {
-    // The matrix multiply dimensions
-    const int64_t M = a.shape()[a.shape().size() - 2];
-    const int64_t N = b.shape()[b.shape().size() - 1];
-
-    // The batch dimensions (all dimensions except the last two)
-    std::vector<int64_t> a_batch_shape(a.shape().begin(), a.shape().end() - 2);
-    std::vector<int64_t> b_batch_shape(b.shape().begin(), b.shape().end() - 2);
-    
-    // Use a standard broadcasting algorithm for the batch dimensions
-    const size_t max_len = std::max(a_batch_shape.size(), b_batch_shape.size());
-    std::vector<int64_t> c_batch_shape(max_len);
-
-    for (size_t i = 0; i < max_len; ++i) {
-        int64_t dim_a = (i < a_batch_shape.size()) ? a_batch_shape[a_batch_shape.size() - 1 - i] : 1;
-        int64_t dim_b = (i < b_batch_shape.size()) ? b_batch_shape[b_batch_shape.size() - 1 - i] : 1;
-
-        if (dim_a != dim_b && dim_a != 1 && dim_b != 1) {
-            throw std::runtime_error("Tensors are not broadcastable for matmul.");
-        }
-        c_batch_shape[max_len - 1 - i] = std::max(dim_a, dim_b);
-    }
-    
-    // Append the matrix dimensions to the broadcasted batch dimensions
-    c_batch_shape.push_back(M);
-    c_batch_shape.push_back(N);
-    
-    return c_batch_shape;
-}
-
-// --- Helper Function 2: Get Data Pointer for a Specific Batch ---
-// Given a flat batch index, calculate the offset to the start of that 2D matrix slice.
-
 
 inline std::vector<__int64_t> compute_strides_(const std::vector<__int64_t> &shape)
 {

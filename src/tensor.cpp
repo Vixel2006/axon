@@ -9,20 +9,22 @@
 
 #include "allocator/allocatorFactory.h"
 #include "helpers.h"
-#include "ops/add.h"
-#include "ops/matmul.h"
-#include "ops/mul.h"
-#include "ops/sub.h"
-#include "ops/
-bool Tensor::is_contiguous() const {
-  if (shape_.size() <= 1) return true;
-  __int64_t expected_stride = 1;
-  for (int i = shape_.size() - 1; i >= 0; --i) {
-    if (shape_[i] == 1) continue;
-    if (strides_[i] != expected_stride) return false;
-    expected_stride *= shape_[i];
-  }
-  return true;
+#include "ops/ops.h"
+
+bool Tensor::is_contiguous() const
+{
+    if (shape_.size() <= 1)
+        return true;
+    __int64_t expected_stride = 1;
+    for (int i = shape_.size() - 1; i >= 0; --i)
+    {
+        if (shape_[i] == 1)
+            continue;
+        if (strides_[i] != expected_stride)
+            return false;
+        expected_stride *= shape_[i];
+    }
+    return true;
 }
 
 Tensor::Tensor(const std::vector<__int64_t> &shape, DType dtype,
@@ -727,70 +729,25 @@ Tensor Tensor::flatten(int start, int end) const {
                 requires_grad_, grad_);
 }
 
-Tensor Tensor::add(const Tensor &other) const {
-  // Here we use the add based on the backend used
-  const Tensor &t = *this;
-  if (device_.type == DeviceType::CPU) {
-    return add_cpu(t, other);
-  } else {
-    return add_gpu(t, other);
-  }
+Tensor Tensor::add(const Tensor& other) const {
+  AddTrait add_trait;
+  return add_trait.apply(*this, other);
 }
 
-Tensor Tensor::sub(const Tensor &other) const {
-  const Tensor &t = *this;
-  if (device_.type == DeviceType::CPU) {
-    return sub_cpu(t, other);
-  } else {
-    return sub_gpu(t, other);
-  }
+Tensor Tensor::sub(const Tensor& other) const {
+  SubTrait sub_trait;
+  return sub_trait.apply(*this, other);
 }
 
-Tensor Tensor::mul(float b) const {
-  const Tensor &t = *this;
-  if (device_.type == DeviceType::CPU) {
-    return mul_cpu(t, b);
-  } else {
-    return mul_gpu(t, b);
-  }
+/*
+Tensor Tensor::mul(float scalar) const {
+    return MulTrait::apply(*this, scalar);
 }
+*/
 
-Tensor Tensor::matmul(const Tensor &other) const {
-  const Tensor &t = *this;
-  if (device_.type == DeviceType::CPU) {
-    return matmul_cpu(t, other);
-  } else {
-    return matmul_gpu(t, other);
-  }
+Tensor Tensor::matmul(const Tensor& other) const {
+  MatMulTrait matmul_trait; 
+  return matmul_trait.apply(*this, other);
 }
-
-template<typename T>
-Tensor<T> Tensor<T>::add(const Tensor<T>& other) const {
-    Union<T> a(*this);
-    Union<T> b(other);
-    return AddTrait<T>::apply(a, b);
-}
-
-template<typename T>
-Tensor<T> Tensor<T>::sub(const Tensor<T>& other) const {
-    Union<T> a(*this);
-    Union<T> b(other);
-    return SubTrait<T>::apply(a, b);
-}
-
-template<typename T>
-Tensor<T> Tensor<T>::mul(T scalar) const {
-    Union<T> a(*this);
-    Union<T> b(scalar);
-    return MulTrait<T>::apply(a, b);
-}
-
-template<typename T>
-Tensor<T> Tensor<T>::matmul(const Tensor<T>& other) const {
-    Union<T> a(*this);
-    Union<T> b(other);
-    return MatMulTrait<T>::apply(a, b);
-}
-
 
 Tensor::~Tensor() {}

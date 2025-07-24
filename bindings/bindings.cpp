@@ -168,10 +168,10 @@ PYBIND11_MODULE(nawah, m) {
              return ss.str();
            })
 
-      .def("__add__", &Tensor::add)
-      .def("__sub__", &Tensor::sub)
-      .def("__mul__", &Tensor::mul)
-      .def("__matmul__", &Tensor::matmul);
-
-  m.def("cuda_synchronize", &cuda_synchronize, "Synchronize CUDA device");
+        .def("__add__", &Tensor::add)
+        .def("__sub__", &Tensor::sub)
+        .def("__mul__", &Tensor::mul)
+        .def("__matmul__", &Tensor::matmul);
+    
+    m.def("cuda_synchronize", &cuda_synchronize, "Synchronize CUDA device");
 }

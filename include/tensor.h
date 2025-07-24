@@ -37,8 +37,8 @@ public:
     std::shared_ptr<void> data_ptr() const { return data_ptr_; }
     bool requires_grad() const { return requires_grad_; }
     std::shared_ptr<void> grad() const { return grad_; }
+    __int64_t offset() const { return offset_; }
     size_t ndim() const { return shape_.size(); }
-    
     
     void set_data_ptr(std::shared_ptr<void> data) { data_ptr_ = data; }
 
