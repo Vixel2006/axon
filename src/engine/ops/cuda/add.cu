@@ -5,7 +5,7 @@
 #include "allocator/allocatorFactory.h"
 #include "device.h"
 #include "helpers.h"
-#include "ops/add.h"
+#include "engine/ops/impl/add.h"
 #include "tensor.h"
 
 #define CUDA_CHECK(err)                                                \

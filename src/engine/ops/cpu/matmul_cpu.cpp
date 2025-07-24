@@ -1,50 +1,13 @@
-#include "ops/matmul.h"
-
+#include "engine/ops/impl/matmul.h"
 #include "helpers.h"
+#include "utils.h"
 #include "tensor.h"
 
 #define BLOCK_SIZE_M 64
 #define BLOCK_SIZE_N 64
 #define BLOCK_SIZE_K 32
 
-// Given a flat batch index, calculate the offset to the start of that 2D matrix
-// slice.
-float* get_data_ptr_for_batch(const Tensor& tensor, int64_t batch_idx) {
-  const auto& shape = tensor.shape();
-  const auto& strides = tensor.strides();
-  const int dims = tensor.ndim();
 
-  // We only iterate over batch dimensions (all except the last two)
-  const int batch_dims = dims - 2;
-  if (batch_dims <= 0) {
-    // If there are no batch dims, the offset is always 0 relative to raw_ptr
-    return static_cast<float*>(tensor.raw_ptr());
-  }
-
-  int64_t offset = 0;
-  int64_t remaining_idx = batch_idx;
-
-  // This loop converts the flat `batch_idx` into a multi-dimensional index
-  // and calculates the corresponding offset using strides.
-  for (int i = 0; i < batch_dims; ++i) {
-    // Calculate how many elements are in the dimensions to the right of the
-    // current one
-    int64_t stride_for_coord_calc = 1;
-    for (int j = i + 1; j < batch_dims; ++j) {
-      stride_for_coord_calc *= shape[j];
-    }
-
-    // Calculate the coordinate for the current dimension 'i'
-    int64_t coord = remaining_idx / stride_for_coord_calc;
-    remaining_idx %= stride_for_coord_calc;
-
-    // Add the contribution of this dimension to the total offset
-    offset += coord * strides[i];
-  }
-
-  // Return the base pointer plus the calculated offset in elements
-  return static_cast<float*>(tensor.raw_ptr()) + offset;
-}
 
 void matmul_2d_kernel(const float* a, const float* b, float* c, int64_t M,
                       int64_t N, int64_t K, int64_t a_stride_m,
