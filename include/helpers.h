@@ -7,6 +7,8 @@
 #include <vector>
 #include <stdexcept>
 #include <cuda_runtime.h>
+#include "tensor.h"
+
 
 inline std::vector<__int64_t> compute_strides_(const std::vector<__int64_t> &shape)
 {

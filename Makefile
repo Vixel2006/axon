@@ -32,7 +32,7 @@ $(BUILD_DIR)/$(MODULE):
 	mkdir -p $(BUILD_DIR)
 	$(CMAKE) -S . -B $(BUILD_DIR) $(CMAKE_FLAGS) && cd $(BUILD_DIR) && $(MAKE)
 	cd ..
-	pip install -e .  -v
+	pip install -e .  --break-system-packages
 
 test:
 	$(PYTEST) $(TEST_DIR) -v

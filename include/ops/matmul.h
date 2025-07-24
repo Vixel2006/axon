@@ -3,7 +3,7 @@
 
 class Tensor;
 
-Tensor matmul_cpu(const Tensor& a, const Tensor& b);
-Tensor matmul_gpu(const Tensor& a, const Tensor& b);
+inline Tensor matmul_cpu(const Tensor& a, const Tensor& b);
+//inline Tensor matmul_gpu(const Tensor& a, const Tensor& b);
 
 #endif
