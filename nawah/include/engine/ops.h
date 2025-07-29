@@ -38,4 +38,11 @@ struct SumImpl {
     static Tensor backward_gpu(const Tensor& a);
 };
 
+struct MeanImpl {
+    static Tensor forward_cpu(const Tensor& a, int dim, bool keepdim);
+    static Tensor forward_gpu(const Tensor& a, int dim, bool keepdim);
+    static Tensor backward_cpu(const Tensor& a);
+    static Tensor backward_gpu(const Tensor& a);
+};
+
 #endif
