@@ -743,4 +743,8 @@ Tensor Tensor::sum(int dim, bool keepdim) const {
   return ReductionTrait<SumImpl>::forward(*this, dim, keepdim);
 }
 
+Tensor Tensor::mean(int dim, bool keepdim) const {
+  return ReductionTrait<MeanImpl>::forward(*this, dim, keepdim);
+}
+
 Tensor::~Tensor() {}

@@ -70,6 +70,8 @@ public:
     Tensor mul(const Tensor& other) const;
     Tensor matmul(const Tensor& other) const;
     Tensor sum(int dim = -1, bool keepdim = false) const;
+    Tensor mean(int dim = -1, bool keepdim = false) const;
+
 private:
     std::shared_ptr<void> data_ptr_;
     std::vector<__int64_t> shape_;
