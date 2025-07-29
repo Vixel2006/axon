@@ -211,6 +211,47 @@ PYBIND11_MODULE(nawah, m) {
       // Using `py::none()` is the standard way to set the default to None.
       py::arg("dim") = py::none(),
       py::arg("keepdim") = false
+  )
+
+
+  .def("mean",
+      // 1. The C++ Lambda that bridges Python and C++
+      [](const Tensor &self, py::object dim_arg, bool keepdim) {
+          // I've renamed the variable to `dim_arg` to make it clearer that
+          // it's a Python object argument, not the final C++ integer.
+
+          // Case A: The user passed dim=None
+          if (dim_arg.is_none()) {
+              // Your C++ function needs to handle "all axes". A common way is a special value.
+              // Here, we'll assume the default `dim=-1` in your C++ function means "all".
+              return self.mean(-1, keepdim);
+          }
+
+          // Case B: The user passed an integer
+          if (py::isinstance<py::int_>(dim_arg)) {
+              // Cast the py::object to a C++ int.
+              int dim_value = dim_arg.cast<int>();
+              // NOW, pass the correct C++ variable to your function.
+              return self.mean(dim_value, keepdim);
+          }
+
+          // (Optional but Recommended) Case C: Handle a list/tuple of integers
+          if (py::isinstance<py::list>(dim_arg) || py::isinstance<py::tuple>(dim_arg)) {
+              // This part requires your C++ `sum` to accept a `std::vector<int>`.
+              // For now, we can throw an error to guide the user.
+              throw py::type_error("sum(): multi-axis reduction is not yet supported. Please provide a single integer or None.");
+          }
+
+          // If the argument is none of the above, raise an error
+          throw py::type_error("sum(): 'dim' argument must be None or an integer.");
+      },
+      // 2. The Docstring
+      "Calculates the sum of tensor elements over a given dimension.",
+
+      // 3. The Python keyword arguments and their default values
+      // Using `py::none()` is the standard way to set the default to None.
+      py::arg("dim") = py::none(),
+      py::arg("keepdim") = false
   );
     m.def("cuda_synchronize", &cuda_synchronize, "Synchronize CUDA device");
 }

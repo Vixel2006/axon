@@ -139,3 +139,8 @@ print(n @ m)
 k = nawah.Tensor(data=[[[1,3], [1,3]], [[3,4], [4,5]]])
 
 print(k.sum(dim=-1, keepdim=False))
+
+
+k = nawah.Tensor(data=[[[1,3], [1,3]], [[3,4], [4,5]]])
+
+print(k.mean(dim=-1, keepdim=False))
