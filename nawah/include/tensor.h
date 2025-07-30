@@ -5,9 +5,11 @@
 
 #include <vector>
 #include <memory>
+#include <optional>
 #include "device.h"
 #include "dtype.h"
 #include "indexing.h"
+#include "autograd/tape.h"
 #include <pybind11/pybind11.h>
 
 namespace py = pybind11;
@@ -16,7 +18,7 @@ class Tensor
 {
 public:
     Tensor(const std::vector<__int64_t> &shape, DType dtype, const std::string &device_str = "cpu", bool requires_grad = false);
-    Tensor(const std::vector<__int64_t> &shape, const std::vector<__int64_t> &strides, DType dtype, Device device, std::shared_ptr<void> data_ptr, __int64_t offset, bool requires_grad, std::shared_ptr<void> grad);
+    Tensor(const std::vector<__int64_t> &shape, const std::vector<__int64_t> &strides, DType dtype, Device device, std::shared_ptr<void> data_ptr, __int64_t offset, bool requires_grad, std::shared_ptr<void> grad, std::optional<Tape> ctx);
     Tensor(const py::list &data, DType dtype = DType::float32, const std::string &device_str = "cpu", bool requires_grad = false);
 
     void *raw_ptr() const;
@@ -39,7 +41,18 @@ public:
     std::shared_ptr<void> grad() const { return grad_; }
     __int64_t offset() const { return offset_; }
     size_t ndim() const { return shape_.size(); }
-    
+    const std::optional<Tape>& ctx() const { return ctx_; }
+
+    void set_ctx(const std::vector<Tensor>& prev, char op) {
+        if (requires_grad_ && !ctx_.has_value()) {
+            ctx_ = Tape();
+        }
+        if (ctx_.has_value()) {
+            ctx_->prev = prev;
+            ctx_->op = op;
+        }
+    }
+
     void set_data_ptr(std::shared_ptr<void> data) { data_ptr_ = data; }
 
     size_t numel() const;
@@ -81,6 +94,7 @@ private:
     __int64_t offset_;
     bool requires_grad_;
     std::shared_ptr<void> grad_;
+    std::optional<Tape> ctx_;
 };
 
 #endif
