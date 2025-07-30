@@ -4,11 +4,11 @@
 
 Tensor add_cpu(const Tensor &a, const Tensor &b) {
     if (a.shape().size() != b.shape().size()) { throw std::runtime_error("the ndim of first tensor is not the same for the second one"); }
-    
+
     for (size_t i = 0; i < a.shape().size(); ++i) {
         if (a.shape()[i] != b.shape()[i]) { throw std::runtime_error("the tensor shapes are mismatched."); }
     }
-    
+
     float* a_data = static_cast<float*>(a.data_ptr().get());
     float* b_data = static_cast<float*>(b.data_ptr().get());
     float* c_data = new float[a.numel()];
@@ -24,6 +24,5 @@ Tensor add_cpu(const Tensor &a, const Tensor &b) {
     std::shared_ptr<void> data(c_data, [](void* ptr) {
         delete[] static_cast<float*>(ptr);
     });
-
-    return Tensor(c_shape, c_strides, a.dtype(), a.device(), data, 0, c_requries_grad, nullptr);
+    return Tensor(c_shape, c_strides, a.dtype(), a.device(), data, 0, c_requries_grad, nullptr, std::nullopt);
 }
