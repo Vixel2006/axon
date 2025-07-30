@@ -36,20 +36,16 @@ PYBIND11_MODULE(nawah, m) {
     .def_readwrite("op", &Tape::op);
 
   py::class_<Tensor>(m, "Tensor")
-      // UPDATED CONSTRUCTOR BINDING
-      // Aligned requires_grad default to 'false' to match the C++ header definition.
       .def(py::init<const std::vector<int64_t> &, DType, const std::string &,
                     bool>(),
            py::arg("shape"), py::arg("dtype") = DType::float32,
            py::arg("device") = "cpu", py::arg("requires_grad") = false)
 
-      // This constructor binding is correct and matches the C++ header.
       .def(py::init<py::list, DType, std::string, bool>(), py::arg("data"),
            py::arg("dtype") = DType::float32, py::arg("device") = "cpu",
            py::arg("requires_grad") = false,
            "Initialize Tensor from a Python list")
 
-      // --- The rest of the bindings remain the same ---
 
       .def_property_readonly("shape", &Tensor::shape,
                              py::return_value_policy::reference_internal)
