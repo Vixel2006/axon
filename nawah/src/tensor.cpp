@@ -31,7 +31,8 @@ Tensor::Tensor(const std::vector<__int64_t> &shape, DType dtype,
       device_(parse_device(device_str)),
       offset_(0),
       requires_grad_(requires_grad),
-      grad_(nullptr) {
+      grad_(nullptr),
+      ctx_(std::nullopt) {
   size_t num_elements = this->numel();
   if (num_elements == 0) {
     data_ptr_ = nullptr;
@@ -65,7 +66,7 @@ Tensor::Tensor(const std::vector<__int64_t> &shape, DType dtype,
 Tensor::Tensor(const std::vector<__int64_t> &shape,
                const std::vector<__int64_t> &strides, DType dtype,
                Device device, std::shared_ptr<void> data_ptr, __int64_t offset,
-               bool requires_grad, std::shared_ptr<void> grad)
+               bool requires_grad, std::shared_ptr<void> grad, std::optional<Tape> ctx)
     : shape_(shape),
       strides_(strides),
       dtype_(dtype),
@@ -73,7 +74,8 @@ Tensor::Tensor(const std::vector<__int64_t> &shape,
       data_ptr_(data_ptr),
       offset_(offset),
       requires_grad_(requires_grad),
-      grad_(grad) {
+      grad_(grad),
+      ctx_(ctx) {
   if (this->strides_.size() != this->shape_.size()) {
     throw std::runtime_error(
         "Shape and stride dimensions mismatch in Tensor constructor.");
@@ -117,29 +119,23 @@ Tensor::Tensor(const py::list &data, DType dtype, const std::string &device_str,
       device_(parse_device(device_str)),
       offset_(0),
       requires_grad_(requires_grad),
-      grad_(nullptr) {
-  // 1. Determine the tensor's shape and total number of elements from the
-  // nested list.
+      grad_(nullptr),
+      ctx_(std::nullopt) {
   get_shape(data, shape_);
   size_t total_size = numel();
 
-  // Handle creation of an empty tensor (e.g., from an empty list).
   if (total_size == 0) {
     if (!data.empty()) {
-      // This case happens for lists like [[]] or [[], []]
       strides_ = compute_strides_(shape_);
     }
-    return;  // Nothing more to do for an empty tensor.
+    return;
   }
 
-  // 2. Compute strides for a new, contiguous tensor.
   strides_ = compute_strides_(shape_);
 
-  // 3. Get the appropriate memory allocator for the target device.
   std::shared_ptr<Allocator> allocator = AllocatorFactory::get(device_);
   size_t size_in_bytes = total_size * DtypeToSize(dtype_);
 
-  // 4. Allocate the final memory for the tensor's data on the target device.
   void *raw_data_ptr = allocator->allocate(size_in_bytes);
   if (!raw_data_ptr) {
     throw std::runtime_error("Memory allocation failed for tensor data.");
@@ -147,7 +143,6 @@ Tensor::Tensor(const py::list &data, DType dtype, const std::string &device_str,
   data_ptr_ = std::shared_ptr<void>(
       raw_data_ptr, [allocator](void *ptr) { allocator->deallocate(ptr); });
 
-  // 5. Allocate memory for the gradient if required.
   if (requires_grad_) {
     void *raw_grad_ptr = allocator->allocate(size_in_bytes);
     if (!raw_grad_ptr) {
@@ -157,22 +152,14 @@ Tensor::Tensor(const py::list &data, DType dtype, const std::string &device_str,
         raw_grad_ptr, [allocator](void *ptr) { allocator->deallocate(ptr); });
   }
 
-  // 6. Populate the tensor with data from the Python list.
   if (dtype_ == DType::float32) {
-    // Step A: Create a temporary buffer on the HOST (CPU) memory.
     std::vector<float> temp_host_buffer(total_size);
 
-    // Step B: Fill this host buffer by "flattening" the nested Python list.
-    // This requires the `flatten_list` helper function.
     this->flatten_list(data, temp_host_buffer.data());
 
-    // Step C: Copy the data from the prepared host buffer to the final
-    // destination.
     if (device_.type == DeviceType::CPU) {
-      // Destination is CPU memory, so use memcpy.
       std::memcpy(data_ptr_.get(), temp_host_buffer.data(), size_in_bytes);
     } else if (device_.type == DeviceType::CUDA) {
-      // Destination is GPU memory, so use cudaMemcpy.
       cudaError_t err = cudaMemcpy(data_ptr_.get(), temp_host_buffer.data(),
                                    size_in_bytes, cudaMemcpyHostToDevice);
       if (err != cudaSuccess) {
@@ -192,39 +179,28 @@ void *Tensor::raw_ptr() const {
 }
 
 size_t Tensor::numel() const {
-  // A tensor with an empty shape is a scalar, which has 1 element.
   if (this->shape_.empty()) {
     return 1;
   }
 
-  // For non-scalar tensors, multiply the dimensions.
-  // This correctly returns 0 if any dimension is 0.
   return std::accumulate(shape_.begin(), shape_.end(), 1LL,
                          std::multiplies<__int64_t>());
 }
 
 void Tensor::fill_helper(py::list &output, size_t depth,
                          std::vector<size_t> &indices) const {
-  // Use raw_ptr() which correctly accounts for the tensor's offset.
-  // All calculated indices will be relative to this pointer.
   float *data = static_cast<float *>(this->raw_ptr());
 
-  // Base case: We are at the last dimension of the tensor.
-  // We should now fill the 'output' list with the actual numbers.
   if (depth == shape_.size() - 1) {
     for (size_t i = 0; i < shape_[depth]; ++i) {
       indices[depth] = i;
       size_t data_idx = 0;
-      // Calculate the final linear index using the full multidimensional index
-      // and strides.
       for (size_t d = 0; d < shape_.size(); ++d) {
         data_idx += indices[d] * strides_[d];
       }
       output.append(data[data_idx]);
     }
   }
-  // Recursive case: We are not at the last dimension yet.
-  // We need to create a nested list for the next dimension.
   else {
     for (size_t i = 0; i < shape_[depth]; ++i) {
       py::list nested_list;
@@ -236,7 +212,6 @@ void Tensor::fill_helper(py::list &output, size_t depth,
 }
 
 void Tensor::fill(py::list &output) const {
-  // Handle 0-dimensional (scalar) tensor as a special case.
   if (shape_.empty()) {
     if (numel() == 1) {
       float *data = static_cast<float *>(this->raw_ptr());
@@ -245,18 +220,14 @@ void Tensor::fill(py::list &output) const {
     return;
   }
 
-  // For other tensors, start the recursion.
   std::vector<size_t> indices(shape_.size(), 0);
   fill_helper(output, 0, indices);
 }
 
 void Tensor::fill_ptr_helper(const py::list &list, size_t depth,
                              std::vector<size_t> &indices) {
-  // Use raw_ptr() which correctly accounts for the tensor's offset.
   float *data = static_cast<float *>(this->raw_ptr());
 
-  // Base case: We are at the last dimension.
-  // The 'list' parameter should be a flat list of numbers.
   if (depth == shape_.size() - 1) {
     if (static_cast<size_t>(shape_[depth]) != list.size()) {
       throw std::runtime_error("List size does not match shape at depth " +
@@ -265,8 +236,6 @@ void Tensor::fill_ptr_helper(const py::list &list, size_t depth,
     for (size_t i = 0; i < shape_[depth]; ++i) {
       indices[depth] = i;
       size_t data_idx = 0;
-      // Calculate the final linear index from the full multidimensional index
-      // and strides.
       for (size_t d = 0; d < shape_.size(); ++d) {
         data_idx += indices[d] * strides_[d];
       }
@@ -279,7 +248,6 @@ void Tensor::fill_ptr_helper(const py::list &list, size_t depth,
       }
     }
   }
-  // Recursive case: Traverse the nested lists.
   else {
     if (static_cast<size_t>(shape_[depth]) != list.size()) {
       throw std::runtime_error("List size does not match shape at depth " +
@@ -298,11 +266,8 @@ void Tensor::fill_ptr_helper(const py::list &list, size_t depth,
 }
 
 void Tensor::fill_ptr(const py::list &list) {
-  // Handle 0-dimensional (scalar) tensor as a special case.
   if (shape_.empty()) {
     if (list.size() != 1) {
-      // For a scalar, we expect the input to be a list with a single element,
-      // e.g., [5.0]
       throw std::runtime_error(
           "Expected a list with one element for a 0D tensor, but got size " +
           std::to_string(list.size()));
@@ -314,7 +279,6 @@ void Tensor::fill_ptr(const py::list &list) {
       throw std::runtime_error("Scalar element is not convertible to float");
     }
   }
-  // For other tensors, start the recursion.
   else {
     std::vector<size_t> indices(shape_.size(), 0);
     fill_ptr_helper(list, 0, indices);
@@ -326,8 +290,6 @@ void flatten_list_recursive(const py::list &list, float *&ptr) {
     if (py::isinstance<py::list>(item)) {
       flatten_list_recursive(item.cast<py::list>(), ptr);
     } else {
-      // Cast, write to the current pointer location, and then advance the
-      // pointer
       *ptr = item.cast<float>();
       ptr++;
     }
@@ -353,8 +315,6 @@ Tensor Tensor::get_item(
   int ellipsis_pos = -1;
   int num_new_axes = 0;
 
-  // --- Pre-computation Step ---
-  // First, find the ellipsis and count new axes
   for (int i = 0; i < strategies.size(); ++i) {
     if (dynamic_cast<EllipsisIndex *>(strategies[i].get())) {
       if (ellipsis_pos != -1) {
@@ -366,41 +326,33 @@ Tensor Tensor::get_item(
     }
   }
 
-  // Number of dimensions the Ellipsis needs to expand into
   int num_ellipsis_dims = 0;
   if (ellipsis_pos != -1) {
-    // The number of strategies that are NOT Ellipsis or NewAxis must match
-    // the number of dimensions they are applied to.
     int non_special_strategies = strategies.size() - 1 - num_new_axes;
     if (non_special_strategies > shape_.size()) {
       throw std::out_of_range("Too many indices for tensor");
     }
     num_ellipsis_dims = shape_.size() - non_special_strategies;
   } else {
-    // No ellipsis, so number of "real" indices must be <= number of dims
     if (strategies.size() - num_new_axes > shape_.size()) {
       throw std::out_of_range("Too many indices for tensor");
     }
   }
 
-  // --- Main Application Loop ---
-  size_t dim_idx = 0;  // Tracks the current dimension of the *original* tensor
+  size_t dim_idx = 0;
   for (const auto &strategy : strategies) {
     if (auto p = dynamic_cast<NewAxisIndex *>(strategy.get())) {
-      // NewAxis adds a dimension without consuming an original one.
       p->apply(0, shape_, strides_, offset, new_shape, new_strides);
     } else if (auto p = dynamic_cast<EllipsisIndex *>(strategy.get())) {
-      // Ellipsis expands into N full slices.
       FullSlice full_slice_strategy;
       for (int k = 0; k < num_ellipsis_dims; ++k) {
         if (dim_idx >= shape_.size())
-          break;  // Should not happen with correct logic
+          break;
         full_slice_strategy.apply(dim_idx, shape_, strides_, offset, new_shape,
                                   new_strides);
         dim_idx++;
       }
     } else {
-      // Regular index (Integer, Slice) that consumes a dimension.
       if (dim_idx >= shape_.size()) {
         throw std::out_of_range("Too many indices for tensor");
       }
@@ -410,7 +362,6 @@ Tensor Tensor::get_item(
     }
   }
 
-  // Handle any remaining, un-indexed dimensions (implicit trailing full slices)
   while (dim_idx < shape_.size()) {
     new_shape.push_back(shape_[dim_idx]);
     new_strides.push_back(strides_[dim_idx]);
@@ -418,7 +369,7 @@ Tensor Tensor::get_item(
   }
 
   return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset,
-                requires_grad_, grad_);
+                requires_grad_, grad_, ctx_);
 }
 
 Tensor Tensor::view(std::vector<__int64_t> &new_shape) const {
@@ -478,7 +429,7 @@ Tensor Tensor::view(std::vector<__int64_t> &new_shape) const {
 
   std::vector<__int64_t> new_strides = compute_strides_(new_shape);
   return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_,
-                requires_grad_, grad_);
+                requires_grad_, grad_, ctx_);
 }
 
 Tensor Tensor::squeeze(int dim) {
@@ -504,7 +455,7 @@ Tensor Tensor::squeeze(int dim) {
   new_strides.erase(new_strides.begin() + dim);
 
   return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_,
-                requires_grad_, grad_);
+                requires_grad_, grad_, ctx_);
 }
 
 Tensor Tensor::unsqueeze(int dim) {
@@ -528,14 +479,13 @@ Tensor Tensor::unsqueeze(int dim) {
   std::vector<int64_t> new_strides = compute_strides_(new_shape);
 
   return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_,
-                requires_grad_, grad_);
+                requires_grad_, grad_, ctx_);
 }
 
 Tensor Tensor::permute(const std::vector<int> &order) {
   if (order.size() != shape_.size()) {
     throw std::invalid_argument(
-        "permute(): `order` must have the same number of dimensions as tensor "
-        "shape. "
+        "permute(): `order` must have the same number of dimensions as tensor " "shape. "
         "Expected " +
         std::to_string(shape_.size()) + ", got " +
         std::to_string(order.size()) + ".");
@@ -565,7 +515,7 @@ Tensor Tensor::permute(const std::vector<int> &order) {
   }
 
   return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_,
-                requires_grad_, grad_);
+                requires_grad_, grad_, ctx_);
 }
 
 Tensor Tensor::transpose(int n, int m) const {
@@ -600,7 +550,7 @@ Tensor Tensor::transpose(int n, int m) const {
   std::swap(new_strides[n], new_strides[m]);
 
   return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_,
-                requires_grad_, grad_);
+                requires_grad_, grad_, ctx_);
 }
 
 Tensor Tensor::expand(const std::vector<__int64_t> &new_shape) const {
@@ -631,7 +581,7 @@ Tensor Tensor::expand(const std::vector<__int64_t> &new_shape) const {
   }
 
   return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_,
-                requires_grad_, grad_);
+                requires_grad_, grad_, ctx_);
 }
 
 Tensor Tensor::broadcast(const std::vector<__int64_t> &new_shape) const {
@@ -667,7 +617,7 @@ Tensor Tensor::broadcast(const std::vector<__int64_t> &new_shape) const {
   }
 
   return Tensor(new_shape, final_strides, dtype_, device_, data_ptr_, offset_,
-                requires_grad_, grad_);
+                requires_grad_, grad_, ctx_);
 }
 
 Tensor Tensor::flatten(int start, int end) const {
@@ -720,7 +670,7 @@ Tensor Tensor::flatten(int start, int end) const {
   std::vector<__int64_t> new_strides = compute_strides_(new_shape);
 
   return Tensor(new_shape, new_strides, dtype_, device_, data_ptr_, offset_,
-                requires_grad_, grad_);
+                requires_grad_, grad_, ctx_);
 }
 
 Tensor Tensor::add(const Tensor& other) const {

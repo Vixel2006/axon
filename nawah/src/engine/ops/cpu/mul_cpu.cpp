@@ -19,5 +19,5 @@ Tensor mul_cpu(const Tensor &a, const Tensor& b) {
         delete[] static_cast<float*>(ptr);
     });
 
-    return Tensor(c_shape, c_strides, a.dtype(), a.device(), data, 0, c_requries_grad, nullptr);
+    return Tensor(c_shape, c_strides, a.dtype(), a.device(), data, 0, c_requries_grad, nullptr, std::nullopt);
 }
