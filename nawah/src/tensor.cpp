@@ -6,6 +6,7 @@
 #include <numeric>
 #include <stdexcept>
 #include <vector>
+#include <algorithm>
 
 #include "allocator/allocatorFactory.h"
 #include "helpers.h"
@@ -40,28 +41,37 @@ Tensor::Tensor(const std::vector<__int64_t> &shape, DType dtype,
   }
 
   size_t size_in_bytes = num_elements * DtypeToSize(dtype_);
-
   auto allocator = AllocatorFactory::get(device_);
-  void *raw_data_ptr = allocator->allocate(size_in_bytes);
-
-  if (raw_data_ptr == nullptr) {
-    throw std::runtime_error("Memory allocation failed for tensor on device " +
-                             device_str +
-                             ". The device might be out of memory.");
-  }
-
   auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
+
+  void *raw_data_ptr = allocator->allocate(size_in_bytes);
+  if (raw_data_ptr == nullptr) {
+    throw std::runtime_error("Memory allocation failed for tensor on device " + device_str);
+  }
   data_ptr_ = std::shared_ptr<void>(raw_data_ptr, deleter);
 
   if (requires_grad_) {
     void *raw_grad_ptr = allocator->allocate(size_in_bytes);
     if (raw_grad_ptr == nullptr) {
-      throw std::runtime_error(
-          "Memory allocation failed for gradient on device " + device_str);
+      throw std::runtime_error("Memory allocation failed for gradient on device " + device_str);
     }
+
+    // Zero out the allocated gradient memory
+    if (device_.type == DeviceType::CPU) {
+      std::memset(raw_grad_ptr, 0, size_in_bytes);
+    } else if (device_.type == DeviceType::CUDA) {
+      cudaError_t err = cudaMemset(raw_grad_ptr, 0, size_in_bytes);
+      if (err != cudaSuccess) {
+        allocator->deallocate(raw_grad_ptr); 
+        throw std::runtime_error("Failed to zero out gradient tensor on CUDA device: " +
+                                 std::string(cudaGetErrorString(err)));
+      }
+    }
+
     grad_ = std::shared_ptr<void>(raw_grad_ptr, deleter);
   }
 }
+
 
 Tensor::Tensor(const std::vector<__int64_t> &shape,
                const std::vector<__int64_t> &strides, DType dtype,
@@ -79,6 +89,32 @@ Tensor::Tensor(const std::vector<__int64_t> &shape,
   if (this->strides_.size() != this->shape_.size()) {
     throw std::runtime_error(
         "Shape and stride dimensions mismatch in Tensor constructor.");
+  }
+
+  if (requires_grad_ && grad_ == nullptr) {
+    size_t num_elements = this->numel();
+    size_t size_in_bytes = num_elements * DtypeToSize(dtype_);
+    auto allocator = AllocatorFactory::get(device_);
+    auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
+
+    void *raw_grad_ptr = allocator->allocate(size_in_bytes);
+    if (raw_grad_ptr == nullptr) {
+      throw std::runtime_error("Memory allocation failed for gradient on device " + deviceToString(device_));
+    }
+
+    // Zero out the allocated gradient memory
+    if (device_.type == DeviceType::CPU) {
+      std::memset(raw_grad_ptr, 0, size_in_bytes);
+    } else if (device_.type == DeviceType::CUDA) {
+      cudaError_t err = cudaMemset(raw_grad_ptr, 0, size_in_bytes);
+      if (err != cudaSuccess) {
+        allocator->deallocate(raw_grad_ptr); 
+        throw std::runtime_error("Failed to zero out gradient tensor on CUDA device: " +
+                                std::string(cudaGetErrorString(err)));
+      }
+    }
+
+    grad_ = std::shared_ptr<void>(raw_grad_ptr, deleter);
   }
 }
 
@@ -133,28 +169,41 @@ Tensor::Tensor(const py::list &data, DType dtype, const std::string &device_str,
 
   strides_ = compute_strides_(shape_);
 
-  std::shared_ptr<Allocator> allocator = AllocatorFactory::get(device_);
+  auto allocator = AllocatorFactory::get(device_);
+  auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
+  
   size_t size_in_bytes = total_size * DtypeToSize(dtype_);
 
   void *raw_data_ptr = allocator->allocate(size_in_bytes);
   if (!raw_data_ptr) {
     throw std::runtime_error("Memory allocation failed for tensor data.");
   }
-  data_ptr_ = std::shared_ptr<void>(
-      raw_data_ptr, [allocator](void *ptr) { allocator->deallocate(ptr); });
+  data_ptr_ = std::shared_ptr<void>(raw_data_ptr, deleter);
 
   if (requires_grad_) {
     void *raw_grad_ptr = allocator->allocate(size_in_bytes);
     if (!raw_grad_ptr) {
       throw std::runtime_error("Memory allocation failed for gradient.");
     }
-    grad_ = std::shared_ptr<void>(
-        raw_grad_ptr, [allocator](void *ptr) { allocator->deallocate(ptr); });
+
+    if (device_.type == DeviceType::CPU) {
+      std::memset(raw_grad_ptr, 0, size_in_bytes);
+    } else if (device_.type == DeviceType::CUDA) {
+      cudaError_t err = cudaMemset(raw_grad_ptr, 0, size_in_bytes);
+      if (err != cudaSuccess) {
+        allocator->deallocate(raw_grad_ptr); 
+        throw std::runtime_error("Failed to zero out gradient tensor on CUDA device: " +
+                                 std::string(cudaGetErrorString(err)));
+      }
+    }
+
+    // Assign to grad_, reusing the deleter defined above.
+    grad_ = std::shared_ptr<void>(raw_grad_ptr, deleter);
   }
 
+  // --- Data filling logic (remains the same) ---
   if (dtype_ == DType::float32) {
     std::vector<float> temp_host_buffer(total_size);
-
     this->flatten_list(data, temp_host_buffer.data());
 
     if (device_.type == DeviceType::CPU) {
@@ -264,6 +313,60 @@ void Tensor::fill_ptr_helper(const py::list &list, size_t depth,
     }
   }
 }
+
+
+// This is the private recursive helper function for the gradient
+void Tensor::fill_grad_helper(py::list &output, size_t depth,
+                              std::vector<size_t> &indices) const {
+    // Read directly from the start of the gradient buffer.
+    // Note: We do not use an offset for the gradient.
+    float *grad_data = static_cast<float *>(grad_.get());
+
+    if (depth == shape_.size() - 1) {
+        for (size_t i = 0; i < shape_[depth]; ++i) {
+            indices[depth] = i;
+            size_t data_idx = 0;
+            for (size_t d = 0; d < shape_.size(); ++d) {
+                data_idx += indices[d] * strides_[d];
+            }
+            output.append(grad_data[data_idx]);
+        }
+    } else {
+        for (size_t i = 0; i < shape_[depth]; ++i) {
+            py::list nested_list;
+            indices[depth] = i;
+            fill_grad_helper(nested_list, depth + 1, indices);
+            output.append(nested_list);
+        }
+    }
+}
+
+// This is the private setup function for the gradient
+void Tensor::fill_grad(py::list &output) const {
+    // If there's no gradient, do nothing. The list will remain empty.
+    if (!grad_) {
+        return;
+    }
+
+    if (shape_.empty()) {
+        if (numel() == 1) {
+            float *grad_data = static_cast<float *>(grad_.get());
+            output.append(grad_data[0]);
+        }
+        return;
+    }
+
+    std::vector<size_t> indices(shape_.size(), 0);
+    fill_grad_helper(output, 0, indices);
+}
+
+// This is the PUBLIC method that will be called from Python
+py::list Tensor::grad() const {
+    py::list output;
+    fill_grad(output); // Call the new helper
+    return output;
+}
+
 
 void Tensor::fill_ptr(const py::list &list) {
   if (shape_.empty()) {
@@ -695,6 +798,56 @@ Tensor Tensor::sum(int dim, bool keepdim) const {
 
 Tensor Tensor::mean(int dim, bool keepdim) const {
   return ReductionTrait<MeanImpl>::forward(*this, dim, keepdim);
+}
+
+std::vector<Tensor> Tensor::build_topo() const {
+  if (!requires_grad_) { throw std::runtime_error("Can't do backward prop on when requires_grad=False"); }
+
+  std::vector<Tensor> topo;
+  std::vector<Tensor> visited;
+
+  std::function<void(const Tensor&)> _visit = [&](const Tensor& t) {
+        if (std::find(visited.begin(), visited.end(), t) == visited.end()) {
+            visited.push_back(t);
+            if (t.ctx_.has_value()) {
+                for (const auto& parent : t.ctx_->prev) {
+                    _visit(parent);
+                }
+                topo.push_back(t);
+            }
+        }
+    };
+
+    _visit(*this);
+
+
+  return topo;
+}
+
+void Tensor::backward() const {
+  if (!requires_grad_ || !ctx_.has_value()) { return ; }
+
+  std::vector<Tensor> topo_sorted_graph = build_topo();
+
+  while (topo_sorted_graph.size() != 0) {
+    Tensor t = topo_sorted_graph.back();
+    topo_sorted_graph.pop_back();
+
+    if (!t.ctx().has_value())
+      continue;
+    
+    char op = t.ctx_->op;
+    std::vector<Tensor> inputs = t.ctx_->prev;
+
+    // Compute gradients based on operation
+    switch (op) {
+        case '+':
+            break;
+        // Add cases for other operations
+        default:
+            throw std::runtime_error("Unsupported operation");
+    }
+  }
 }
 
 Tensor::~Tensor() {}
