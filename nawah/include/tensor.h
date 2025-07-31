@@ -30,15 +30,18 @@ public:
 
     Tensor(Tensor &&other) noexcept = default;
     Tensor &operator=(Tensor &&other) noexcept = default;
+    bool operator==(const Tensor& other) const {
+      return this == &other;
+    }
 
     py::list data() const;
+    py::list grad() const;
     const std::vector<__int64_t> &shape() const { return shape_; }
     const std::vector<__int64_t> &strides() const { return strides_; }
     DType dtype() const { return dtype_; }
     Device device() const { return device_; }
     std::shared_ptr<void> data_ptr() const { return data_ptr_; }
     bool requires_grad() const { return requires_grad_; }
-    std::shared_ptr<void> grad() const { return grad_; }
     __int64_t offset() const { return offset_; }
     size_t ndim() const { return shape_.size(); }
     const std::optional<Tape>& ctx() const { return ctx_; }
@@ -60,6 +63,9 @@ public:
 
     void fill_helper(py::list &output, size_t depth, std::vector<size_t> &indices) const;
     void fill(py::list &output) const;
+
+    void fill_grad_helper(py::list &output, size_t depth, std::vector<size_t> &indices) const;
+    void fill_grad(py::list &output) const;
 
     void fill_ptr_helper(const py::list &list, size_t depth, std::vector<size_t> &indices);
     void fill_ptr(const py::list &output);
@@ -84,6 +90,9 @@ public:
     Tensor matmul(const Tensor& other) const;
     Tensor sum(int dim = -1, bool keepdim = false) const;
     Tensor mean(int dim = -1, bool keepdim = false) const;
+
+    std::vector<Tensor> build_topo() const;
+    void backward() const;
 
 private:
     std::shared_ptr<void> data_ptr_;

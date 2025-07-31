@@ -56,6 +56,7 @@ PYBIND11_MODULE(nawah, m) {
                              py::return_value_policy::reference_internal)
       .def_property_readonly("requires_grad", &Tensor::requires_grad)
       .def_property_readonly("data", &Tensor::data)
+      .def_property_readonly("grad", &Tensor::grad)
       .def_property_readonly("ctx", &Tensor::ctx)
 
       .def("numel", &Tensor::numel)
@@ -188,7 +189,10 @@ PYBIND11_MODULE(nawah, m) {
           "Calculates the mean of tensor elements over a given dimension.",
           py::arg("dim") = py::none(),
           py::arg("keepdim") = false
-      );
+      )
+
+      .def("build_topo", &Tensor::build_topo)
+      .def("backward", &Tensor::backward);
 
     m.def("cuda_synchronize", &cuda_synchronize, "Synchronize CUDA device");
 }

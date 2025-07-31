@@ -19,11 +19,15 @@ print(t1[0, 1:3, :])
 
 tensor_2d = nawah.Tensor(data=[[1, 2, 3], [4, 5, 6]])
 tensor1 = nawah.Tensor(data=[[1, 23, 4], [1, 3, 4]], requires_grad=True)
+print(tensor1.grad)
+
 tensor2 = nawah.Tensor(data=[[1, 3, 4], [2, 3, 54]], requires_grad=True)
 tensor3 = tensor1 + tensor2
 print(tensor3.ctx)
 print(tensor3.ctx.op)
 print(tensor3.ctx.prev[1])
+print(tensor3.requires_grad)
+print(tensor3.grad)
 tensor4 = tensor1 - tensor2
 print(tensor1 * tensor2)
 
