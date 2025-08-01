@@ -29,7 +29,31 @@ print(tensor3.requires_grad)
 print(tensor3.grad)
 print(tensor1.grad)
 tensor4 = tensor1 - tensor2
-print(tensor1 * tensor2)
+
+
+a = nawah.Tensor([[10, 20, 30]], requires_grad=True)
+b = nawah.Tensor([[1, 2, 3]], requires_grad=True)
+
+c = a - b
+c.backward()
+
+print("a, b")
+print(c.grad)
+print(a.grad)
+print(b.grad)
+
+n1 = nawah.Tensor(data=[[1,3,4]], requires_grad=True)
+n2 = nawah.Tensor(data=[[3,4,5]], requires_grad=True)
+n3 = n1 * n2
+n4 = nawah.Tensor(data=[[4,5,6]], requires_grad=True)
+n5 = n3 + n4
+n5.backward()
+print(n5.grad)
+print(n4.grad)
+print(n3.grad)
+print("n1 and n2 grad")
+print(n1.grad)
+print(n2.grad)
 
 t1 = nawah.Tensor([1000, 1000], device="cuda:0")
 t2 = nawah.Tensor([1000, 1000], device="cuda:0")
