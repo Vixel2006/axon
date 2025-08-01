@@ -33,7 +33,7 @@ PYBIND11_MODULE(nawah, m) {
   py::class_<Tape>(m, "Tape")
     .def(py::init<>())
     .def_readwrite("prev", &Tape::prev)
-    .def_readwrite("op", &Tape::op);
+    .def_readwrite("backward_fn", &Tape::backward_fn);
 
   py::class_<Tensor>(m, "Tensor")
       .def(py::init<const std::vector<int64_t> &, DType, const std::string &,

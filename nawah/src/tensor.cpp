@@ -777,27 +777,27 @@ Tensor Tensor::flatten(int start, int end) const {
 }
 
 Tensor Tensor::add(const Tensor& other) const {
-  return OpTrait<AddImpl>::forward(*this, other);
+  return OpTrait<AddImpl>::operation(*this, other);
 }
 
 Tensor Tensor::sub(const Tensor& other) const {
-  return OpTrait<SubImpl>::forward(*this, other);
+  return OpTrait<SubImpl>::operation(*this, other);
 }
 
 Tensor Tensor::mul(const Tensor& other) const {
-    return OpTrait<MulImpl>::forward(*this, other);
+    return OpTrait<MulImpl>::operation(*this, other);
 }
 
 Tensor Tensor::matmul(const Tensor& other) const {
-  return OpTrait<MatmulImpl>::forward(*this, other);
+  return OpTrait<MatmulImpl>::operation(*this, other);
 }
 
 Tensor Tensor::sum(int dim, bool keepdim) const {
-  return ReductionTrait<SumImpl>::forward(*this, dim, keepdim);
+  return ReductionTrait<SumImpl>::operation(*this, dim, keepdim);
 }
 
 Tensor Tensor::mean(int dim, bool keepdim) const {
-  return ReductionTrait<MeanImpl>::forward(*this, dim, keepdim);
+  return ReductionTrait<MeanImpl>::operation(*this, dim, keepdim);
 }
 
 std::vector<Tensor> Tensor::build_topo() const {
@@ -836,17 +836,11 @@ void Tensor::backward() const {
     if (!t.ctx().has_value())
       continue;
     
-    char op = t.ctx_->op;
+    auto backward_fn = t.ctx_->backward_fn;
     std::vector<Tensor> inputs = t.ctx_->prev;
 
     // Compute gradients based on operation
-    switch (op) {
-        case '+':
-            break;
-        // Add cases for other operations
-        default:
-            throw std::runtime_error("Unsupported operation");
-    }
+    backward_fn(t, inputs);
   }
 }
 

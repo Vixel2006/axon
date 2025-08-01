@@ -24,16 +24,15 @@ print(tensor1.grad)
 tensor2 = nawah.Tensor(data=[[1, 3, 4], [2, 3, 54]], requires_grad=True)
 tensor3 = tensor1 + tensor2
 print(tensor3.ctx)
-print(tensor3.ctx.op)
 print(tensor3.ctx.prev[1])
 print(tensor3.requires_grad)
 print(tensor3.grad)
+print(tensor1.grad)
 tensor4 = tensor1 - tensor2
 print(tensor1 * tensor2)
 
 t1 = nawah.Tensor([1000, 1000], device="cuda:0")
 t2 = nawah.Tensor([1000, 1000], device="cuda:0")
-
 
 def benchmark_addition(shape=(1000, 1000), runs=100):
     t_cpu1 = nawah.Tensor(shape, device="cpu")
@@ -56,17 +55,16 @@ def benchmark_addition(shape=(1000, 1000), runs=100):
     nawah.cuda_synchronize()
     start_gpu = time.perf_counter()
     for _ in range(runs):
-        _ = t_gpu1 - t_gpu2
-    nawah.cuda_synchronize()
+        _ = t_gpu1 + t_gpu2
     end_gpu = time.perf_counter()
 
-    print(f"CPU avg time (sub): {(end_cpu - start_cpu) / runs * 1000:.4f} ms")
-    print(f"CUDA avg time (sub): {(end_gpu - start_gpu) / runs * 1000:.4f} ms")
+    print(f"CPU avg time (add): {(end_cpu - start_cpu) / runs * 1000:.4f} ms")
+    print(f"CUDA avg time (add): {(end_gpu - start_gpu) / runs * 1000:.4f} ms")
 
 
 benchmark_addition(shape=[1000, 1000])
 
-
+"""
 def benchmark_mul(shape=(1000, 1000), runs=100):
     t_cpu1 = nawah.Tensor(shape, device="cpu")
     t_cpu2 = nawah.Tensor(shape, device="cpu")
@@ -98,7 +96,7 @@ def benchmark_mul(shape=(1000, 1000), runs=100):
 
 benchmark_mul()
 
-"""
+
 def benchmark_matmul(shape=(1000, 1000), runs=100):
     t_cpu1 = nawah.Tensor(shape, device="cpu")
     t_cpu2 = nawah.Tensor(shape, device="cpu")
@@ -129,17 +127,16 @@ def benchmark_matmul(shape=(1000, 1000), runs=100):
 
 
 benchmark_matmul(shape=[100, 100])
-"""
 
 n = nawah.Tensor(data=[[1, 2, 3]], device="cpu")
 m = nawah.Tensor(data=[[1], [2], [3]], device="cpu")
 print(n @ m)
 
-"""
+
 n = nawah.Tensor(data=[[1, 2, 3]], device="cuda:0")
 m = nawah.Tensor(data=[[1], [2], [3]], device="cuda:0")
 print(n @ m)
-"""
+
 
 k = nawah.Tensor(data=[[[1,3], [1,3]], [[3,4], [4,5]]])
 
@@ -149,3 +146,4 @@ print(k.sum(dim=-1, keepdim=False))
 k = nawah.Tensor(data=[[[1,3], [1,3]], [[3,4], [4,5]]])
 
 print(k.mean(dim=-1, keepdim=False))
+"""

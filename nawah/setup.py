@@ -131,11 +131,13 @@ ext_modules = [
             "src/engine/ops/cuda/mul.cu",
             "src/engine/ops/cuda/matmul.cu",
             "src/engine/ops/cuda/sum.cu",
-            "src/engine/ops/cuda/mean.cu"
+            "src/engine/ops/cuda/mean.cu",
+            "src/autograd/cpu/badd.cpp",
+            "src/autograd/cuda/badd.cu"
         ],
         include_dirs=["include", os.path.join(CUDA_PATH, "include")],
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],
-        libraries=["cudart", "cublas"],
+        libraries=["cudart"],
         language="c++",
         extra_compile_args=["-std=c++17", "-g", "-O3"],
         extra_link_args=["-lcuda"],

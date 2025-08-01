@@ -6,29 +6,22 @@
 
 template<typename OpImpl>
 struct OpTrait {
-    static Tensor forward(const Tensor& a, const Tensor& b) {
+    static Tensor operation(const Tensor& a, const Tensor& b) {
         if (a.device().type == DeviceType::CPU) {
-            return OpImpl::forward_cpu(a, b);
+            return OpImpl::cpu(a, b);
         } else if (a.device().type == DeviceType::CUDA) {
-            return OpImpl::forward_gpu(a, b);
-        }
-    }
-    static Tensor backward(const Tensor& a, const Tensor& b) {
-        if (a.device().type == DeviceType::CPU) {
-            return OpImpl::backward_cpu(a, b);
-        } else if (a.device().type == DeviceType::CUDA) {
-            return OpImpl::backward_gpu(a, b);
+            return OpImpl::gpu(a, b);
         }
     }
 };
 
 template<typename OpImpl>
 struct ReductionTrait {
-  static Tensor forward(const Tensor& a, int dim, bool keepdim) {
+  static Tensor operation(const Tensor& a, int dim, bool keepdim) {
     if (a.device().type == DeviceType::CPU) {
-      return OpImpl::forward_cpu(a, dim, keepdim);
+      return OpImpl::cpu(a, dim, keepdim);
     } else if (a.device().type == DeviceType::CUDA) {
-      return OpImpl::forward_gpu(a, dim, keepdim);
+      return OpImpl::gpu(a, dim, keepdim);
     }
   }
 };
