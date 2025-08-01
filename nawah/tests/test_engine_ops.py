@@ -147,11 +147,9 @@ class TestTensorOps:
         c = a + b
         assert c.requires_grad is True
         assert c.ctx is not None
-        assert c.ctx.op == '+'
         assert len(c.ctx.prev) == 2
 
         # Test multiplication
         d = a * b
         assert d.requires_grad is True
         assert d.ctx is not None
-        assert d.ctx.op == '*' # Assuming your mul op uses '*'

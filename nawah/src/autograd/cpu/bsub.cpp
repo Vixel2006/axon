@@ -1,7 +1,7 @@
-#include "autograd/badd.h"
 #include "tensor.h"
+#include "autograd/bsub.h"
 
-void backward_add_cpu(const Tensor& out, std::vector<Tensor>& prev) {
+void backward_sub_cpu(const Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
     Tensor& b = prev[1];
@@ -10,11 +10,11 @@ void backward_add_cpu(const Tensor& out, std::vector<Tensor>& prev) {
     const float* out_grad_p = static_cast<float*>(t.grad_ptr().get());
     float* a_grad_p = static_cast<float*>(a.grad_ptr().get());
     float* b_grad_p = static_cast<float*>(b.grad_ptr().get());
-    
-    if (!out_grad_p || !a_grad_p || !b_grad_p) {
-        throw std::runtime_error("A gradient pointer is null in 'add' backward pass.");
-    }
 
+    if (!out_grad_p || !a_grad_p || !b_grad_p) {
+        throw std::runtime_error("A gradient pointer is null in 'sub' backward pass.");
+    }
+    
     if (a.requires_grad()) {
         for (size_t i = 0; i < num_elements; ++i) {
             a_grad_p[i] += out_grad_p[i];
@@ -23,9 +23,8 @@ void backward_add_cpu(const Tensor& out, std::vector<Tensor>& prev) {
 
     if (b.requires_grad()) {
         for (size_t i = 0; i < num_elements; ++i) {
-            b_grad_p[i] += out_grad_p[i];
+            b_grad_p[i] -= out_grad_p[i];
         }
     }
-
 }
 

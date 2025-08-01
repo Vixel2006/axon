@@ -133,7 +133,11 @@ ext_modules = [
             "src/engine/ops/cuda/sum.cu",
             "src/engine/ops/cuda/mean.cu",
             "src/autograd/cpu/badd.cpp",
-            "src/autograd/cuda/badd.cu"
+            "src/autograd/cuda/badd.cu",
+            "src/autograd/cpu/bsub.cpp",
+            "src/autograd/cuda/bsub.cu",
+            "src/autograd/cpu/bmul.cpp",
+            "src/autograd/cuda/bmul.cu",
         ],
         include_dirs=["include", os.path.join(CUDA_PATH, "include")],
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],
