@@ -34,6 +34,9 @@ public:
       return this == &other;
     }
 
+
+    void seed_gradient();
+
     py::list data() const;
     py::list grad() const;
     const std::vector<__int64_t> &shape() const { return shape_; }
@@ -41,6 +44,7 @@ public:
     DType dtype() const { return dtype_; }
     Device device() const { return device_; }
     std::shared_ptr<void> data_ptr() const { return data_ptr_; }
+    std::shared_ptr<void> grad_ptr() { return grad_; }
     bool requires_grad() const { return requires_grad_; }
     __int64_t offset() const { return offset_; }
     size_t ndim() const { return shape_.size(); }
@@ -92,7 +96,7 @@ public:
     Tensor mean(int dim = -1, bool keepdim = false) const;
 
     std::vector<Tensor> build_topo() const;
-    void backward() const;
+    void backward();
 
 private:
     std::shared_ptr<void> data_ptr_;

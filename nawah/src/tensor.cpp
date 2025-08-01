@@ -222,6 +222,39 @@ Tensor::Tensor(const py::list &data, DType dtype, const std::string &device_str,
   }
 }
 
+void Tensor::seed_gradient() {
+    if (!requires_grad_ || grad_ == nullptr) {
+        return;
+    }
+
+    size_t num_elements = this->numel();
+    if (num_elements == 0) {
+        return;
+    }
+    size_t size_in_bytes = num_elements * DtypeToSize(dtype_);
+    void* grad_data_ptr = grad_.get();
+
+    if (device_.type == DeviceType::CPU) {
+        float* grad_ptr = static_cast<float*>(grad_data_ptr);
+        for (size_t i = 0; i < num_elements; ++i) {
+            grad_ptr[i] = 1.0f;
+        }
+    } else if (device_.type == DeviceType::CUDA) {
+        std::vector<char> host_buffer(size_in_bytes);
+
+        float* host_ptr = reinterpret_cast<float*>(host_buffer.data());
+        for (size_t i = 0; i < num_elements; ++i) {
+            host_ptr[i] = 1.0f;
+        }
+
+        cudaError_t err = cudaMemcpy(grad_data_ptr, host_buffer.data(), size_in_bytes, cudaMemcpyHostToDevice);
+        if (err != cudaSuccess) {
+            throw std::runtime_error("Failed to copy seed gradient to CUDA device: " + 
+                                     std::string(cudaGetErrorString(err)));
+        }
+    }
+}
+
 void *Tensor::raw_ptr() const {
   return static_cast<void *>(static_cast<char *>(data_ptr_.get()) +
                              offset_ * DtypeToSize(dtype_));
@@ -824,24 +857,23 @@ std::vector<Tensor> Tensor::build_topo() const {
   return topo;
 }
 
-void Tensor::backward() const {
+void Tensor::backward() {
   if (!requires_grad_ || !ctx_.has_value()) { return ; }
 
+  seed_gradient();
   std::vector<Tensor> topo_sorted_graph = build_topo();
 
-  while (topo_sorted_graph.size() != 0) {
-    Tensor t = topo_sorted_graph.back();
-    topo_sorted_graph.pop_back();
+  for (auto it = topo_sorted_graph.rbegin(); it != topo_sorted_graph.rend(); ++it) {
+    Tensor& t = *it;
 
-    if (!t.ctx().has_value())
-      continue;
-    
-    auto backward_fn = t.ctx_->backward_fn;
-    std::vector<Tensor> inputs = t.ctx_->prev;
+    if (t.ctx().has_value()) {
+      auto& tape = t.ctx();
+      std::vector<Tensor> inputs = tape->prev;
 
-    // Compute gradients based on operation
-    backward_fn(t, inputs);
+      tape->backward_fn(t, inputs);
+    }
   }
 }
 
 Tensor::~Tensor() {}
+
