@@ -46,13 +46,13 @@ public:
     size_t ndim() const { return shape_.size(); }
     const std::optional<Tape>& ctx() const { return ctx_; }
 
-    void set_ctx(const std::vector<Tensor>& prev, char op) {
+    void set_ctx(const std::vector<Tensor>& prev, std::function<void(const Tensor&, std::vector<Tensor>&)> backward_fn) {
         if (requires_grad_ && !ctx_.has_value()) {
             ctx_ = Tape();
         }
         if (ctx_.has_value()) {
             ctx_->prev = prev;
-            ctx_->op = op;
+            ctx_->backward_fn = backward_fn;
         }
     }
 
