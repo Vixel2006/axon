@@ -6,7 +6,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(nawah, m) {
+PYBIND11_MODULE(cnawah, m) {
   py::enum_<DType>(m, "DType")
       .value("float16", DType::float16)
       .value("float32", DType::float32)
