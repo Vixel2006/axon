@@ -13,7 +13,7 @@ SRC_DIR = src
 TEST_DIR = tests
 CMAKE_FLAGS = -D CMAKE_CUDA_COMPILER=$(CUDA)
 SOURCES = $(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*.cu)
-MODULE = nawah.cpython-313-x86_64-linux-gnu.so
+MODULE = cnawah.cpython-313-x86_64-linux-gnu.so
 
 all: prepare init build test lint style
 

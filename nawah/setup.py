@@ -2,7 +2,7 @@ import os
 import subprocess
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def find_cuda():
@@ -109,7 +109,7 @@ class CudaBuild(build_ext):
 
 ext_modules = [
     Pybind11Extension(
-        "nawah",
+        "cnawah",
         [
             "bindings/bindings.cpp",
             "src/allocator/allocatorFactory.cpp",
@@ -151,6 +151,7 @@ ext_modules = [
 setup(
     name="nawah",
     version="0.1",
+    packages=find_packages(),
     ext_modules=ext_modules,
     cmdclass={"build_ext": CudaBuild},
     zip_safe=False,
