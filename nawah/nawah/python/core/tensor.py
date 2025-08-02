@@ -1,8 +1,10 @@
-import cnawah as nw
+import cnawah as cnw
+from ..api.pipeline import Pipe, Pipeable
 
-class Tensor(nw.Tensor):
-    def __rshift__(self, fn):
-        return fn(self)
+class Tensor(cnw.Tensor):
+    def __rshift__(self, other):
+        if isinstance(other, Pipe):
+            return other._execute(self)
+        else:
+            return other(self)
 
-    def add(self, other):
-        return self + other
