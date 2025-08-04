@@ -17,20 +17,7 @@
     }                                                                  \
   }
 
-__global__ void relu_kernel(float* c, float* t, float leakage, size_t n) {
-  size_t index = blockIdx.x * blockDim.x + threadIdx.x;
 
-  size_t stride = gridDim.x * blockDim.x;
-
-  for (size_t i = index; i < n; i += stride) {
-    if (t[i] < 0) {
-      c[i] = leakage;
-    } else {
-      c[i] = t[i];
-    }
-  }
-}
-
-Tensor CudaOps::relu(const Tensor& t) {
-  // HERE goes cuda implmemenation
+Tensor CudaOps::log(const Tensor& a) {
+  // TODO: log gpu implemenation
 }

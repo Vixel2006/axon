@@ -865,8 +865,12 @@ Tensor Tensor::mean(int dim, bool keepdim) const {
   return this->ops_->mean(*this, dim, keepdim);
 }
 
-Tensor Tensor::relu(float leakage = 0.0) const {
-  return this->ops_->relu(*this, leakage);
+Tensor Tensor::div(const Tensor& other) const {
+  return this->ops_->div(*this, other);
+}
+
+Tensor Tensor::div(float other) const {
+  return this->ops_->div(*this, other);
 }
 
 std::vector<Tensor> Tensor::build_topo() const {

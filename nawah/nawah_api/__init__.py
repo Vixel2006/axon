@@ -1,6 +1,5 @@
 from .python.core.tensor import Tensor
 from .python.api import pipe
-from .python.activations import relu, lrelu
 
 import cnawah as nw
 
@@ -8,6 +7,10 @@ DType = nw.DType
 Device = nw.Device
 DeviceType = nw.DeviceType
 Tape = nw.Tape
+relu = nw.relu
+log = nw.log
+exp = nw.exp
+softmax = nw.softmax
 cuda_synchronize = nw.cuda_synchronize
 
 __all__ = [
@@ -18,7 +21,6 @@ __all__ = [
     "Tape",
     "cuda_synchronize",
     "pipe",
-    "relu",
-    "lrelu"
+    "relu"
 ]
 

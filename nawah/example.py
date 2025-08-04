@@ -1,8 +1,10 @@
-import nawah as nw
+import nawah_api as nw
+import time
 
-t = nw.Tensor([[3.0, 4.0, 5.0], [3.0, 4.0, 5.0]], device="cpu")
-t1 = nw.Tensor([[3.0 ,4.0, 5.0], [3.0, 4.0, 5.0]], device="cpu")
+t = nw.Tensor([[3.0, 4.0, 5.0], [3.0, 4.0, 5.0]], device="cuda:0")
+t1 = nw.Tensor([[3.0 ,4.0, 5.0], [3.0, 4.0, 5.0]], device="cuda:0")
 t3 = nw.Tensor([[6.0 ,7.0 ,8.0], [6.0, 7.0, 7.0]], device="cpu")
+print(t + t1)
 
 @nw.pipe
 def add_minus(x, n):
@@ -28,4 +30,27 @@ print(tensor1.grad)
 print(tensor.grad)
 
 t5 = tensor >> nw.relu
-print(tensor.relu())
+print(t5)
+
+t6 = tensor >> nw.log
+print(t6)
+
+t7 = tensor >> nw.exp
+print(t7)
+
+ten = t / 3
+print(ten)
+
+
+t_cpu = nw.Tensor([[3.0, 4.0, 5.0], [3.0, 4.0, 5.0]], device="cpu")
+t_cuda = nw.Tensor([[3.0, 4.0, 5.0], [3.0, 4.0, 5.0]], device="cuda:0")
+start = time.perf_counter()
+n = t_cpu >> nw.softmax
+end = time.perf_counter()
+print(f"CPU: {end - start}")
+
+start = time.perf_counter()
+n = t_cuda >> nw.softmax
+end = time.perf_counter()
+print(f"CUDA: {end - start}")
+

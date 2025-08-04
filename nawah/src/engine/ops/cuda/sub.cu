@@ -1,87 +1,58 @@
 #include <cuda_runtime.h>
-
 #include <stdexcept>
-
-#include "allocator/allocatorFactory.h"
-#include "device.h"
-#include "helpers.h"
-#include "engine/ops.h"
 #include "tensor.h"
+#include "engine/ops.h"
+#include "helpers.h"
 
 #define CUDA_CHECK(err)                                                \
-  {                                                                    \
+  do {                                                                 \
     cudaError_t err_ = (err);                                          \
     if (err_ != cudaSuccess) {                                         \
       throw std::runtime_error("CUDA Error: " +                        \
                                std::string(cudaGetErrorString(err_))); \
     }                                                                  \
-  }
+  } while (0)
 
-__global__ void sub_kernel(float* c, float* a, float* b, size_t n) {
-  size_t index = blockDim.x * blockIdx.x + threadIdx.x;
-  size_t stride = gridDim.x * blockDim.x;
-
-  for (int i = index; i < n; i += stride) {
-    c[i] = a[i] - b[i];
-  }
+__global__ void sub_kernel(float* __restrict__ c, const float* __restrict__ a,
+                           const float* __restrict__ b, size_t n) {
+    for (size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+         i < n;
+         i += gridDim.x * blockDim.x) {
+        c[i] = a[i] - b[i];
+    }
 }
 
+
 Tensor CudaOps::sub(const Tensor& a, const Tensor& b) {
-  if (a.shape().size() != b.shape().size()) {
-    throw std::runtime_error(
-        "the ndim of first tensor is not the same for the second one");
-  }
-
-  for (size_t i = 0; i < a.shape().size(); ++i) {
-    if (a.shape()[i] != b.shape()[i]) {
-      throw std::runtime_error("the tensor shapes are mismatched.");
+    if (a.shape() != b.shape()) {
+        throw std::runtime_error("Tensor shapes must be identical for subtraction.");
     }
-  }
 
-  if (a.device().type != DeviceType::CUDA ||
-      b.device().type != DeviceType::CUDA) {
-    throw std::runtime_error("add_gpu can only operate on CUDA tensors.");
-  }
-  if (!a.is_contiguous() || !b.is_contiguous()) {
-    throw std::runtime_error(
-        "CUDA add currently only supports contiguous tensors.");
-  }
+    if (a.device().type != DeviceType::CUDA || b.device().type != DeviceType::CUDA) {
+        throw std::runtime_error("CUDA::sub can only operate on CUDA tensors.");
+    }
 
-  bool c_requires_grad = a.requires_grad() || b.requires_grad();
-  Tensor c(a.shape(), a.dtype(), deviceToString(a.device()), c_requires_grad);
+    if (!a.is_contiguous() || !b.is_contiguous()) {
+        throw std::runtime_error("CUDA::sub currently only supports contiguous tensors.");
+    }
 
-  float* c_data = static_cast<float*>(c.data_ptr().get());
-  float* a_data = static_cast<float*>(a.data_ptr().get());
-  float* b_data = static_cast<float*>(b.data_ptr().get());
+    Tensor c(a.shape(), a.dtype(), deviceToString(a.device()), a.requires_grad() || b.requires_grad());
 
-  size_t num_elements = a.numel();
-  if (num_elements == 0) {
-    return a;
-  }
+    const size_t num_elements = a.numel();
+    if (num_elements == 0) {
+        return c;
+    }
 
-  int threadsPerBlock = 256;
-  int blocksPerGrid = (num_elements + threadsPerBlock - 1) / threadsPerBlock;
+    const float* a_data = static_cast<const float*>(a.data_ptr().get());
+    const float* b_data = static_cast<const float*>(b.data_ptr().get());
+    float* c_data = static_cast<float*>(c.data_ptr().get());
 
-  sub_kernel<<<blocksPerGrid, threadsPerBlock>>>(c_data, a_data, b_data,
-                                                 num_elements);
+    const int threadsPerBlock = 256;
+    const int blocksPerGrid = (num_elements + threadsPerBlock - 1) / threadsPerBlock;
 
-  CUDA_CHECK(cudaGetLastError());
+    sub_kernel<<<blocksPerGrid, threadsPerBlock>>>(c_data, a_data, b_data, num_elements);
 
-  std::vector<__int64_t> c_shape = a.shape();
-  std::vector<__int64_t> c_strides = compute_strides_(c_shape);
-  bool c_requries_grad = a.requires_grad() || b.requires_grad();
+    CUDA_CHECK(cudaGetLastError());
 
-  auto allocator = AllocatorFactory::get(c.device());
-  void* raw_ptr = allocator->allocate(num_elements);
-
-  if (raw_ptr == nullptr) {
-    throw std::runtime_error(
-        "Memory allocation failed for tensor on device cuda. The device might "
-        "be out of memory.");
-  }
-
-  auto deleter = [allocator](void* ptr) { allocator->deallocate(ptr); };
-  c.set_data_ptr(std::shared_ptr<void>(raw_ptr, deleter));
-
-  return c;
+    return c;
 }
