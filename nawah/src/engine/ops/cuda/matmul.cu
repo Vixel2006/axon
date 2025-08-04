@@ -1,5 +1,5 @@
 #include "tensor.h"
-#include "engine/ops/impl/matmul.h"
+#include "engine/ops.h"
 #include <cuda_runtime.h>
 #include <vector>
 #include <cstdint>
@@ -22,7 +22,7 @@ do {                                                                          \
 
 #define TILE_DIM 32
 
-Tensor matmul_gpu(const Tensor& a, const Tensor& b) {
+Tensor CudaOps::matmul(const Tensor& a, const Tensor& b) {
   // Won't do it now
 }
 

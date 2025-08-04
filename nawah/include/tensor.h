@@ -11,6 +11,8 @@
 #include "indexing.h"
 #include "autograd/tape.h"
 #include <pybind11/pybind11.h>
+#include "engine/ops.h"
+#include "autograd/ops.h"
 
 namespace py = pybind11;
 
@@ -94,6 +96,7 @@ public:
     Tensor matmul(const Tensor& other) const;
     Tensor sum(int dim = -1, bool keepdim = false) const;
     Tensor mean(int dim = -1, bool keepdim = false) const;
+    Tensor relu(float leakage) const;
 
     std::vector<Tensor> build_topo() const;
     void backward();
@@ -108,6 +111,7 @@ private:
     bool requires_grad_;
     std::shared_ptr<void> grad_;
     std::optional<Tape> ctx_;
+    Ops* ops_;
 };
 
 #endif

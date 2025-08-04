@@ -1,7 +1,7 @@
-#include "autograd/badd.h"
+#include "autograd/ops.h"
 #include "tensor.h"
 
-void backward_add_cpu(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::add(const Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
     Tensor& b = prev[1];

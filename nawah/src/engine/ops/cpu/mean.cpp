@@ -1,10 +1,10 @@
 #include "tensor.h"
-#include "engine/ops/impl/mean.h"
-#include "engine/ops/impl/sum.h"
+#include "engine/ops.h"
+#include "engine/ops.h"
 #include <stdexcept>
 #include <omp.h>
 
-Tensor mean_cpu(const Tensor &a, int dim, bool keepdim) {
+Tensor CpuOps::mean(const Tensor &a, int dim, bool keepdim) {
     int ndim = a.ndim();
     if (dim < 0) {
         dim = ndim + dim;
@@ -15,7 +15,7 @@ Tensor mean_cpu(const Tensor &a, int dim, bool keepdim) {
 
     const int64_t reduction_size = a.shape()[dim];
 
-    Tensor sum_result = sum_cpu(a, dim, keepdim);
+    Tensor sum_result = CpuOps::sum(a, dim, keepdim);
 
     if (reduction_size == 0) {
         return sum_result;
