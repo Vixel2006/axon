@@ -1,17 +1,10 @@
 import pytest
 import numpy as np
+import os
+import sys
 
-try:
-    import nawah as nw
-except ImportError:
-    raise ImportError(
-        "Could not import the 'nawah' module. "
-        "Please make sure it has been compiled and is in the Python path."
-    )
-
-#
-# ... (Keep all your existing code from the top of the file) ...
-#
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import nawah as nw
 
 def is_cuda_available():
     """Check if CUDA is available and a tensor can be created on the GPU."""
