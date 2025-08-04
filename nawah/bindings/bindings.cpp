@@ -3,6 +3,57 @@
 
 #include "helpers.h"
 #include "tensor.h"
+#include "engine/ops.h"
+#include <stdexcept>
+
+static CpuOps cpu_ops;
+static CudaOps cuda_ops;
+
+Tensor relu_dispatcher(const Tensor &a) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.relu(a);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.relu(a);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
+    }
+}
+
+
+Tensor log_dispatcher(const Tensor &a) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.log(a);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.log(a);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
+    }
+}
+
+Tensor exp_dispatcher(const Tensor &a) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.exp(a);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.exp(a);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
+    }
+}
+
+
+Tensor softmax_dispatcher(const Tensor &a) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.softmax(a);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.softmax(a);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
+    }
+}
 
 namespace py = pybind11;
 
@@ -160,7 +211,11 @@ PYBIND11_MODULE(cnawah, m) {
       .def("__sub__", &Tensor::sub)
       .def("__mul__", &Tensor::mul)
       .def("__matmul__", &Tensor::matmul)
-        
+      .def("__truediv__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::div),
+             "Performs element-wise division with another tensor.")
+      .def("__truediv__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::div),
+             "Performs element-wise division with a scalar.")
+
       .def("sum",
           [](const Tensor &self, py::object dim_arg, bool keepdim) {
             if (dim_arg.is_none()) {
@@ -191,10 +246,42 @@ PYBIND11_MODULE(cnawah, m) {
           py::arg("keepdim") = false
       )
 
+
       .def("build_topo", &Tensor::build_topo)
       .def("backward", &Tensor::backward);
 
     m.def("cuda_synchronize", &cuda_synchronize, "Synchronize CUDA device");
+    m.def(
+        "relu",
+        &relu_dispatcher,
+        "Applies the Rectified Linear Unit function element-wise.",
+        py::arg("a")
+    );
+
+
+    m.def(
+        "log",
+        &log_dispatcher,
+        "Applies the log",
+        py::arg("a")
+    );
+
+
+    m.def(
+        "exp",
+        &exp_dispatcher,
+        "Applies the exp.",
+        py::arg("a")
+    );
+
+
+    m.def(
+        "softmax",
+        &softmax_dispatcher,
+        "Applies the softmax operation.",
+        py::arg("a")
+    );
+
 }
 
 

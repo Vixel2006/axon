@@ -93,10 +93,11 @@ public:
     Tensor add(const Tensor& other) const;
     Tensor sub(const Tensor& other) const;
     Tensor mul(const Tensor& other) const;
+    Tensor div(const Tensor& other) const;
+    Tensor div(float other) const;
     Tensor matmul(const Tensor& other) const;
     Tensor sum(int dim = -1, bool keepdim = false) const;
     Tensor mean(int dim = -1, bool keepdim = false) const;
-    Tensor relu(float leakage) const;
 
     std::vector<Tensor> build_topo() const;
     void backward();

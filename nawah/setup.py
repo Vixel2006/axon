@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sysconfig # Import sysconfig to find Python paths
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 from setuptools import setup, find_packages
@@ -7,6 +8,7 @@ from setuptools import setup, find_packages
 
 def find_cuda():
     """Finds the CUDA install path."""
+    # (Same as your version)
     cuda_home = os.environ.get("CUDA_HOME") or "/usr/local/cuda"
     if os.path.exists(cuda_home):
         return cuda_home
@@ -27,14 +29,9 @@ CUDA_PATH = find_cuda()
 class CudaBuild(build_ext):
     """
     Custom build_ext command to compile CUDA files.
-    It inherits from pybind11's build_ext to keep its features.
     """
-
     def build_extension(self, ext):
-        # The CUDA compiler
         nvcc = os.path.join(CUDA_PATH, "bin", "nvcc")
-
-        # Separate the source files into C++ and CUDA files
         cpp_sources = []
         cu_sources = []
         for source in ext.sources:
@@ -43,70 +40,48 @@ class CudaBuild(build_ext):
             else:
                 cpp_sources.append(source)
 
-        # Compile CUDA files to object files
+        # ==================== ADDITION: Get Python Include Dirs ===================
+        python_include_path = sysconfig.get_path("include")
+        python_plat_include_path = sysconfig.get_path("platinclude")
+        # ========================================================================
+        
         cuda_objects = []
         for source in cu_sources:
-            # Create object file path
             obj_name = os.path.splitext(os.path.basename(source))[0] + ".o"
             obj_path = os.path.join(self.build_temp, obj_name)
-
-            # Ensure build directory exists
             os.makedirs(os.path.dirname(obj_path), exist_ok=True)
-
             cuda_objects.append(obj_path)
 
             command = [
                 nvcc,
-                "-c",
-                source,
-                "-o",
-                obj_path,
+                "-c", source, "-o", obj_path,
                 "--std=c++17",
-                "-Xcompiler",
-                "-fPIC",
-                # Add optimization flags
+                "-Xcompiler", "-fPIC",
                 "-O3",
-                # Add compute capability (adjust as needed for your GPU)
-                "-gencode",
-                "arch=compute_75,code=sm_75",
-                "-gencode",
-                "arch=compute_80,code=sm_80",
-                "-gencode",
-                "arch=compute_86,code=sm_86",
-                "-Wno-deprecated-gpu-targets",  # Suppress the warning
+                "-gencode", "arch=compute_75,code=sm_75",
+                "-gencode", "arch=compute_86,code=sm_86",
+                "-Wno-deprecated-gpu-targets",
             ]
-
-            # Add all include directories for nvcc (including Python headers)
+            
+            # Add all extension include directories
             for include_dir in ext.include_dirs:
                 command.extend(["-I", include_dir])
 
-            # Add Python include directories explicitly
-            import sysconfig
-
-            python_include = sysconfig.get_path("include")
-            if python_include and python_include not in ext.include_dirs:
-                command.extend(["-I", python_include])
-
-            # Also add platinclude for platform-specific headers
-            python_platinclude = sysconfig.get_path("platinclude")
-            if python_platinclude and python_platinclude != python_include:
-                command.extend(["-I", python_platinclude])
-
+            # =================== FIX: Explicitly add Python includes ==================
+            command.extend(["-I", python_include_path])
+            if python_plat_include_path != python_include_path:
+                 command.extend(["-I", python_plat_include_path])
+            # ========================================================================
+            
             print(f"Compiling CUDA source: {' '.join(command)}")
             subprocess.check_call(command)
 
-        # Update extension to use only C++ sources
         ext.sources = cpp_sources
-
-        # Add CUDA objects to extra_objects
-        if not hasattr(ext, "extra_objects"):
-            ext.extra_objects = []
         ext.extra_objects.extend(cuda_objects)
-
-        # Let the original pybind11 build_ext handle the C++ compilation and linking
         super().build_extension(ext)
 
-
+# ... (The rest of your setup.py remains the same)
+# (ext_modules definition, setup() call, etc.)
 ext_modules = [
     Pybind11Extension(
         "cnawah",
@@ -122,6 +97,11 @@ ext_modules = [
             "src/engine/ops/cpu/sum.cpp",
             "src/engine/ops/cpu/mean.cpp",
             "src/engine/ops/cpu/relu.cpp",
+            "src/engine/ops/cpu/pow.cpp",
+            "src/engine/ops/cpu/log.cpp",
+            "src/engine/ops/cpu/div.cpp",
+            "src/engine/ops/cpu/exp.cpp",
+            "src/engine/ops/cpu/softmax.cpp",
             "src/engine/ops/cuda/add.cu",
             "src/engine/ops/cuda/sub.cu",
             "src/engine/ops/cuda/mul.cu",
@@ -129,6 +109,11 @@ ext_modules = [
             "src/engine/ops/cuda/sum.cu",
             "src/engine/ops/cuda/mean.cu",
             "src/engine/ops/cuda/relu.cu",
+            "src/engine/ops/cuda/exp.cu",
+            "src/engine/ops/cuda/log.cu",
+            "src/engine/ops/cuda/pow.cu",
+            "src/engine/ops/cuda/div.cu",
+            "src/engine/ops/cuda/softmax.cu",
             "src/autograd/cpu/badd.cpp",
             "src/autograd/cuda/badd.cu",
             "src/autograd/cpu/bsub.cpp",
@@ -140,8 +125,19 @@ ext_modules = [
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],
         libraries=["cudart"],
         language="c++",
-        extra_compile_args=["-std=c++17", "-g", "-O3"],
-        extra_link_args=["-lcuda"],
+        
+        extra_compile_args=[
+            "-std=c++17", 
+            "-g", 
+            "-O3", 
+            "-mavx2",       
+            "-mfma",        
+            "-fopenmp"      
+        ],
+        extra_link_args=[
+            "-fopenmp",     
+            "-lcuda"
+        ]
     ),
 ]
 
