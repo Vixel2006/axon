@@ -18,5 +18,18 @@ t4 = t >> add_minus(t3)
 print(t2)
 print(t4)
 
+
+tensor = nw.Tensor([[3,4,-5], [3,4,5]], requires_grad=True)
+tensor1 = nw.Tensor([[4,5,6], [4,5,6]], requires_grad=True)
+
+t8 = tensor1 * tensor
+
+t8.backward()
+print(tensor1.grad)
+print(tensor.grad)
+
+t5 = tensor >> nw.relu
+print(tensor.relu())
+
 t5 = t.view([3,2])
 print(t5)

@@ -17,60 +17,48 @@
     }                                                                  \
   }
 
-__global__ void add_kernel(float* c, float* a, float* b, size_t n) {
+__global__ void relu_kernel(float* c, float* t, float leakage, size_t n) {
   size_t index = blockIdx.x * blockDim.x + threadIdx.x;
 
   size_t stride = gridDim.x * blockDim.x;
 
   for (size_t i = index; i < n; i += stride) {
-    c[i] = a[i] + b[i];
+    if (t[i] < 0) {
+      c[i] = leakage;
+    } else {
+      c[i] = t[i];
+    }
   }
 }
 
-Tensor CudaOps::add(const Tensor& a, const Tensor& b) {
-  if (a.shape().size() != b.shape().size()) {
-    throw std::runtime_error(
-        "the ndim of first tensor is not the same for the second one");
-  }
-
-  for (size_t i = 0; i < a.shape().size(); ++i) {
-    if (a.shape()[i] != b.shape()[i]) {
-      throw std::runtime_error("the tensor shapes are mismatched.");
-    }
-  }
-
-  if (a.device().type != DeviceType::CUDA ||
-      b.device().type != DeviceType::CUDA) {
-    throw std::runtime_error("add_gpu can only operate on CUDA tensors.");
-  }
-  if (!a.is_contiguous() || !b.is_contiguous()) {
+Tensor CudaOps::relu(const Tensor& t, float leakage) {
+  if (!t.is_contiguous()) {
     throw std::runtime_error(
         "CUDA add currently only supports contiguous tensors.");
   }
 
-  bool c_requires_grad = a.requires_grad() || b.requires_grad();
-  Tensor c(a.shape(), a.dtype(), deviceToString(a.device()), c_requires_grad);
+  bool c_requires_grad = t.requires_grad();
+  Tensor c(t.shape(), t.dtype(), deviceToString(t.device()), c_requires_grad);
 
   float* c_data = static_cast<float*>(c.data_ptr().get());
-  float* a_data = static_cast<float*>(a.data_ptr().get());
-  float* b_data = static_cast<float*>(b.data_ptr().get());
+  float* t_data = static_cast<float*>(t.data_ptr().get());
 
-  size_t num_elements = a.numel();
+  size_t num_elements = t.numel();
   if (num_elements == 0) {
-    return a;
+    return t;
   }
 
   int threadsPerBlock = 256;
   int blocksPerGrid = (num_elements + threadsPerBlock - 1) / threadsPerBlock;
 
-  add_kernel<<<blocksPerGrid, threadsPerBlock>>>(c_data, a_data, b_data,
+  relu_kernel<<<blocksPerGrid, threadsPerBlock>>>(c_data, t_data, leakage,
                                                  num_elements);
 
   CUDA_CHECK(cudaGetLastError());
 
-  std::vector<__int64_t> c_shape = a.shape();
+  std::vector<__int64_t> c_shape = t.shape();
   std::vector<__int64_t> c_strides = compute_strides_(c_shape);
-  bool c_requries_grad = a.requires_grad() || b.requires_grad();
+  bool c_requries_grad = t.requires_grad();
 
   auto allocator = AllocatorFactory::get(c.device());
   void* raw_ptr = allocator->allocate(num_elements);

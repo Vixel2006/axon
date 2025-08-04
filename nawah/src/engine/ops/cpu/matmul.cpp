@@ -1,4 +1,4 @@
-#include "engine/ops/impl/matmul.h"
+#include "engine/ops.h"
 #include "helpers.h"
 #include "utils.h"
 #include "tensor.h"
@@ -39,7 +39,7 @@ void matmul_2d_kernel(const float* a, const float* b, float* c, int64_t M,
   }
 }
 
-Tensor matmul_cpu(const Tensor& a, const Tensor& b) {
+Tensor CpuOps::matmul(const Tensor& a, const Tensor& b) {
   if (a.ndim() < 2 || b.ndim() < 2) {
     throw std::runtime_error("Matmul requires at least 2 dimensions.");
   }

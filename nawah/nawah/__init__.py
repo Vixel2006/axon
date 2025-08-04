@@ -1,5 +1,6 @@
 from .python.core.tensor import Tensor
 from .python.api import pipe
+from .python.activations import relu, lrelu
 
 import cnawah as nw
 
@@ -16,6 +17,8 @@ __all__ = [
     "DeviceType",
     "Tape",
     "cuda_synchronize",
-    "pipe"
+    "pipe",
+    "relu",
+    "lrelu"
 ]
 

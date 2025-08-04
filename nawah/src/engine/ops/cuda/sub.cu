@@ -5,7 +5,7 @@
 #include "allocator/allocatorFactory.h"
 #include "device.h"
 #include "helpers.h"
-#include "engine/ops/impl/sub.h"
+#include "engine/ops.h"
 #include "tensor.h"
 
 #define CUDA_CHECK(err)                                                \
@@ -26,7 +26,7 @@ __global__ void sub_kernel(float* c, float* a, float* b, size_t n) {
   }
 }
 
-Tensor sub_gpu(const Tensor& a, const Tensor& b) {
+Tensor CudaOps::sub(const Tensor& a, const Tensor& b) {
   if (a.shape().size() != b.shape().size()) {
     throw std::runtime_error(
         "the ndim of first tensor is not the same for the second one");

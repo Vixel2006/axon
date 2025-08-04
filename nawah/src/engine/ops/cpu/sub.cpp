@@ -1,8 +1,8 @@
 #include "tensor.h"
-#include "engine/ops/impl/sub.h"
+#include "engine/ops.h"
 #include "helpers.h"
 
-Tensor sub_cpu(const Tensor &a, const Tensor &b) {
+Tensor CpuOps::sub(const Tensor &a, const Tensor &b) {
     if (a.shape().size() != b.shape().size()) { throw std::runtime_error("the ndim of first tensor is not the same for the second one"); }
     
     for (size_t i = 0; i < a.shape().size(); ++i) {

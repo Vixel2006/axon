@@ -10,8 +10,8 @@
 
 #include "allocator/allocatorFactory.h"
 #include "helpers.h"
-#include "engine/ops/traits/ops_trait.h"
 #include "engine/ops.h"
+#include "backend_registery.h"
 
 bool Tensor::is_contiguous() const {
     int64_t stride = 1;
@@ -49,6 +49,9 @@ Tensor::Tensor(const std::vector<__int64_t> &shape, DType dtype,
     throw std::runtime_error("Memory allocation failed for tensor on device " + device_str);
   }
   data_ptr_ = std::shared_ptr<void>(raw_data_ptr, deleter);
+
+  if (device_.type == DeviceType::CPU) { ops_ = get_cpu_ops(); }
+  else if (device_.type == DeviceType::CUDA) { ops_ = get_gpu_ops(); }
 
   if (requires_grad_) {
     void *raw_grad_ptr = allocator->allocate(size_in_bytes);
@@ -90,6 +93,10 @@ Tensor::Tensor(const std::vector<__int64_t> &shape,
     throw std::runtime_error(
         "Shape and stride dimensions mismatch in Tensor constructor.");
   }
+
+
+  if (device_.type == DeviceType::CPU) { ops_ = get_cpu_ops(); }
+  else if (device_.type == DeviceType::CUDA) { ops_ = get_gpu_ops(); }
 
   if (requires_grad_ && grad_ == nullptr) {
     size_t num_elements = this->numel();
@@ -180,6 +187,10 @@ Tensor::Tensor(const py::list &data, DType dtype, const std::string &device_str,
   }
   data_ptr_ = std::shared_ptr<void>(raw_data_ptr, deleter);
 
+  
+  if (device_.type == DeviceType::CPU) { ops_ = get_cpu_ops(); }
+  else if (device_.type == DeviceType::CUDA) { ops_ = get_gpu_ops(); }
+
   if (requires_grad_) {
     void *raw_grad_ptr = allocator->allocate(size_in_bytes);
     if (!raw_grad_ptr) {
@@ -191,7 +202,7 @@ Tensor::Tensor(const py::list &data, DType dtype, const std::string &device_str,
     } else if (device_.type == DeviceType::CUDA) {
       cudaError_t err = cudaMemset(raw_grad_ptr, 0, size_in_bytes);
       if (err != cudaSuccess) {
-        allocator->deallocate(raw_grad_ptr); 
+        allocator->deallocate(raw_grad_ptr);
         throw std::runtime_error("Failed to zero out gradient tensor on CUDA device: " +
                                  std::string(cudaGetErrorString(err)));
       }
@@ -810,27 +821,52 @@ Tensor Tensor::flatten(int start, int end) const {
 }
 
 Tensor Tensor::add(const Tensor& other) const {
-  return OpTrait<AddImpl>::operation(*this, other);
+  Tensor t = this->ops_->add(*this, other);
+  
+  if (device_.type == DeviceType::CPU)
+    t.set_ctx({*this, other}, CpuAutograd::add);
+  else if (device_.type == DeviceType::CUDA)
+    t.set_ctx({*this, other}, CudaAutograd::add);
+
+  return t;
 }
 
 Tensor Tensor::sub(const Tensor& other) const {
-  return OpTrait<SubImpl>::operation(*this, other);
+  Tensor t = this->ops_->sub(*this, other);
+
+  if (device_.type == DeviceType::CPU)
+    t.set_ctx({*this, other}, CpuAutograd::sub);
+  else if (device_.type == DeviceType::CUDA)
+    t.set_ctx({*this, other}, CudaAutograd::sub);
+  
+    return t;
 }
 
 Tensor Tensor::mul(const Tensor& other) const {
-    return OpTrait<MulImpl>::operation(*this, other);
+    Tensor t = this->ops_->mul(*this, other);
+
+    if (device_.type == DeviceType::CPU)
+      t.set_ctx({*this, other}, CpuAutograd::mul);
+    else if (device_.type == DeviceType::CUDA)
+      t.set_ctx({*this, other}, CudaAutograd::mul);
+    
+    return t;
 }
 
 Tensor Tensor::matmul(const Tensor& other) const {
-  return OpTrait<MatmulImpl>::operation(*this, other);
+  return this->ops_->matmul(*this, other);
 }
 
 Tensor Tensor::sum(int dim, bool keepdim) const {
-  return ReductionTrait<SumImpl>::operation(*this, dim, keepdim);
+  return this->ops_->sum(*this, dim, keepdim);
 }
 
 Tensor Tensor::mean(int dim, bool keepdim) const {
-  return ReductionTrait<MeanImpl>::operation(*this, dim, keepdim);
+  return this->ops_->mean(*this, dim, keepdim);
+}
+
+Tensor Tensor::relu(float leakage = 0.0) const {
+  return this->ops_->relu(*this, leakage);
 }
 
 std::vector<Tensor> Tensor::build_topo() const {

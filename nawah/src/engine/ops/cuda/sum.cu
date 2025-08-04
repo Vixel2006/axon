@@ -5,7 +5,7 @@
 #include "allocator/allocatorFactory.h"
 #include "device.h"
 #include "helpers.h"
-#include "engine/ops/impl/sum.h"
+#include "engine/ops.h"
 #include "tensor.h"
 
 #define CUDA_CHECK(err)                                                \
@@ -18,6 +18,6 @@
   }
 
 
-Tensor sum_gpu(const Tensor& a, int dim, bool keepdim) {
+Tensor CudaOps::sum(const Tensor& a, int dim, bool keepdim) {
   // TODO: Sum gpu implemenation
 }

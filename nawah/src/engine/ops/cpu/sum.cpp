@@ -1,10 +1,10 @@
 #include "tensor.h"
-#include "engine/ops/impl/sum.h"
+#include "engine/ops.h"
 #include "helpers.h"
 
 #include <numeric>
 
-Tensor sum_cpu(const Tensor &a, int dim, bool keepdim) {
+Tensor CpuOps::sum(const Tensor &a, int dim, bool keepdim) {
 int ndim = a.ndim();
     if (dim < 0) {
         dim = ndim + dim;

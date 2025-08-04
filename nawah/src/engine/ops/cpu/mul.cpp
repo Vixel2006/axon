@@ -1,8 +1,8 @@
 #include "tensor.h"
-#include "engine/ops/impl/mul.h"
+#include "engine/ops.h"
 #include "helpers.h"
 
-Tensor mul_cpu(const Tensor &a, const Tensor& b) {
+Tensor CpuOps::mul(const Tensor &a, const Tensor& b) {
     float* a_data = static_cast<float*>(a.data_ptr().get());
     float* b_data = static_cast<float*>(b.data_ptr().get());
     float* c_data = new float[a.numel()];

@@ -1,6 +1,6 @@
 #include "tensor.h"
 #include "helpers.h"
-#include "engine/ops/impl/mul.h"
+#include "engine/ops.h"
 #include "device.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
@@ -23,7 +23,7 @@ __global__ void mul_kernel(float* c, float* a, float* b, size_t n) {
     }
 }
 
-Tensor mul_gpu(const Tensor &a, const Tensor &b) {
+Tensor CudaOps::mul(const Tensor &a, const Tensor &b) {
     if (a.device().type != DeviceType::CUDA) { throw std::runtime_error("add_gpu can only operate on CUDA tensors."); }
     if (!a.is_contiguous()) {
         throw std::runtime_error("CUDA mul currently only supports contiguous tensors.");
