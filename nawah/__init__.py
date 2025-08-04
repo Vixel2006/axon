@@ -1,6 +1,7 @@
 # 1. Import your final, user-facing Tensor class from its specific location.
 from .python.core.tensor import Tensor
 from .python.api import Pipe, Pipeable
+from .python.activations import relu, lrelu
 
 from . import _C
 
@@ -18,5 +19,7 @@ __all__ = [
     "Tape",
     "cuda_synchronize",
     "Pipe",
-    "Pipeable"
+    "Pipeable",
+    "relu",
+    "lrelu"
 ]

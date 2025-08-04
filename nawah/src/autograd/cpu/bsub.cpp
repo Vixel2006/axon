@@ -1,7 +1,7 @@
 #include "tensor.h"
-#include "autograd/bsub.h"
+#include "autograd/ops.h"
 
-void backward_sub_cpu(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::sub(const Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
     Tensor& b = prev[1];

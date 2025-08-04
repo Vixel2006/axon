@@ -1,6 +1,6 @@
-#include "autograd/badd.h"
+#include "autograd/ops.h"
 #include "tensor.h"
 
-void backward_add_gpu(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::add(const Tensor& out, std::vector<Tensor>& prev) {
   // TODO: gpu backward add function
 }

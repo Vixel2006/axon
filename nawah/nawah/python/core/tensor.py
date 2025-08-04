@@ -8,3 +8,5 @@ class Tensor(cnw.Tensor):
         else:
             return other(self)
 
+    def relu(self, leak = 0):
+        pass

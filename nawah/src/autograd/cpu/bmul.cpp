@@ -1,7 +1,7 @@
-#include "autograd/bmul.h"
+#include "autograd/ops.h"
 #include "tensor.h"
 
-void backward_mul_cpu(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::mul(const Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
     Tensor& b = prev[1];

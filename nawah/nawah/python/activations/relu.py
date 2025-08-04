@@ -1,9 +1,10 @@
 from ..core import Tensor
 from ..api import pipe
 
-@pipe
-def relu(x):
-    pass
 
+def relu(x):
+    return x.relu()
+
+@pipe
 def lrelu(x, leak):
-    pass
+    return x.relu(leak)
