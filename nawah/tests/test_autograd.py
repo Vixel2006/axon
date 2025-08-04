@@ -1,14 +1,13 @@
 import pytest
 import numpy as np
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import nawah_api as nw
-
 #
 # ... (Keep all your existing code from the top of the file) ...
 #
+import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import nawah as nw
 
 def is_cuda_available():
     """Check if CUDA is available and a tensor can be created on the GPU."""

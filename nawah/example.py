@@ -10,15 +10,16 @@ print(t + t1)
 def add_minus(x, n):
     return x - t1 + t3 - n
 
+@nw.pipe
 def add_minus_with_no_arguments(x):
     return x - t1 + t3
 
-t2 = t >> add_minus_with_no_arguments
+t2 = t >> add_minus_with_no_arguments()
 t4 = t >> add_minus(t3)
-
 
 print(t2)
 print(t4)
+
 
 tensor = nw.Tensor([[3,4,-5], [3,4,5]], requires_grad=True)
 tensor1 = nw.Tensor([[4,5,6], [4,5,6]], requires_grad=True)
@@ -30,6 +31,7 @@ print(tensor1.grad)
 print(tensor.grad)
 
 t5 = tensor >> nw.relu
+
 print(t5)
 
 t6 = tensor >> nw.log
@@ -54,3 +56,8 @@ n = t_cuda >> nw.softmax
 end = time.perf_counter()
 print(f"CUDA: {end - start}")
 
+
+print(tensor.relu())
+
+t5 = t.view([3,2])
+print(t5)

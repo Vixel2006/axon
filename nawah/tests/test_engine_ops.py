@@ -6,6 +6,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import nawah_api as nw
 
+
 def is_cuda_available():
     """Check if CUDA is available and a tensor can be created on the GPU."""
     try:
