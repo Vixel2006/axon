@@ -1,5 +1,6 @@
 #include "tensor.h"
 #include "engine/ops.h"
+#include "autograd/ops.h"
 #include "helpers.h"
 #include <cmath>
 #include <omp.h>
@@ -43,7 +44,13 @@ Tensor CpuOps::pow(const Tensor &base, float exponent) {
 
     bool c_requires_grad = base.requires_grad();
     std::shared_ptr<void> data(c_data_raw, AlignedDeleter{});
-    return Tensor(base.shape(), base.strides(), base.dtype(), base.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    Tensor t = Tensor(base.shape(), base.strides(), base.dtype(), base.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+
+    if (c_requires_grad) {
+      t.set_ctx({base}, CpuAutograd::pow);
+    }
+
+    return t;
 }
 
 Tensor CpuOps::pow(const Tensor &base, const Tensor &exponent) {
@@ -76,6 +83,12 @@ Tensor CpuOps::pow(const Tensor &base, const Tensor &exponent) {
 
     bool c_requires_grad = base.requires_grad() || exponent.requires_grad();
     std::shared_ptr<void> data(c_data_raw, AlignedDeleter{});
-    return Tensor(base.shape(), base.strides(), base.dtype(), base.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    Tensor t =  Tensor(base.shape(), base.strides(), base.dtype(), base.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    
+    if (c_requires_grad) {
+      t.set_ctx({base, exponent}, CpuAutograd::pow);
+    }
+
+    return t;
 }
 
