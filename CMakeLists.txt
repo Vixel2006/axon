@@ -18,7 +18,7 @@ set(CMAKE_CUDA_ARCHITECTURES "75;86")
 add_subdirectory(vendor/pybind11)
 
 find_package(CUDAToolkit REQUIRED)
-
+find_package(OpenMP REQUIRED)
 
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
 
@@ -34,6 +34,12 @@ target_include_directories(nawah PRIVATE
 target_link_libraries(nawah PRIVATE
     pybind11::module
     CUDA::toolkit
+    OpenMP::OpenMP_CXX
 )
 
-target_compile_options(nawah PRIVATE -mavx2)
+target_compile_options(nawah PRIVATE
+  -mavx2
+  -mfma
+  $<$<CONFIG:Debug>:-g>
+  $<$<CONFIG:Release>:-O3 -DNDEBUG>
+)
