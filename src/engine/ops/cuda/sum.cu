@@ -1,10 +1,9 @@
 #include "engine/ops.h"
 #include "tensor.h"
-#include "helpers.h" // For AlignedDeleter
+#include "helpers.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
 
-// Macro for robust CUDA error checking
 #define CUDA_CHECK(call)                                                    \
     do {                                                                    \
         cudaError_t err = call;                                             \
