@@ -306,16 +306,46 @@ void Tensor::fill_helper(py::list &output, size_t depth,
 }
 
 void Tensor::fill(py::list &output) const {
-  if (shape_.empty()) {
-    if (numel() == 1) {
-      float *data = static_cast<float *>(this->raw_ptr());
-      output.append(data[0]);
+    if (shape_.empty()) {
+        if (numel() == 1) {
+            float value;
+            if (device_.type == DeviceType::CUDA) {
+                // Copy the single scalar value from device to host
+                cudaMemcpy(&value, this->raw_ptr(), sizeof(float), cudaMemcpyDeviceToHost);
+            } else {
+                value = *(static_cast<float *>(this->raw_ptr()));
+            }
+            output.append(value);
+        }
+        return;
     }
-    return;
-  }
 
-  std::vector<size_t> indices(shape_.size(), 0);
-  fill_helper(output, 0, indices);
+    // --- The Core Fix ---
+    if (device_.type == DeviceType::CUDA) {
+        // 1. Create a host-side buffer
+        size_t total_elements = this->numel();
+        std::vector<float> host_data(total_elements);
+
+        // 2. Copy data from GPU device to host buffer
+        cudaError_t err = cudaMemcpy(host_data.data(), data_ptr_.get(), total_elements * sizeof(float), cudaMemcpyDeviceToHost);
+        if (err != cudaSuccess) {
+            throw std::runtime_error("Failed to copy tensor data from device to host for display: " + std::string(cudaGetErrorString(err)));
+        }
+
+        // 3. Create a temporary CPU Tensor view to reuse the fill_helper logic
+        Tensor cpu_view(shape_, strides_, dtype_, Device{DeviceType::CPU, 0}, 
+                        std::shared_ptr<void>(host_data.data(), [](void*){}), // Non-owning pointer
+                        0, false, nullptr, std::nullopt);
+        
+        std::vector<size_t> indices(shape_.size(), 0);
+        // Call the helper on the safe, CPU-based view
+        cpu_view.fill_helper(output, 0, indices);
+
+    } else {
+        // Original CPU-only logic is fine
+        std::vector<size_t> indices(shape_.size(), 0);
+        fill_helper(output, 0, indices);
+    }
 }
 
 void Tensor::fill_ptr_helper(const py::list &list, size_t depth,
@@ -388,21 +418,52 @@ void Tensor::fill_grad_helper(py::list &output, size_t depth,
 
 // This is the private setup function for the gradient
 void Tensor::fill_grad(py::list &output) const {
-    // If there's no gradient, do nothing. The list will remain empty.
     if (!grad_) {
         return;
     }
 
     if (shape_.empty()) {
         if (numel() == 1) {
-            float *grad_data = static_cast<float *>(grad_.get());
-            output.append(grad_data[0]);
+            float value;
+            if (device_.type == DeviceType::CUDA) {
+                // Copy the single scalar value from device to host
+                cudaMemcpy(&value, grad_.get(), sizeof(float), cudaMemcpyDeviceToHost);
+            } else {
+                value = *(static_cast<float *>(grad_.get()));
+            }
+            output.append(value);
         }
         return;
     }
 
-    std::vector<size_t> indices(shape_.size(), 0);
-    fill_grad_helper(output, 0, indices);
+    // --- The Core Fix for Gradients ---
+    if (device_.type == DeviceType::CUDA) {
+        // 1. Create a host-side buffer for the gradient
+        size_t total_elements = this->numel();
+        std::vector<float> host_grad_data(total_elements);
+
+        // 2. Copy gradient data from GPU device to host buffer
+        cudaError_t err = cudaMemcpy(host_grad_data.data(), grad_.get(), total_elements * sizeof(float), cudaMemcpyDeviceToHost);
+        if (err != cudaSuccess) {
+            throw std::runtime_error("Failed to copy gradient data from device to host for display: " + std::string(cudaGetErrorString(err)));
+        }
+
+        // 3. Create a temporary CPU Tensor view to reuse the fill_grad_helper logic
+        Tensor cpu_view(shape_, strides_, dtype_, Device{DeviceType::CPU, 0}, 
+                        nullptr, // data_ptr is not needed for this
+                        0, true, 
+                        std::shared_ptr<void>(host_grad_data.data(), [](void*){}), // Non-owning pointer to grad
+                        std::nullopt);
+
+        std::vector<size_t> indices(shape_.size(), 0);
+        // Call the helper on the safe, CPU-based view
+        cpu_view.fill_grad_helper(output, 0, indices);
+
+    } else {
+        // Original CPU-only logic is fine
+        std::vector<size_t> indices(shape_.size(), 0);
+        fill_grad_helper(output, 0, indices);
+    }
 }
 
 // This is the PUBLIC method that will be called from Python
