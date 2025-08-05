@@ -1,7 +1,7 @@
 #include "tensor.h"
 #include "engine/ops.h"
 #include "helpers.h"
-#include <omp.h>       // For OpenMP
+#include <omp.h>
 #include <vector>
 #include <memory>
 #include <stdexcept>
@@ -21,7 +21,7 @@ Tensor CpuOps::div(const Tensor &numerator, float denominator) {
 
     void* c_data_raw = nullptr;
     #ifdef _MSC_VER
-    c_data_raw = _aligned_malloc(num_elements * sizeof(float), 32); // For AVX
+    c_data_raw = _aligned_malloc(num_elements * sizeof(float), 32);
     #else
     if (posix_memalign(&c_data_raw, 32, num_elements * sizeof(float)) != 0) {
         c_data_raw = nullptr;
@@ -49,7 +49,6 @@ Tensor CpuOps::div(const Tensor &numerator, float denominator) {
 
 
 Tensor CpuOps::div(const Tensor &numerator, const Tensor &denominator) {
-    // 1. Critical shape validation.
     if (numerator.shape() != denominator.shape()) {
         throw std::runtime_error("Tensor shapes must be identical for element-wise division.");
     }
