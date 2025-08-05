@@ -3,10 +3,61 @@
 
 #include "helpers.h"
 #include "tensor.h"
+#include "engine/ops.h"
+#include <stdexcept>
+
+static CpuOps cpu_ops;
+static CudaOps cuda_ops;
+
+Tensor relu_dispatcher(const Tensor &a) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.relu(a);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.relu(a);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
+    }
+}
+
+
+Tensor log_dispatcher(const Tensor &a) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.log(a);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.log(a);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
+    }
+}
+
+Tensor exp_dispatcher(const Tensor &a) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.exp(a);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.exp(a);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
+    }
+}
+
+
+Tensor softmax_dispatcher(const Tensor &a) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.softmax(a);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.softmax(a);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
+    }
+}
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(nawah, m) {
+PYBIND11_MODULE(cnawah, m) {
   py::enum_<DType>(m, "DType")
       .value("float16", DType::float16)
       .value("float32", DType::float32)
@@ -30,15 +81,22 @@ PYBIND11_MODULE(nawah, m) {
         return "<Device '" + deviceToString(d) + "'>";
       });
 
+  py::class_<Tape>(m, "Tape")
+    .def(py::init<>())
+    .def_readwrite("prev", &Tape::prev)
+    .def_readwrite("backward_fn", &Tape::backward_fn);
+
   py::class_<Tensor>(m, "Tensor")
       .def(py::init<const std::vector<int64_t> &, DType, const std::string &,
                     bool>(),
            py::arg("shape"), py::arg("dtype") = DType::float32,
-           py::arg("device") = "cpu", py::arg("requires_grad") = true)
+           py::arg("device") = "cpu", py::arg("requires_grad") = false)
+
       .def(py::init<py::list, DType, std::string, bool>(), py::arg("data"),
            py::arg("dtype") = DType::float32, py::arg("device") = "cpu",
            py::arg("requires_grad") = false,
            "Initialize Tensor from a Python list")
+
 
       .def_property_readonly("shape", &Tensor::shape,
                              py::return_value_policy::reference_internal)
@@ -49,6 +107,8 @@ PYBIND11_MODULE(nawah, m) {
                              py::return_value_policy::reference_internal)
       .def_property_readonly("requires_grad", &Tensor::requires_grad)
       .def_property_readonly("data", &Tensor::data)
+      .def_property_readonly("grad", &Tensor::grad)
+      .def_property_readonly("ctx", &Tensor::ctx)
 
       .def("numel", &Tensor::numel)
       .def("is_contiguous", &Tensor::is_contiguous)
@@ -67,53 +127,35 @@ PYBIND11_MODULE(nawah, m) {
              std::vector<std::shared_ptr<IndexStrategy>> strategies;
              const auto &shape = t.shape();
 
-             // Helper lambda to correctly parse a Python slice and create a
-             // SliceIndex strategy. This is the core of the improved logic.
              auto process_slice = [&](py::slice s, size_t dim_index) {
                if (dim_index >= shape.size()) {
                  throw py::index_error("too many indices for tensor");
                }
                const __int64_t dim_size = shape[dim_index];
-
-               // Manually extract start, stop, and step, handling the case
-               // where they are `None`. This passes the raw, un-normalized
-               // values to our powerful C++ `SliceIndex`.
                __int64_t start, stop, step;
 
-               // Step 1: Get step, defaulting to 1 if None.
                step = s.attr("step").is_none()
                           ? 1
                           : s.attr("step").cast<__int64_t>();
-
                if (step == 0) {
                  throw py::value_error("slice step cannot be zero");
                }
 
-               // Step 2: Get start, providing the correct default if None
-               // (depends on step direction).
                if (s.attr("start").is_none()) {
                  start = (step > 0) ? 0 : dim_size - 1;
                } else {
                  start = s.attr("start").cast<__int64_t>();
                }
 
-               // Step 3: Get stop, providing the correct default if None
-               // (depends on step direction).
                if (s.attr("stop").is_none()) {
-                 // Use `dim_size` for forward slicing and `-1` for backward
-                 // slicing. Our C++ code is designed to understand these
-                 // sentinels.
                  stop = (step > 0) ? dim_size : -1;
                } else {
                  stop = s.attr("stop").cast<__int64_t>();
                }
 
-               // Create the strategy with the raw, un-normalized values.
                strategies.push_back(
                    std::make_shared<SliceIndex>(start, stop, step));
              };
-
-             // --- Main Logic ---
 
              if (py::isinstance<py::tuple>(obj)) {
                auto tuple = obj.cast<py::tuple>();
@@ -132,9 +174,6 @@ PYBIND11_MODULE(nawah, m) {
                  } else if (py::isinstance<py::slice>(item)) {
                    process_slice(item.cast<py::slice>(), i);
                  } else {
-                   // Note: A production library would also handle `None` (for
-                   // new axes) and `Ellipsis` (...) here. This implementation
-                   // focuses on the core types.
                    throw py::type_error("Unsupported index type in tuple");
                  }
                }
@@ -168,10 +207,81 @@ PYBIND11_MODULE(nawah, m) {
              return ss.str();
            })
 
-        .def("__add__", &Tensor::add)
-        .def("__sub__", &Tensor::sub)
-        .def("__mul__", &Tensor::mul)
-        .def("__matmul__", &Tensor::matmul);
-    
+      .def("__add__", &Tensor::add)
+      .def("__sub__", &Tensor::sub)
+      .def("__mul__", &Tensor::mul)
+      .def("__matmul__", &Tensor::matmul)
+      .def("__truediv__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::div),
+             "Performs element-wise division with another tensor.")
+      .def("__truediv__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::div),
+             "Performs element-wise division with a scalar.")
+
+      .def("sum",
+          [](const Tensor &self, py::object dim_arg, bool keepdim) {
+            if (dim_arg.is_none()) {
+              return self.sum(-1, keepdim);
+            }
+            if (py::isinstance<py::int_>(dim_arg)) {
+              return self.sum(dim_arg.cast<int>(), keepdim);
+            }
+            throw py::type_error("sum(): 'dim' argument must be None or an integer.");
+          },
+          "Calculates the sum of tensor elements over a given dimension.",
+          py::arg("dim") = py::none(),
+          py::arg("keepdim") = false
+      )
+
+      .def("mean",
+          [](const Tensor &self, py::object dim_arg, bool keepdim) {
+            if (dim_arg.is_none()) {
+              return self.mean(-1, keepdim);
+            }
+            if (py::isinstance<py::int_>(dim_arg)) {
+              return self.mean(dim_arg.cast<int>(), keepdim);
+            }
+            throw py::type_error("mean(): 'dim' argument must be None or an integer.");
+          },
+          "Calculates the mean of tensor elements over a given dimension.",
+          py::arg("dim") = py::none(),
+          py::arg("keepdim") = false
+      )
+
+
+      .def("build_topo", &Tensor::build_topo)
+      .def("backward", &Tensor::backward);
+
     m.def("cuda_synchronize", &cuda_synchronize, "Synchronize CUDA device");
+    m.def(
+        "relu",
+        &relu_dispatcher,
+        "Applies the Rectified Linear Unit function element-wise.",
+        py::arg("a")
+    );
+
+
+    m.def(
+        "log",
+        &log_dispatcher,
+        "Applies the log",
+        py::arg("a")
+    );
+
+
+    m.def(
+        "exp",
+        &exp_dispatcher,
+        "Applies the exp.",
+        py::arg("a")
+    );
+
+
+    m.def(
+        "softmax",
+        &softmax_dispatcher,
+        "Applies the softmax operation.",
+        py::arg("a")
+    );
+
 }
+
+

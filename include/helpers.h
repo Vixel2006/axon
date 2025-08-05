@@ -24,6 +24,24 @@ inline std::vector<__int64_t> compute_strides_(const std::vector<__int64_t> &sha
     return strides;
 }
 
+inline std::vector<__int64_t> reduce_shape(const std::vector<__int64_t> &shape, int dim, bool keepdim) {
+  if (dim < 0 || dim >= static_cast<int>(shape.size())) {
+    std::ostringstream oss;
+    oss << "Invalid dimension " << dim << " for tensor of rank " << shape.size() << ".";
+    throw std::runtime_error(oss.str());
+  }
+
+  std::vector<__int64_t> new_shape = shape;
+
+  if (keepdim) {
+    new_shape[dim] = 1;
+  } else {
+    new_shape.erase(new_shape.begin() + dim);
+  }
+
+  return new_shape;
+}
+
 inline std::string shapeToString(const std::vector<__int64_t> &shape)
 {
     std::string out = "[";
