@@ -1,5 +1,6 @@
 #include "tensor.h"
 #include "engine/ops.h"
+#include "autograd/ops.h"
 #include "helpers.h"
 #include <immintrin.h>
 #include <omp.h>
@@ -52,6 +53,15 @@ Tensor CpuOps::relu(const Tensor &a) {
 
     bool c_requires_grad = a.requires_grad();
     std::shared_ptr<void> data(c_data_raw, AlignedDeleter{});
-    return Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+
+    Tensor t = Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+
+    /*
+    if (c_requries_grad) {
+        t.set_ctx({a}, CpuAutograd::relu);
+    }
+    */
+
+    return t;
 }
 

@@ -11,6 +11,7 @@
 #include "allocator/allocatorFactory.h"
 #include "helpers.h"
 #include "engine/ops.h"
+#include "autograd/ops.h"
 #include "backend_registery.h"
 
 bool Tensor::is_contiguous() const {
@@ -866,11 +867,27 @@ Tensor Tensor::mean(int dim, bool keepdim) const {
 }
 
 Tensor Tensor::div(const Tensor& other) const {
-  return this->ops_->div(*this, other);
+  Tensor t = this->ops_->div(*this, other);
+
+
+  if (device_.type == DeviceType::CPU)
+    t.set_ctx({*this, other}, CpuAutograd::div);
+  else if (device_.type == DeviceType::CUDA)
+    t.set_ctx({*this, other}, CudaAutograd::div);
+
+  return t;
 }
 
 Tensor Tensor::div(float other) const {
-  return this->ops_->div(*this, other);
+  Tensor t = this->ops_->div(*this, other);
+
+  if (device_.type == DeviceType::CPU)
+    t.set_ctx({*this}, CpuAutograd::div);
+  else if (device_.type == DeviceType::CUDA)
+    t.set_ctx({*this}, CudaAutograd::div);
+
+  return t;
+
 }
 
 std::vector<Tensor> Tensor::build_topo() const {

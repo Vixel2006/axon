@@ -9,6 +9,10 @@ struct CpuAutograd {
   static void sub(const Tensor& out, std::vector<Tensor>& prev);
   static void mul(const Tensor& out, std::vector<Tensor>& prev);
   static void matmul(const Tensor& out, std::vector<Tensor>& prev);
+  static void div(const Tensor& out, std::vector<Tensor>& prev);
+  static void log(const Tensor& out, std::vector<Tensor>& prev);
+  static void exp(const Tensor& out, std::vector<Tensor>& prev);
+  static void pow(const Tensor& out, std::vector<Tensor>& prev);
 };
 
 struct CudaAutograd {
@@ -16,6 +20,10 @@ struct CudaAutograd {
   static void sub(const Tensor& out, std::vector<Tensor>& prev);
   static void mul(const Tensor& out, std::vector<Tensor>& prev);
   static void matmul(const Tensor& out, std::vector<Tensor>& prev);
+  static void div(const Tensor& out, std::vector<Tensor>& prev);
+  static void log(const Tensor& out, std::vector<Tensor>& prev);
+  static void exp(const Tensor& out, std::vector<Tensor>& prev);
+  static void pow(const Tensor& out, std::vector<Tensor>& prev);
 };
 
 
