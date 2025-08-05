@@ -1,10 +1,9 @@
 #include "engine/ops.h"
 #include "tensor.h"
-#include "helpers.h" // For AlignedDeleter
+#include "helpers.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
 
-// Macro for robust CUDA error checking
 #define CUDA_CHECK(call)                                                    \
     do {                                                                    \
         cudaError_t err = call;                                             \
@@ -14,8 +13,6 @@
         }                                                                   \
     } while (0)
 
-// A custom deleter for host memory allocated with posix_memalign or _aligned_malloc
-// It's good practice to define this in a central header (like helpers.h) to avoid re-definition.
 struct AlignedDeleter {
     void operator()(void* ptr) const {
         #ifdef _MSC_VER
@@ -26,14 +23,6 @@ struct AlignedDeleter {
     }
 };
 
-/**
- * @brief CUDA kernel for element-wise power of a tensor with a SCALAR exponent.
- *
- * @param base_data Pointer to the device memory of the base tensor.
- * @param exponent The scalar float value for the exponent.
- * @param c_data Pointer to the device memory of the output tensor.
- * @param num_elements The total number of elements in the tensor.
- */
 __global__ void pow_tensor_scalar_kernel(const float* base_data, const float exponent, float* c_data, size_t num_elements) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
@@ -43,14 +32,6 @@ __global__ void pow_tensor_scalar_kernel(const float* base_data, const float exp
     }
 }
 
-/**
- * @brief CUDA kernel for element-wise power of a tensor with a TENSOR exponent.
- *
- * @param base_data Pointer to the device memory of the base tensor.
- * @param exp_data Pointer to the device memory of the exponent tensor.
- * @param c_data Pointer to the device memory of the output tensor.
- * @param num_elements The total number of elements in the tensors.
- */
 __global__ void pow_tensor_tensor_kernel(const float* base_data, const float* exp_data, float* c_data, size_t num_elements) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
@@ -61,7 +42,6 @@ __global__ void pow_tensor_tensor_kernel(const float* base_data, const float* ex
 }
 
 
-// Overload 1: For Tensor ^ Scalar
 Tensor CudaOps::pow(const Tensor &base, float exponent) {
     if (base.device().type != DeviceType::CUDA) {
         throw std::runtime_error("Input tensor for CudaOps::pow must be on the CUDA device.");
@@ -108,7 +88,6 @@ Tensor CudaOps::pow(const Tensor &base, float exponent) {
 }
 
 
-// Overload 2: For Tensor ^ Tensor
 Tensor CudaOps::pow(const Tensor &base, const Tensor &exponent) {
     if (base.shape() != exponent.shape()) {
         throw std::runtime_error("Tensor shapes are mismatched for pow operation.");

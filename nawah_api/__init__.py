@@ -11,7 +11,6 @@ relu = nw.relu
 log = nw.log
 exp = nw.exp
 softmax = nw.softmax
-pow = nw.pow
 cuda_synchronize = nw.cuda_synchronize
 
 __all__ = [

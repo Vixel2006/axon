@@ -1,31 +1,30 @@
 #include "engine/ops.h"
 #include "tensor.h"
+#include "helpers.h"
+#include "allocator/allocatorFactory.h" // Include the factory
 #include <cuda_runtime.h>
 #include <stdexcept>
 
-// Macro for CUDA error checking
+// Consistent error checking macro
 #define CUDA_CHECK(call)                                                    \
     do {                                                                    \
         cudaError_t err = call;                                             \
         if (err != cudaSuccess) {                                           \
-            throw std::runtime_error(std::string("CUDA Error: ") +           \
+            throw std::runtime_error(std::string("CUDA Error in " #call " : ") + \
                                      cudaGetErrorString(err));              \
         }                                                                   \
     } while (0)
 
-
-struct AlignedDeleter {
-    void operator()(void* ptr) const {
-        #ifdef _MSC_VER
-        _aligned_free(ptr);
-        #else
-        free(ptr);
-        #endif
-    }
-};
-
-__global__ void softmax_kernel(const float* a, float* c, int rows, int cols) {
-    // Each block processes one row of the input tensor.
+/**
+ * @brief CUDA kernel for row-wise softmax on a 2D tensor.
+ *
+ * This kernel is designed for efficiency by assigning one block to compute the
+ * softmax for one entire row. It uses shared memory to perform two parallel
+ * reductions: one to find the maximum value for numerical stability, and a
+ * second to find the sum of exponentials.
+ */
+__global__ void softmax_kernel(const float* input_data, float* output_data, int rows, int cols) {
+    // Each block processes one row
     int row = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -33,29 +32,29 @@ __global__ void softmax_kernel(const float* a, float* c, int rows, int cols) {
     extern __shared__ float sdata[];
 
     // --- Step 1: Find the maximum value in the row for numerical stability ---
-    // Use the IEEE 754 bit representation for negative infinity.
-    // This is the correct and portable way to do this in a CUDA kernel.
-    float max_val = -__int_as_float(0x7F800000);
+    float max_val = -__int_as_float(0x7F800000); // Negative infinity
     for (int i = tid; i < cols; i += blockDim.x) {
-        max_val = fmaxf(max_val, a[row * cols + i]);
+        max_val = fmaxf(max_val, input_data[row * cols + i]);
     }
     sdata[tid] = max_val;
     __syncthreads();
 
-    // Perform reduction in shared memory to find the absolute max for the row
+    // Perform reduction in shared memory to find the row's true max
     for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
         if (tid < s) {
             sdata[tid] = fmaxf(sdata[tid], sdata[tid + s]);
         }
         __syncthreads();
     }
-    max_val = sdata[0]; // The max value for the entire row
+    max_val = sdata[0];
+    __syncthreads();
 
-    // --- Step 2: Compute exponentials and their sum ---
+    // --- Step 2: Compute sum of exponentials ---
     float sum_exp = 0.0f;
     for (int i = tid; i < cols; i += blockDim.x) {
-        float val = expf(a[row * cols + i] - max_val);
-        c[row * cols + i] = val; // Store intermediate exp value
+        // Store intermediate exp(x-max) in output and accumulate sum
+        float val = expf(input_data[row * cols + i] - max_val);
+        output_data[row * cols + i] = val;
         sum_exp += val;
     }
     sdata[tid] = sum_exp;
@@ -68,68 +67,65 @@ __global__ void softmax_kernel(const float* a, float* c, int rows, int cols) {
         }
         __syncthreads();
     }
-    sum_exp = sdata[0]; // The total sum of exponentials for the row
+    sum_exp = sdata[0];
 
     // --- Step 3: Normalize to get the final softmax values ---
     for (int i = tid; i < cols; i += blockDim.x) {
-        c[row * cols + i] /= sum_exp;
+        output_data[row * cols + i] /= sum_exp;
     }
 }
 
 
+/**
+ * @brief Performs a row-wise softmax on a 2D tensor that is already on the CUDA device.
+ *
+ * This function follows a "Device-In, Device-Out" paradigm. It allocates new GPU memory
+ * for the output tensor using the framework's custom allocator and returns a new tensor
+ * that also resides on the GPU.
+ */
 Tensor CudaOps::softmax(const Tensor &a) {
-    // Assuming a 2D tensor for softmax
     if (a.shape().size() != 2) {
-        throw std::runtime_error("Softmax currently only supports 2D tensors.");
+        throw std::runtime_error("CudaOps::softmax currently only supports 2D tensors.");
     }
-    const size_t num_elements = a.numel();
+    if (a.device().type != DeviceType::CUDA) {
+        throw std::runtime_error("Input tensor for CudaOps::softmax must be on the CUDA device.");
+    }
+    
     const int rows = a.shape()[0];
     const int cols = a.shape()[1];
+    const size_t num_elements = a.numel();
+    const size_t data_size = num_elements * sizeof(float);
 
-    // Allocate device memory
-    float *d_a, *d_c;
-    CUDA_CHECK(cudaMalloc(&d_a, num_elements * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_c, num_elements * sizeof(float)));
+    if (num_elements == 0) {
+        return Tensor(a.shape(), a.dtype(), deviceToString(a.device()), false);
+    }
 
-    // Copy input tensor from host to device
-    CUDA_CHECK(cudaMemcpy(d_a, a.data_ptr().get(), num_elements * sizeof(float), cudaMemcpyHostToDevice));
+    // 1. Get the device pointer directly from the input tensor.
+    const float* d_a = static_cast<const float*>(a.raw_ptr());
 
-    // Kernel launch parameters
+    // 2. Allocate memory for the output tensor ON THE DEVICE using the AllocatorFactory.
+    auto allocator = AllocatorFactory::get(a.device());
+    void* d_c_raw = allocator->allocate(data_size);
+    if (!d_c_raw) {
+        throw std::runtime_error("Failed to allocate CUDA memory for output tensor via AllocatorFactory.");
+    }
+    float* d_c = static_cast<float*>(d_c_raw);
+
+    // 3. Define kernel launch parameters
     const int threadsPerBlock = 256;
     dim3 blocksPerGrid(rows);
+    const size_t shared_mem_size = threadsPerBlock * sizeof(float);
 
-    // The amount of shared memory is dynamic, specified at launch time.
-    size_t shared_mem_size = threadsPerBlock * sizeof(float);
-
-    // Launch the softmax kernel
+    // 4. Launch the softmax kernel
     softmax_kernel<<<blocksPerGrid, threadsPerBlock, shared_mem_size>>>(d_a, d_c, rows, cols);
-    CUDA_CHECK(cudaGetLastError()); // Check for any errors during kernel launch
+    CUDA_CHECK(cudaGetLastError());
 
-    // Allocate host memory for the result
-    void* c_data_raw;
-    #ifdef _MSC_VER
-    c_data_raw = _aligned_malloc(num_elements * sizeof(float), 32);
-    #else
-    if (posix_memalign(&c_data_raw, 32, num_elements * sizeof(float)) != 0) {
-        c_data_raw = nullptr;
-    }
-    #endif
-    if (!c_data_raw) {
-        cudaFree(d_a);
-        cudaFree(d_c);
-        throw std::runtime_error("Failed to allocate aligned memory for the output tensor.");
-    }
-
-    // Copy result back from device to host
-    CUDA_CHECK(cudaMemcpy(c_data_raw, d_c, num_elements * sizeof(float), cudaMemcpyDeviceToHost));
-
-    // Free device memory
-    cudaFree(d_a);
-    cudaFree(d_c);
+    // 5. Create the output Tensor object, wrapping the new DEVICE pointer.
+    auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
+    std::shared_ptr<void> data(d_c_raw, deleter);
 
     bool c_requires_grad = a.requires_grad();
-    auto data = std::shared_ptr<void>(c_data_raw, AlignedDeleter{});
 
+    // The new Tensor is created with the new shape, strides, and the device-side data pointer.
     return Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
 }
-

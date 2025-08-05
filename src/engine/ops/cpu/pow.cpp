@@ -23,7 +23,7 @@ Tensor CpuOps::pow(const Tensor &base, float exponent) {
 
     void* c_data_raw = nullptr;
     #ifdef _MSC_VER
-    c_data_raw = _aligned_malloc(num_elements * sizeof(float), 32); // For AVX
+    c_data_raw = _aligned_malloc(num_elements * sizeof(float), 32);
     #else
     if (posix_memalign(&c_data_raw, 32, num_elements * sizeof(float)) != 0) {
         c_data_raw = nullptr;

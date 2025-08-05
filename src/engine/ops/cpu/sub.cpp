@@ -1,8 +1,8 @@
 #include "tensor.h"
 #include "engine/ops.h"
 #include "helpers.h"
-#include <immintrin.h> // For AVX intrinsics and aligned memory allocation
-#include <omp.h>       // For OpenMP
+#include <immintrin.h>
+#include <omp.h>
 #include <stdexcept>
 #include <vector>
 #include <memory>
