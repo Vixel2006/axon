@@ -2,9 +2,6 @@
 #include "tensor.h"
 #include <stdexcept>
 
-// It is beneficial to define a threshold for parallelization.
-// The overhead of creating threads is not worth it for small tensors.
-// This value may need tuning based on the specific hardware.
 #define PARALLEL_THRESHOLD 4096
 
 void CpuAutograd::mul(const Tensor& out, std::vector<Tensor>& prev) {
@@ -27,8 +24,6 @@ void CpuAutograd::mul(const Tensor& out, std::vector<Tensor>& prev) {
     const bool b_req_grad = b.requires_grad();
 
     if (a_req_grad && b_req_grad) {
-        // Most common case: both gradients are needed.
-        // Combine into a single loop to reduce overhead and improve cache usage.
         #pragma omp parallel for simd schedule(static) if(num_elements > PARALLEL_THRESHOLD)
         for (size_t i = 0; i < num_elements; ++i) {
             const float grad_out = out_grad_p[i];
@@ -36,13 +31,11 @@ void CpuAutograd::mul(const Tensor& out, std::vector<Tensor>& prev) {
             b_grad_p[i] += grad_out * a_data_p[i];
         }
     } else if (a_req_grad) {
-        // Only 'a' needs gradient.
         #pragma omp parallel for simd schedule(static) if(num_elements > PARALLEL_THRESHOLD)
         for (size_t i = 0; i < num_elements; ++i) {
             a_grad_p[i] += out_grad_p[i] * b_data_p[i];
         }
     } else if (b_req_grad) {
-        // Only 'b' needs gradient.
         #pragma omp parallel for simd schedule(static) if(num_elements > PARALLEL_THRESHOLD)
         for (size_t i = 0; i < num_elements; ++i) {
             b_grad_p[i] += out_grad_p[i] * a_data_p[i];
