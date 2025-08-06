@@ -7,15 +7,6 @@
 #include <stdexcept>
 #include <numeric>
 
-#define CUDA_CHECK(call)                                                    \
-    do {                                                                    \
-        cudaError_t err = call;                                             \
-        if (err != cudaSuccess) {                                           \
-            throw std::runtime_error(std::string("CUDA Error in " #call " : ") + \
-                                     cudaGetErrorString(err));              \
-        }                                                                   \
-    } while (0)
-
 #define TILE_DIM 32
 
 __global__ void batched_matmul_kernel_optimized(
@@ -137,6 +128,11 @@ Tensor CudaOps::matmul(const Tensor& a, const Tensor& b) {
     std::shared_ptr<void> data(d_c_raw, deleter);
 
     bool c_requires_grad = a.requires_grad() || b.requires_grad();
+    Tensor t = Tensor(c_shape, compute_strides_(c_shape), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
     
-    return Tensor(c_shape, compute_strides_(c_shape), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    if (c_requires_grad) {
+      t.set_ctx({a, b}, CudaAutograd::matmul);
+    }
+
+    return t;
 }

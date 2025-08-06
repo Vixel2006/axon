@@ -1,17 +1,9 @@
 #include "engine/ops.h"
 #include "tensor.h"
 #include "helpers.h"
+#include "utils.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
-
-#define CUDA_CHECK(call)                                                    \
-    do {                                                                    \
-        cudaError_t err = call;                                             \
-        if (err != cudaSuccess) {                                           \
-            throw std::runtime_error(std::string("CUDA Error in " #call " : ") + \
-                                     cudaGetErrorString(err));              \
-        }                                                                   \
-    } while (0)
 
 struct AlignedDeleter {
     void operator()(void* ptr) const {
@@ -28,7 +20,7 @@ __global__ void pow_tensor_scalar_kernel(const float* base_data, const float exp
     int stride = gridDim.x * blockDim.x;
 
     for (int i = index; i < num_elements; i += stride) {
-        c_data[i] = powf(base_data[i], exponent); // Use powf for single-precision floats
+        c_data[i] = powf(base_data[i], exponent);
     }
 }
 
@@ -84,7 +76,13 @@ Tensor CudaOps::pow(const Tensor &base, float exponent) {
 
     bool c_requires_grad = base.requires_grad();
     std::shared_ptr<void> data(c_data_raw, AlignedDeleter{});
-    return Tensor(base.shape(), base.strides(), base.dtype(), base.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    Tensor t = Tensor(base.shape(), base.strides(), base.dtype(), base.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    
+    if (c_requires_grad) {
+      t.set_ctx({base}, CudaAutograd::pow);
+    }
+
+    return t;
 }
 
 
@@ -137,5 +135,11 @@ Tensor CudaOps::pow(const Tensor &base, const Tensor &exponent) {
 
     bool c_requires_grad = base.requires_grad() || exponent.requires_grad();
     std::shared_ptr<void> data(c_data_raw, AlignedDeleter{});
-    return Tensor(base.shape(), base.strides(), base.dtype(), base.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    Tensor t = Tensor(base.shape(), base.strides(), base.dtype(), base.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+
+    if (c_requires_grad) {
+      t.set_ctx({base, exponent}, CudaAutograd::pow);
+    }
+
+    return t;
 }

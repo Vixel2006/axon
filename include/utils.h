@@ -9,6 +9,15 @@
 
 class Tensor;
 
+#define CUDA_CHECK(call)                                                    \
+    do {                                                                    \
+        cudaError_t err = call;                                             \
+        if (err != cudaSuccess) {                                           \
+            throw std::runtime_error(std::string("CUDA Error in " #call " : ") + \
+                                     cudaGetErrorString(err));              \
+        }                                                                   \
+    } while (0)
+
 inline std::vector<int64_t> compute_broadcast_matmul_shape(const Tensor& a, const Tensor& b) {
     // The matrix multiply dimensions
     const int64_t M = a.shape()[a.shape().size() - 2];

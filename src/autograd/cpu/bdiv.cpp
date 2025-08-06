@@ -29,7 +29,7 @@ void CpuAutograd::div(const Tensor& out, std::vector<Tensor>& prev) {
         if (a_req_grad && b_req_grad) {
             #pragma omp parallel for simd schedule(static) if(num_elements > PARALLEL_THRESHOLD)
             for (size_t i = 0; i < num_elements; ++i) {
-                const float b_inv = 1.0f / b_data_p[i]; // Pre-calculate reciprocal
+                const float b_inv = 1.0f / b_data_p[i];
                 const float grad_out = out_grad_p[i];
                 a_grad_p[i] += grad_out * b_inv;
                 b_grad_p[i] -= grad_out * a_data_p[i] * b_inv * b_inv;

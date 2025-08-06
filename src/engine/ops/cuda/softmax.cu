@@ -1,88 +1,60 @@
 #include "engine/ops.h"
 #include "tensor.h"
 #include "helpers.h"
-#include "allocator/allocatorFactory.h" // Include the factory
+#include "utils.h"
+#include "autograd/ops.h"
+#include "allocator/allocatorFactory.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
 
-// Consistent error checking macro
-#define CUDA_CHECK(call)                                                    \
-    do {                                                                    \
-        cudaError_t err = call;                                             \
-        if (err != cudaSuccess) {                                           \
-            throw std::runtime_error(std::string("CUDA Error in " #call " : ") + \
-                                     cudaGetErrorString(err));              \
-        }                                                                   \
-    } while (0)
-
-/**
- * @brief CUDA kernel for row-wise softmax on a 2D tensor.
- *
- * This kernel is designed for efficiency by assigning one block to compute the
- * softmax for one entire row. It uses shared memory to perform two parallel
- * reductions: one to find the maximum value for numerical stability, and a
- * second to find the sum of exponentials.
- */
-__global__ void softmax_kernel(const float* input_data, float* output_data, int rows, int cols) {
-    // Each block processes one row
+__global__ void reduce_rows_kernel(const float* input_data, float* output_data, int rows, int cols, bool do_max) {
     int row = blockIdx.x;
     int tid = threadIdx.x;
 
-    // Use shared memory for efficient parallel reduction within a block.
     extern __shared__ float sdata[];
+    float identity = do_max ? -__int_as_float(0x7F800000) : 0.0f;
+    float result = identity;
 
-    // --- Step 1: Find the maximum value in the row for numerical stability ---
-    float max_val = -__int_as_float(0x7F800000); // Negative infinity
     for (int i = tid; i < cols; i += blockDim.x) {
-        max_val = fmaxf(max_val, input_data[row * cols + i]);
+        result = do_max ? fmaxf(result, input_data[row * cols + i]) : result + input_data[row * cols + i];
     }
-    sdata[tid] = max_val;
+    sdata[tid] = result;
     __syncthreads();
 
-    // Perform reduction in shared memory to find the row's true max
     for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
         if (tid < s) {
-            sdata[tid] = fmaxf(sdata[tid], sdata[tid + s]);
+            sdata[tid] = do_max ? fmaxf(sdata[tid], sdata[tid + s]) : sdata[tid] + sdata[tid + s];
         }
         __syncthreads();
     }
-    max_val = sdata[0];
-    __syncthreads();
 
-    // --- Step 2: Compute sum of exponentials ---
-    float sum_exp = 0.0f;
-    for (int i = tid; i < cols; i += blockDim.x) {
-        // Store intermediate exp(x-max) in output and accumulate sum
-        float val = expf(input_data[row * cols + i] - max_val);
-        output_data[row * cols + i] = val;
-        sum_exp += val;
-    }
-    sdata[tid] = sum_exp;
-    __syncthreads();
-
-    // Perform reduction in shared memory to get the total sum
-    for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (tid < s) {
-            sdata[tid] += sdata[tid + s];
-        }
-        __syncthreads();
-    }
-    sum_exp = sdata[0];
-
-    // --- Step 3: Normalize to get the final softmax values ---
-    for (int i = tid; i < cols; i += blockDim.x) {
-        output_data[row * cols + i] /= sum_exp;
+    if (tid == 0) {
+        output_data[row] = sdata[0];
     }
 }
 
 
-/**
- * @brief Performs a row-wise softmax on a 2D tensor that is already on the CUDA device.
- *
- * This function follows a "Device-In, Device-Out" paradigm. It allocates new GPU memory
- * for the output tensor using the framework's custom allocator and returns a new tensor
- * that also resides on the GPU.
- */
+__global__ void broadcast_sub_kernel(const float* a_data, const float* b_vec, float* c_data, size_t num_elements, int cols) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    for (size_t i = index; i < num_elements; i += stride) {
+        int row = i / cols;
+        c_data[i] = a_data[i] - b_vec[row];
+    }
+}
+
+
+__global__ void broadcast_div_kernel(const float* a_data, const float* b_vec, float* c_data, size_t num_elements, int cols) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    for (size_t i = index; i < num_elements; i += stride) {
+        int row = i / cols;
+        c_data[i] = a_data[i] / (b_vec[row] + 1e-9f);
+    }
+}
+
 Tensor CudaOps::softmax(const Tensor &a) {
     if (a.shape().size() != 2) {
         throw std::runtime_error("CudaOps::softmax currently only supports 2D tensors.");
@@ -94,38 +66,62 @@ Tensor CudaOps::softmax(const Tensor &a) {
     const int rows = a.shape()[0];
     const int cols = a.shape()[1];
     const size_t num_elements = a.numel();
-    const size_t data_size = num_elements * sizeof(float);
 
     if (num_elements == 0) {
         return Tensor(a.shape(), a.dtype(), deviceToString(a.device()), false);
     }
 
-    // 1. Get the device pointer directly from the input tensor.
-    const float* d_a = static_cast<const float*>(a.raw_ptr());
-
-    // 2. Allocate memory for the output tensor ON THE DEVICE using the AllocatorFactory.
     auto allocator = AllocatorFactory::get(a.device());
-    void* d_c_raw = allocator->allocate(data_size);
-    if (!d_c_raw) {
-        throw std::runtime_error("Failed to allocate CUDA memory for output tensor via AllocatorFactory.");
-    }
-    float* d_c = static_cast<float*>(d_c_raw);
+    auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
 
-    // 3. Define kernel launch parameters
+    void* d_max_vals_raw = allocator->allocate(rows * sizeof(float));
+    float* d_max_vals = static_cast<float*>(d_max_vals_raw);
+
     const int threadsPerBlock = 256;
-    dim3 blocksPerGrid(rows);
-    const size_t shared_mem_size = threadsPerBlock * sizeof(float);
+    dim3 reduceGrid(rows);
+    size_t sharedMem = threadsPerBlock * sizeof(float);
+    
+    reduce_rows_kernel<<<reduceGrid, threadsPerBlock, sharedMem>>>(
+        static_cast<const float*>(a.raw_ptr()), d_max_vals, rows, cols, true
+    );
+    CUDA_CHECK(cudaGetLastError());
+    
+    // --- Step 2: Subtract the max value from each element in the row ---
+    void* d_shifted_raw = allocator->allocate(num_elements * sizeof(float));
+    float* d_shifted = static_cast<float*>(d_shifted_raw);
+    dim3 elementwiseGrid((num_elements + threadsPerBlock - 1) / threadsPerBlock);
 
-    // 4. Launch the softmax kernel
-    softmax_kernel<<<blocksPerGrid, threadsPerBlock, shared_mem_size>>>(d_a, d_c, rows, cols);
+    broadcast_sub_kernel<<<elementwiseGrid, threadsPerBlock>>>(
+        static_cast<const float*>(a.raw_ptr()), d_max_vals, d_shifted, num_elements, cols
+    );
+    CUDA_CHECK(cudaGetLastError());
+    allocator->deallocate(d_max_vals_raw);
+
+    Tensor shifted_tensor = Tensor(a.shape(), a.strides(), a.dtype(), a.device(), 
+                                   std::shared_ptr<void>(d_shifted_raw, deleter), 0, false, nullptr, std::nullopt);
+
+    Tensor exps_tensor = CudaOps::exp(shifted_tensor);
+
+    void* d_sum_exps_raw = allocator->allocate(rows * sizeof(float));
+    float* d_sum_exps = static_cast<float*>(d_sum_exps_raw);
+    
+    reduce_rows_kernel<<<reduceGrid, threadsPerBlock, sharedMem>>>(
+        static_cast<const float*>(exps_tensor.raw_ptr()), d_sum_exps, rows, cols, false // false for sum
+    );
     CUDA_CHECK(cudaGetLastError());
 
-    // 5. Create the output Tensor object, wrapping the new DEVICE pointer.
-    auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
-    std::shared_ptr<void> data(d_c_raw, deleter);
+    void* d_out_raw = allocator->allocate(num_elements * sizeof(float));
+    float* d_out = static_cast<float*>(d_out_raw);
 
-    bool c_requires_grad = a.requires_grad();
+    broadcast_div_kernel<<<elementwiseGrid, threadsPerBlock>>>(
+        static_cast<const float*>(exps_tensor.raw_ptr()), d_sum_exps, d_out, num_elements, cols
+    );
+    CUDA_CHECK(cudaGetLastError());
+    allocator->deallocate(d_sum_exps_raw);
 
-    // The new Tensor is created with the new shape, strides, and the device-side data pointer.
-    return Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    std::shared_ptr<void> data(d_out_raw, deleter);
+    bool out_requires_grad = a.requires_grad();
+    Tensor t = Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, out_requires_grad, nullptr, std::nullopt);
+
+    return t;
 }

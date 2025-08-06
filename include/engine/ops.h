@@ -1,5 +1,6 @@
 #ifndef NAWAH_OPS_H
 #define NAWAH_OPS_H
+#include "autograd/ops.h"
 
 class Tensor;
 
