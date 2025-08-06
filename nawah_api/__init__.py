@@ -11,6 +11,12 @@ relu = nw.relu
 log = nw.log
 exp = nw.exp
 softmax = nw.softmax
+ones = nw.ones
+zeros = nw.zeros
+randn = nw.randn
+uniform = nw.uniform
+zeros_like = nw.zeros_like
+ones_like = nw.ones_like
 cuda_synchronize = nw.cuda_synchronize
 
 __all__ = [
@@ -21,6 +27,12 @@ __all__ = [
     "Tape",
     "cuda_synchronize",
     "pipe",
-    "relu"
+    "relu",
+    "ones",
+    "zeros",
+    "randn",
+    "uniform",
+    "zeros_like",
+    "ones_like"
 ]
 
