@@ -19,6 +19,10 @@ struct Ops {
   virtual Tensor pow(const Tensor& base, float exponent) = 0;
   virtual Tensor pow(const Tensor& base, const Tensor& exponent) = 0;
   virtual Tensor softmax(const Tensor &a) = 0;
+  virtual void fill_zeros(Tensor& t) const = 0;
+  virtual void fill_ones(Tensor& t) const = 0;
+  virtual void fill_uniform(Tensor& t) const = 0;
+  virtual void fill_randn(Tensor& t) const = 0;
 };
 
 struct CpuOps: Ops {
@@ -36,6 +40,10 @@ struct CpuOps: Ops {
   Tensor pow(const Tensor& base, float exponent) override;
   Tensor pow(const Tensor& base, const Tensor& exponent) override;
   Tensor softmax(const Tensor &a) override;
+  void fill_ones(Tensor& t) const override;
+  void fill_zeros(Tensor& t) const override;
+  void fill_uniform(Tensor& t) const override;
+  void fill_randn(Tensor& t) const override;
 };
 
 struct CudaOps: Ops {
@@ -53,6 +61,10 @@ struct CudaOps: Ops {
   Tensor pow(const Tensor& base, float exponent) override;
   Tensor pow(const Tensor& base, const Tensor& exponent) override;
   Tensor softmax(const Tensor &a) override;
+  void fill_ones(Tensor& t) const override;
+  void fill_zeros(Tensor& t) const override;
+  void fill_uniform(Tensor& t) const override;
+  void fill_randn(Tensor& t) const override;
 };
 
 #endif
