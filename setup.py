@@ -130,6 +130,8 @@ ext_modules = [
             "src/autograd/cuda/blog.cu",
             "src/autograd/cuda/bexp.cu",
             "src/autograd/cuda/bmatmul.cu",
+            "src/engine/ops/cpu/fill.cpp",
+            "src/engine/ops/cuda/fill.cu"
         ],
         include_dirs=["include", os.path.join(CUDA_PATH, "include")],
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],
