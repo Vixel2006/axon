@@ -1,25 +1,17 @@
 #include "engine/ops.h"
 #include "tensor.h"
 #include "helpers.h"
+#include "utils.h"
 #include "allocator/allocatorFactory.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
-
-#define CUDA_CHECK(call)                                                    \
-    do {                                                                    \
-        cudaError_t err = call;                                             \
-        if (err != cudaSuccess) {                                           \
-            throw std::runtime_error(std::string("CUDA Error in " #call " : ") + \
-                                     cudaGetErrorString(err));              \
-        }                                                                   \
-    } while (0)
 
 __global__ void exp_kernel(const float* a_data, float* c_data, size_t num_elements) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
 
     for (int i = index; i < num_elements; i += stride) {
-        c_data[i] = expf(a_data[i]); // Use expf for single-precision floats
+        c_data[i] = expf(a_data[i]);
     }
 }
 
@@ -53,6 +45,11 @@ Tensor CudaOps::exp(const Tensor &a) {
     std::shared_ptr<void> data(d_c_raw, deleter);
 
     bool c_requires_grad = a.requires_grad();
+    Tensor t = Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
 
-    return Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    if (c_requires_grad) {
+      t.set_ctx({a}, CudaAutograd::exp);
+    }
+
+    return t;
 }

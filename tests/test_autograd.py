@@ -3,41 +3,23 @@ import numpy as np
 import sys
 import os
 
+# Ensure the library is in the path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import nawah_api as nw
 
-#
-# ... (Keep all your existing code from the top of the file) ...
-#
 
-def is_cuda_available():
-    """Check if CUDA is available and a tensor can be created on the GPU."""
-    try:
-        nw.Tensor([1], device="cuda")
-        nw.cuda_synchronize()
-        return True
-    except (RuntimeError, ValueError) as e:
-        print(f"CUDA not available: {e}")
-        return False
-
-DEVICES = ["cpu"]
-if is_cuda_available():
-    DEVICES.append("cuda")
+DEVICES = ["cpu", "cuda:0"]
 
 def skip_if_cuda_not_available(device):
-    if device == "cuda" and "cuda" not in DEVICES:
-        pytest.skip("CUDA device not available")
+    """A pytest helper to skip tests if the required 'cuda' device is not available."""
+    if device == "cuda:0" and "cuda:0" not in DEVICES:
+        pytest.skip("Skipping test: CUDA device not available or configured.")
 
 
-class TestTensorOps:
+class TestTensorAutograd:
     """
-    Test suite for nawah.Tensor operations using pytest.
+    Test suite for the backward pass and gradient calculations in nawah.
     """
-
-    # ... (Keep your existing forward-pass tests: test_creation_and_properties, test_addition, etc.) ...
-    
-    # --- Autograd / Backward Pass Tests ---
-    # The following tests verify the correctness of the backward() pass.
 
     @pytest.mark.parametrize("device", DEVICES)
     def test_backward_addition(self, device):
@@ -46,16 +28,14 @@ class TestTensorOps:
         a = nw.Tensor([[1, 2, 3]], requires_grad=True, device=device)
         b = nw.Tensor([[4, 5, 6]], requires_grad=True, device=device)
         
-        # The backward pass is started from a scalar, so we sum the result.
-        c = (a + b)
+        # We the result to get a scalar loss, which starts the backward pass with a gradient of 1.
+        c = a + b
         c.backward()
 
-        # The derivative of sum is 1. For `c = a + b`, the gradient of `a` is 1 
-        # and the gradient of `b` is 1, multiplied by the output gradient.
-        # So both grads should be tensors of 1s.
+        # The derivative of is 1. For `L = sum(a + b)`, dL/da = 1 and dL/db = 1.
         expected_grad = np.array([[1., 1., 1.]])
-        assert np.allclose(a.grad, expected_grad)
-        assert np.allclose(b.grad, expected_grad)
+        assert a.grad is not None and np.allclose(a.grad, expected_grad)
+        assert b.grad is not None and np.allclose(b.grad, expected_grad)
 
     @pytest.mark.parametrize("device", DEVICES)
     def test_backward_subtraction(self, device):
@@ -64,62 +44,113 @@ class TestTensorOps:
         a = nw.Tensor([[10, 20, 30]], requires_grad=True, device=device)
         b = nw.Tensor([[1, 2, 3]], requires_grad=True, device=device)
         
-        c = (a - b)
+        c = a - b
         c.backward()
 
-        # For `c = a - b`, the gradient of `a` is 1, but the gradient of `b` is -1.
+        # For `L =(a - b)`, dL/da = 1, but dL/db = -1.
         expected_grad_a = np.array([[1., 1., 1.]])
         expected_grad_b = np.array([[-1., -1., -1.]])
-        assert np.allclose(a.grad, expected_grad_a)
-        assert np.allclose(b.grad, expected_grad_b)
+        assert a.grad is not None and np.allclose(a.grad, expected_grad_a)
+        assert b.grad is not None and np.allclose(b.grad, expected_grad_b)
 
     @pytest.mark.parametrize("device", DEVICES)
     def test_backward_multiplication(self, device):
         """Tests the backward pass for element-wise multiplication."""
         skip_if_cuda_not_available(device)
-        # Use simple data to easily verify the chain rule
         a_data = [[2., 5., 10.]]
         b_data = [[3., 4., 6.]]
         a = nw.Tensor(a_data, requires_grad=True, device=device)
         b = nw.Tensor(b_data, requires_grad=True, device=device)
         
-        c = (a * b)
+        c = a * b
         c.backward()
 
-        # For `c = a * b`, the gradient of `a` is `b`'s data,
-        # and the gradient of `b` is `a`'s data.
-        assert np.allclose(a.grad, b_data) # grad(a) == b
-        assert np.allclose(b.grad, a_data) # grad(b) == a
+        # For `L =(a * b)`, dL/da = b and dL/db = a.
+        assert a.grad is not None and np.allclose(a.grad, b_data)
+        assert b.grad is not None and np.allclose(b.grad, a_data)
 
     @pytest.mark.parametrize("device", DEVICES)
-    def test_backward_chain_rule_mul_add(self, device):
-        """
-        Tests the backward pass for a chain of operations (mul -> add).
-        This is the exact test case you provided.
-        """
+    def test_backward_division(self, device):
+        """Tests the backward pass for element-wise division."""
         skip_if_cuda_not_available(device)
-        n1_data = [[1., 3., 4.]]
-        n2_data = [[3., 4., 5.]]
-        n4_data = [[4., 5., 6.]]
-        
-        n1 = nw.Tensor(n1_data, requires_grad=True, device=device)
-        n2 = nw.Tensor(n2_data, requires_grad=True, device=device)
-        n4 = nw.Tensor(n4_data, requires_grad=True, device=device)
+        a_data = np.array([[8., 18., 40.]])
+        b_data = np.array([[2., 3., 5.]])
+        a = nw.Tensor([[8., 18., 40.]], requires_grad=True, device=device)
+        b = nw.Tensor([[2., 3., 5.]], requires_grad=True, device=device)
 
-        # The graph:
-        n3 = n1 * n2
-        n5 = n3 + n4
+        c = a / b
+        c.backward()
+
+        # For L =(a/b), dL/da = 1/b and dL/db = -a / (b**2)
+        expected_grad_a = 1.0 / b_data
+        expected_grad_b = -a_data / (b_data ** 2)
+        assert a.grad is not None and np.allclose(a.grad, expected_grad_a)
+        assert b.grad is not None and np.allclose(b.grad, expected_grad_b)
         
-        # Start backward pass from a scalar sum
-        loss = n5
-        loss.backward()
+    @pytest.mark.parametrize("device", DEVICES)
+    def test_backward_scalar_division(self, device):
+        """Tests the backward pass for division by a scalar."""
+        skip_if_cuda_not_available(device)
+        a_data = np.array([[10., 20., 30.]])
+        scalar = 2.0
+        a = nw.Tensor([[10., 20., 30.]], requires_grad=True, device=device)
+
+        c = a / scalar
+        c.backward()
+
+        # For L =(a/k), dL/da = 1/k
+        expected_grad_a = np.full(a_data.shape, 1.0 / scalar)
+        assert a.grad is not None and np.allclose(a.grad, expected_grad_a)
+
+    @pytest.mark.parametrize("device", DEVICES)
+    def test_backward_exp(self, device):
+        """Tests the backward pass for the exp function."""
+        skip_if_cuda_not_available(device)
+        a_data = np.array([[1., -2., 0.]])
+        a = nw.Tensor([[1., -2., 0.]], requires_grad=True, device=device)
         
-        # Verify gradients step-by-step
-        # 1. Gradient of loss w.r.t n5 is 1.
-        # 2. Grad of n4 is 1. Grad of n3 is 1.
-        assert np.allclose(n4.grad, [[1., 1., 1.]])
-        # 3. Grad of n1 is grad_n3 * n2_data = 1 * n2_data
-        assert np.allclose(n1.grad, n2_data)
-        # 4. Grad of n2 is grad_n3 * n1_data = 1 * n1_data
-        assert np.allclose(n2.grad, n1_data)
+        c = nw.exp(a)
+        c.backward()
+
+        # For L =(exp(a)), dL/da = exp(a)
+        expected_grad = np.exp(a_data)
+        assert a.grad is not None and np.allclose(a.grad, expected_grad)
+
+    @pytest.mark.parametrize("device", DEVICES)
+    def test_backward_log(self, device):
+        """Tests the backward pass for the log function."""
+        skip_if_cuda_not_available(device)
+        a_data = np.array([[1., 10., 0.5]])
+        a = nw.Tensor([[1., 10., 0.5]], requires_grad=True, device=device)
+        
+        c = nw.log(a)
+        c.backward()
+
+        # For L =(log(a)), dL/da = 1/a
+        expected_grad = 1.0 / a_data
+        assert a.grad is not None and np.allclose(a.grad, expected_grad)
+
+    @pytest.mark.parametrize("device", DEVICES)
+    def test_backward_matmul(self, device):
+        """Tests the backward pass for matrix multiplication."""
+        skip_if_cuda_not_available(device)
+        a_data = np.array([[1., 2., 3.], [4., 5., 6.]]) # (2, 3)
+        b_data = np.array([[7., 8.], [9., 10.], [11., 12.]]) # (3, 2)
+        
+        a = nw.Tensor([[1., 2., 3.], [4., 5., 6.]], requires_grad=True, device=device)
+        b = nw.Tensor([[7., 8.], [9., 10.], [11., 12.]], requires_grad=True, device=device)
+        
+        c = a @ b # Result is a scalar, c.shape is (2,2) before sum
+        c.backward()
+
+        # For L =(A @ B), dL/dA = (dL/dC) @ B.T. Since L=sum(C), dL/dC is a matrix of ones.
+        grad_c = np.ones((2, 2))
+        expected_grad_a = grad_c @ b_data.T
+        
+        # And dL/dB = A.T @ (dL/dC)
+        expected_grad_b = a_data.T @ grad_c
+
+        assert a.grad is not None and np.allclose(a.grad, expected_grad_a)
+        assert b.grad is not None and np.allclose(b.grad, expected_grad_b)
+
 

@@ -53,4 +53,3 @@ Tensor CpuOps::exp(const Tensor &a) {
     return t;
 }
 
-

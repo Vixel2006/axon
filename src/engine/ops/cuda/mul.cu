@@ -1,18 +1,11 @@
 #include "engine/ops.h"
+#include "autograd/ops.h"
 #include "tensor.h"
 #include "helpers.h"
+#include "utils.h"
 #include "allocator/allocatorFactory.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
-
-#define CUDA_CHECK(call)                                                    \
-    do {                                                                    \
-        cudaError_t err = call;                                             \
-        if (err != cudaSuccess) {                                           \
-            throw std::runtime_error(std::string("CUDA Error in " #call " : ") + \
-                                     cudaGetErrorString(err));              \
-        }                                                                   \
-    } while (0)
 
 __global__ void mul_kernel(const float* __restrict__ a_data,
                            const float* __restrict__ b_data,
@@ -60,6 +53,11 @@ Tensor CudaOps::mul(const Tensor& a, const Tensor& b) {
     std::shared_ptr<void> data(d_c_raw, deleter);
 
     bool c_requires_grad = a.requires_grad() || b.requires_grad();
+    Tensor t = Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
 
-    return Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    if (c_requires_grad) {
+      t.set_ctx({a, b}, CudaAutograd::mul);
+    }
+
+    return t;
 }

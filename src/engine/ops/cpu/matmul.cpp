@@ -150,7 +150,7 @@ Tensor CpuOps::matmul(const Tensor& a, const Tensor& b) {
     b_bcast_shape.push_back(b.shape()[b.ndim() - 2]);
     b_bcast_shape.push_back(b.shape()[b.ndim() - 1]);
 
-    Tensor c = Tensor(c_shape, a.dtype());
+    Tensor c = Tensor(c_shape, a.dtype(), deviceToString(a.device()), a.requires_grad() || b.requires_grad());
     Tensor a_exp = a.broadcast(a_bcast_shape);
     Tensor b_exp = b.broadcast(b_bcast_shape);
 
@@ -178,6 +178,10 @@ Tensor CpuOps::matmul(const Tensor& a, const Tensor& b) {
 
         matmul_2d_kernel_optimized(a_ptr, b_ptr, c_ptr, M, N, K, a_stride_m, a_stride_k,
                                    b_stride_k, b_stride_n, c_stride_m, c_stride_n);
+    }
+
+    if (c.requires_grad()) {
+      c.set_ctx({a, b}, CpuAutograd::matmul);
     }
 
     return c;

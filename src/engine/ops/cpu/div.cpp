@@ -44,7 +44,13 @@ Tensor CpuOps::div(const Tensor &numerator, float denominator) {
 
     bool c_requires_grad = numerator.requires_grad();
     std::shared_ptr<void> data(c_data_raw, AlignedDeleter{});
-    return Tensor(numerator.shape(), numerator.strides(), numerator.dtype(), numerator.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    Tensor t = Tensor(numerator.shape(), numerator.strides(), numerator.dtype(), numerator.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    
+    if (c_requires_grad) {
+      t.set_ctx({numerator}, CpuAutograd::div);
+    }
+
+    return t;
 }
 
 
@@ -78,6 +84,12 @@ Tensor CpuOps::div(const Tensor &numerator, const Tensor &denominator) {
 
     bool c_requires_grad = numerator.requires_grad() || denominator.requires_grad();
     std::shared_ptr<void> data(c_data_raw, AlignedDeleter{});
-    return Tensor(numerator.shape(), numerator.strides(), numerator.dtype(), numerator.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    Tensor t = Tensor(numerator.shape(), numerator.strides(), numerator.dtype(), numerator.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+
+    if (c_requires_grad) {
+      t.set_ctx({numerator, denominator}, CpuAutograd::div);
+    }
+
+    return t;
 }
 
