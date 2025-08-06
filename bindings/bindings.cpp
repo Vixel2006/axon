@@ -3,6 +3,7 @@
 
 #include "helpers.h"
 #include "tensor.h"
+#include "init.h"
 #include "engine/ops.h"
 #include <stdexcept>
 
@@ -281,6 +282,24 @@ PYBIND11_MODULE(cnawah, m) {
         "Applies the softmax operation.",
         py::arg("a")
     );
+
+    m.def("zeros", &zeros, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,
+              "Creates a tensor filled with zeros.");
+              
+    m.def("ones", &ones, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,
+          "Creates a tensor filled with ones.");
+          
+    m.def("randn", &randn, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,
+          "Creates a tensor with random numbers from a standard normal distribution.");
+          
+    m.def("uniform", &uniform, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,
+          "Creates a tensor with random numbers from a uniform distribution [0, 1).");
+          
+    m.def("zeros_like", &zeros_like, py::arg("other"),
+          "Creates a tensor of zeros with the same properties as another tensor.");
+          
+    m.def("ones_like", &ones_like, py::arg("other"),
+          "Creates a tensor of ones with the same properties as another tensor.");
 
 }
 
