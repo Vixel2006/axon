@@ -1,14 +1,7 @@
-
-<br>
-<!--
-<p align="center">
-  <img src="https://i.imgur.com/uUuYfGv.png" alt="Nawah Logo" width="150"/>
-</p>
--->
 <h1 align="center">Nawah</h1>
 
 <p align="center">
-  A deep learning framework designed as a conversation, not a command.
+  This is not a deep learning framework. It's an argument.
 </p>
 
 <p align="center">
@@ -20,207 +13,144 @@
 
 ---
 
-Nawah isn't another deep learning framework. **It's an argument.** It argues that the way we build neural networks has become cluttered with boilerplate and cognitive overhead. It argues that building a model should feel like composing a fluid graph, not wrestling with a rigid class hierarchy.
+## The Heresy We Propose
 
-Modern frameworks force your thoughts into their structure. Nawah is built to structure itself around your thoughts.
+For too long, deep learning frameworks have suffered from the **Coupling Problem**. Your model's architecture (`__init__`), its core logic (`forward`), its training loop, and its configuration are all entangled within a single, monolithic class. This leads to boilerplate, hidden states, and a development process that feels more like archaeology than creation.
+
+Nawah is built on a simple, powerful, and controversial idea: **The Great Separation.**
+
+We argue that a sane workflow demands the complete decoupling of three distinct concepts:
+1.  **The State (`Net`):** Your model's learnable parameters. It should be nothing more than a transparent, dictionary-like container. A blueprint registry.
+2.  **The Configuration (`Config`):** The declarative "single source of truth" that defines the architecture, hyperparameters, and experiment settings.
+3.  **The Execution (`Runner`):** The boilerplate engine that handles the `for` loops of training, validation, and inference, freeing you to focus only on the unique logic.
+
+Stop building god objects. Start designing clean, composable systems.
 
 <br>
 
-## The Philosophy: From Script to Graph
+## The Nawah Way in 4 Steps
 
-Tired of nested, unreadable forward passes?
-```python
-# The "Russian Doll" approach
-x = self.dropout(self.act(self.bn2(self.conv2(self.act(self.bn1(self.conv1(x)))))))
-```
+See how The Great Separation leads to a cleaner, faster, and more hackable workflow.
 
-With Nawah, you define **pipelines**, not scripts. The `>>` operator isn't just syntax sugar; it turns your model into a **first-class, queryable pipeline**.
+### Step 1: Define the Truth (`Config`)
 
 ```python
-# The Nawah way: A clear, sequential graph
-x_flow = x >> self.conv1 >> self.bn1 >> self.act >> self.conv2 >> self.bn2 >> self.act >> self.dropout
+import nawah as nw
+
+class TrainingConfig:
+    in_channels = 3
+    base_channels = 64
+    block_type = 'ResBlock'
+    learning_rate = 1e-3
+    batch_size = 128
+    epochs = 10
+    optimizer = 'Adam'
 ```
 
-This simple shift unlocks a new level of developer experience. Let's show you how.
+### Step 2: Build the State (`Net`)
+
+```python
+from nawah.factories import resnet_block
+
+config = TrainingConfig()
+model = nn.Net()
+
+model.add("entry_conv", nn.conv2d(config.in_channels, config.base_channels, kernel_size=7))
+model.add("block1", resnet_block(config.base_channels))
+model.add("block2", resnet_block(config.base_channels))
+model.add("head", nn.linear(config.base_channels, 10))
+```
+
+### Step 3: Define YOUR Logic (`training_step`)
+
+```python
+def my_training_step(runner_state):
+    net = runner_state.net
+    batch = runner_state.batch
+
+    x, y_true = batch
+
+    y_pred = net(x)
+
+    loss = nw.functional.cross_entropy(y_pred, y_true)
+
+    return {"loss": loss, "y_pred": y_pred}
+```
+
+### Step 4: Let the Runner Execute
+
+```python
+runner = nw.Runner(config=config, model=model)
+
+history = runner.train(
+    training_step_fn=my_training_step,
+    train_dataset=my_train_data,
+    eval_dataset=my_eval_data,
+    metrics=[nw.metrics.Accuracy(), nw.metrics.F1Score()]
+)
+```
 
 ---
 
-## The Nawah API: Four Ideas You'll Love
+## 💣 Hackability Is Not a Feature. It's the Point.
 
-### 1. Pipelines are First-Class Citizens
+Most libraries hide their internals like it’s some sacred artifact. Nawah doesn’t do that. Everything is an object you can poke, inspect, and mutate at runtime.
 
-Because models are defined as pipelines, you can slice and query them like a list. Need to extract features from a pretrained model? Just slice it.
+- 🔍 Access **all model parameters** with `net.params`
+- 🧱 Access **buffers** (non-trainable states) with `net.buffers`
+- 🔧 Swap any layer with `net['layer_name'] = new_layer`
+- 🧠 Replace functions on-the-fly: `net['fc1']['fn'] = custom_linear`
+- 💥 Inject any arbitrary PyFunc into a pipeline step
+- 👁️‍🗨️ Pure functional `>>` pipelines — you trace, log, wrap, or fuse
+- 🧬 Plug and play — it’s just Python dicts and functional calls
 
-```python
-# Given a trained VisionTransformer model...
-model = VisionTransformer()
+Frameworks treat you like a user. Nawah treats you like a hacker.
 
-# Get the feature extractor (all layers except the final classification head)
-feature_extractor = model[:-1] 
-
-# Get just the patch embedding and the first two transformer blocks
-early_features = model[:3] 
-
-# Apply the partial model
-features = x >> feature_extractor
-```
-**No more complex hook registration or manual layer surgery.** You think in blocks, you slice in blocks.
-
-### 2. Complex Patterns, Simple Decorators
-
-Repetitive structural patterns like residual connections clutter your code. Nawah abstracts them into declarative decorators.
-
-Want to make a block residual? Just decorate it with `@nn.Residual`.
-
-```python
-import nawah.nn as nn
-import nawah.functional as F
-
-class ResNetBlock(nn.Module):
-    def __init__(self, channels):
-        super().__init__()
-        self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        self.bn1   = nn.BatchNorm2d(channels)
-        self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
-        self.bn2   = nn.BatchNorm2d(channels)
-    
-    @nn.Residual # <-- That's it. Nawah handles the skip connection.
-    @F.relu      # <-- Chain decorators for activation.
-    def forward(self, x):
-        return x >> self.conv1 >> self.bn1 >> F.relu >> self.conv2 >> self.bn2
-```
-Your `forward` pass defines the **core logic**. The decorators layer on the **structural pattern**.
-
-### 3. Transparent Internals, Zero Effort
-
-Stop guessing tensor shapes. Nawah models are self-documenting. Printing a module automatically traces a dummy input through the graph to show you the output shape at every single step.
-
-```python
-model = ResNetBlock(channels=64)
-print(model)
-```
-```text
-> ResNetBlock (Input: [1, 64, 32, 32])
-===================================================================
-| Layer      | Type          | Output Shape         | Trainable   |
-|------------|---------------|----------------------|-------------|
-| conv1      | Conv2d        | [1, 64, 32, 32]      | ✓           |
-| bn1        | BatchNorm2d   | [1, 64, 32, 32]      | ✓           |
-| (F.relu)   | Function      | [1, 64, 32, 32]      |             |
-| conv2      | Conv2d        | [1, 64, 32, 32]      | ✓           |
-| bn2        | BatchNorm2d   | [1, 64, 32, 32]      | ✓           |
-| (F.relu)   | Function      | [1, 64, 32, 32]      |             |
-| (Residual) | Connection    | [1, 64, 32, 32]      |             |
-===================================================================
-```
-**No more `print(x.shape)` scattered everywhere.** Debugging is built-in.
-
-### 4. Hackable Gradients, Made Simple
-
-Need to implement gradient clipping, custom gradient modifications, or just inspect gradients during backward passes? Attach a hook with a simple lambda.
-
-```python
-# Get a parameter from your model
-p = model.conv1.weight
-
-# Clip gradients for this specific parameter during .backward()
-p.hook_grad(lambda grad: grad.clamp(-1, 1))
-
-# Log the norm of the gradient every time it's computed
-p.hook_grad(lambda grad: print(f"Grad norm for conv1.weight: {grad.norm()}"))
-
-# --- then later in the training loop ---
-loss.backward() # Hooks are automatically triggered
-```
-
-This gives you low-level control without the boilerplate, perfectly embodying the **"blueprint and wrench"** philosophy.
+You want to freeze weights? Detach the gradient. You want to mutate activations on the fly? Go ahead. Want to track internal outputs? Inject a hook or just override the fn inline. It's your engine. Drive it like a maniac.
 
 ---
 
-## 💡 The Vision: The Next Step
+## 🔥 The Vision: A Fully Fused Stack
 
-Nawah's ultimate goal is to bridge the gap between Python's expressiveness and the bare-metal performance of compiled code.
+The Great Separation enables our ultimate goal: bridging the gap between high-level expression and bare-metal performance.
 
-- **NawahScript**: Imagine defining simple models with a powerful, chainable DSL.
-  ```python
-  # The future is concise.
-  model = "Conv(3, 64, k=3, p=1) -> ReLU >> ResBlock(64) * 3 -> AvgPool -> Linear(64, 10)"
-  ```
-- **JIT Compiler to CUDA**: The pipeline `>>` operator isn't just an operator—it's an Abstract Syntax Tree. We're building a JIT compiler that walks this tree and **fuses operations into a single, high-performance CUDA kernel**, right from your Python code.
+- **JIT Compiler for CUDA:** The explicit pipeline (`>>`) is a parsable AST. We will trace and fuse it into high-performance CUDA kernels.
+- **Config-Driven Architecture:** Define your model in the Config, and the Net builds itself.
 
 ---
 
 ## ✅ Core Features & Status
 
-- [x] **Expressive & Composable API** (`>>`, `@nn.Residual`)
-- [ ] **Full Autograd Engine** (Forward & Backward)
-- [ ] **Transparent Debugging** (Automatic shape tracing)
-- [ ] **Core Layers & Optimizers** (Linear, Conv2D, BatchNorm, Adam, SGD)
-- [x] **Complete CPU Training Loop**
-- [ ] **CUDA Backend** (High-performance kernels under development ⚙️)
-- [ ] **Model Serialization** (Saving/Loading)
-- [ ] **Advanced Layers** (Transformers, Attention, LayerNorm)
+- ✅ Core Philosophy: The Great Separation (Net, Config, Runner)
+- ✅ Transparent API: Dictionary-based layers and explicit data flows.
+- ✅ Core Autograd Engine: Tape-based and fully functional.
+- 🔧 JIT Compilation Engine: AST parsing and fusion (In Development)
+- ✅ High-Level Runner: Training, evaluation, and inference handled
+- ✅ Built-in Metrics: Accuracy, Precision, F1, etc.
+- ✅ Core Layers, Losses, Optimizers
+- ✅ CUDA Backend: Custom kernels for performance
 
 ---
 
 ## 🚀 Getting Started
 
 ```bash
-# Clone the repository
 git clone https://github.com/yushi2006/nawah.git
 cd nawah
-
-# Install dependencies and build the C++/CUDA backend
 pip install -e .
-```
-
-## 📦 A Taste of Nawah
-
-```python
-import nawah as nwh
-import nawah.nn as nn
-import nawah.functional as F
-import nawah.optim as optim
-
-class SimpleResNet(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.entry = nn.Conv2d(3, 64, kernel_size=7, stride=2)
-        self.block1 = self._make_block(64)
-        self.block2 = self._make_block(64)
-        self.pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.head = nn.Linear(64, 10)
-
-    def _make_block(self, channels):
-        @nn.Residual
-        def block(x):
-            return x >> nn.Conv2d(channels, channels, 3, padding=1) \
-                     >> nn.BatchNorm2d(channels) \
-                     >> F.relu
-        return block
-
-    def forward(self, x):
-        return (x >> self.entry >> F.relu 
-                  >> self.block1 >> self.block2
-                  >> self.pool >> nwh.flatten 
-                  >> self.head)
-
-model = SimpleResNet()
-print(model) # See the beautiful, automatic shape trace!
 ```
 
 ---
 
 ## 🤝 Contributing
 
-Nawah is built for builders. If you're passionate about creating elegant developer tools and diving deep into the internals of deep learning, you belong here.
+If this argument resonates with you—if you believe clarity, hackability, and performance can co-exist—then you belong here.
 
-**How you can help:**
-- **Expand the Layer Zoo**: Implement new and interesting layers.
-- **Refine the API**: Have an idea for an even more expressive API? Let's hear it.
-- **Write Docs & Examples**: Help others fall in love with the Nawah workflow.
+- Implement Runner Features
+- Expand the Layer Zoo
+- Build Metrics Modules
 
-**Fork the repo. Open an issue. Let's build the future of DL tooling together.**
+Fork it. Break it. Build it better.
 
 ---
 
@@ -228,15 +158,13 @@ Nawah is built for builders. If you're passionate about creating elegant develop
 
 **Yusuf Mohamed**  
 ML Researcher | ML Engineer | Open-source Builder  
-
-- Creator of **GRF** (Gated Recursive Fusion)  
-- Building **Nawah** as a clean-slate deep learning framework  
-- Contributor at **Hugging Face**  
-
-📎 [GitHub – @yushi2006](https://github.com/yushi2006)  
-📎 [LinkedIn – Yusuf Mohamed](https://www.linkedin.com/in/yusufmohamed2006/)
+Creator of GRF (Gated Recursive Fusion)  
+Contributor at Hugging Face  
+📎 GitHub – [@yushi2006](https://github.com/yushi2006)  
+📎 LinkedIn – Yusuf Mohamed  
 
 ---
+
 ## 📄 License
 
-**MIT License** — free to use, modify, and commercialize with attribution.
+MIT License — free to use, modify, and commercialize with attribution.
