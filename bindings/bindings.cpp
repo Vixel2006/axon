@@ -56,6 +56,17 @@ Tensor softmax_dispatcher(const Tensor &a) {
     }
 }
 
+Tensor conv_dispatcher(const Tensor &a, const Tensor& kernel, int stride, int padding) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.conv2d(a, kernel, stride, padding);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.conv2d(a, kernel, stride, padding);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for conv2d: " + deviceToString(a.device()));
+    }
+}
+
 namespace py = pybind11;
 
 PYBIND11_MODULE(cnawah, m) {
@@ -208,14 +219,18 @@ PYBIND11_MODULE(cnawah, m) {
              return ss.str();
            })
 
-      .def("__add__", &Tensor::add)
-      .def("__sub__", &Tensor::sub)
-      .def("__mul__", &Tensor::mul)
+      .def("__add__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::add))
+      .def("__add__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::add))
+      .def("__sub__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::sub))
+      .def("__sub__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::sub))
+      .def("__mul__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::mul))
+      .def("__mul__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::mul))
       .def("__matmul__", &Tensor::matmul)
       .def("__truediv__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::div),
              "Performs element-wise division with another tensor.")
       .def("__truediv__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::div),
              "Performs element-wise division with a scalar.")
+      .def("__neg__", &Tensor::neg)
 
       .def("sum",
           [](const Tensor &self, py::object dim_arg, bool keepdim) {
@@ -281,6 +296,17 @@ PYBIND11_MODULE(cnawah, m) {
         &softmax_dispatcher,
         "Applies the softmax operation.",
         py::arg("a")
+    );
+
+
+    m.def(
+        "conv2d",
+        &conv_dispatcher,
+        "Applies the conv2d operation.",
+        py::arg("a"),
+        py::arg("kernel"),
+        py::arg("stride") = 1,
+        py::arg("padding") = 1
     );
 
     m.def("zeros", &zeros, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,

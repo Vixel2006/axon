@@ -6,8 +6,11 @@ class Tensor;
 
 struct Ops {
   virtual Tensor add(const Tensor& a, const Tensor& b) = 0;
+  virtual Tensor add(const Tensor& a, float scalar) = 0;
   virtual Tensor sub(const Tensor& a, const Tensor& b) = 0;
+  virtual Tensor sub(const Tensor& a, float scalar) = 0;
   virtual Tensor mul(const Tensor& a, const Tensor& b) = 0;
+  virtual Tensor mul(const Tensor& a, float scalar) = 0;
   virtual Tensor div(const Tensor &numerator, float denominator) = 0;
   virtual Tensor div(const Tensor &numerator, const Tensor& denominator) = 0;
   virtual Tensor matmul(const Tensor& a, const Tensor& b) = 0;
@@ -19,6 +22,8 @@ struct Ops {
   virtual Tensor pow(const Tensor& base, float exponent) = 0;
   virtual Tensor pow(const Tensor& base, const Tensor& exponent) = 0;
   virtual Tensor softmax(const Tensor &a) = 0;
+  virtual Tensor neg(const Tensor& a) = 0;
+  virtual Tensor conv2d(const Tensor& a, const Tensor& kernel, int stride, int padding) = 0;
   virtual void fill_zeros(Tensor& t) const = 0;
   virtual void fill_ones(Tensor& t) const = 0;
   virtual void fill_uniform(Tensor& t) const = 0;
@@ -27,8 +32,11 @@ struct Ops {
 
 struct CpuOps: Ops {
   Tensor add(const Tensor& a, const Tensor& b) override;
+  Tensor add(const Tensor& a, float scalar) override;
   Tensor sub(const Tensor& a, const Tensor& b) override;
+  Tensor sub(const Tensor& a, float scalar) override;
   Tensor mul(const Tensor& a, const Tensor& b) override;
+  Tensor mul(const Tensor& a, float scalar) override;
   Tensor div(const Tensor &numerator, float denominator) override;
   Tensor div(const Tensor &numerator, const Tensor& denominator) override;
   Tensor matmul(const Tensor& a, const Tensor& b) override;
@@ -40,6 +48,8 @@ struct CpuOps: Ops {
   Tensor pow(const Tensor& base, float exponent) override;
   Tensor pow(const Tensor& base, const Tensor& exponent) override;
   Tensor softmax(const Tensor &a) override;
+  Tensor neg(const Tensor &a) override;
+  Tensor conv2d(const Tensor& a, const Tensor& kernel, int stride, int padding) override;
   void fill_ones(Tensor& t) const override;
   void fill_zeros(Tensor& t) const override;
   void fill_uniform(Tensor& t) const override;
@@ -48,8 +58,11 @@ struct CpuOps: Ops {
 
 struct CudaOps: Ops {
   Tensor add(const Tensor& a, const Tensor& b) override;
+  Tensor add(const Tensor& a, float scalar) override;
   Tensor sub(const Tensor& a, const Tensor& b) override;
+  Tensor sub(const Tensor& a, float scalar) override;
   Tensor mul(const Tensor& a, const Tensor& b) override;
+  Tensor mul(const Tensor& a, float scalar) override;
   Tensor div(const Tensor &numerator, float denominator) override;
   Tensor div(const Tensor &numerator, const Tensor& denominator) override;
   Tensor matmul(const Tensor& a, const Tensor& b) override;
@@ -61,6 +74,8 @@ struct CudaOps: Ops {
   Tensor pow(const Tensor& base, float exponent) override;
   Tensor pow(const Tensor& base, const Tensor& exponent) override;
   Tensor softmax(const Tensor &a) override;
+  Tensor neg(const Tensor& a) override;
+  Tensor conv2d(const Tensor& a, const Tensor& kernel, int stride, int padding) override;
   void fill_ones(Tensor& t) const override;
   void fill_zeros(Tensor& t) const override;
   void fill_uniform(Tensor& t) const override;
