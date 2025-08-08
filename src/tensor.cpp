@@ -861,37 +861,40 @@ Tensor Tensor::flatten(int start, int end) const {
                 requires_grad_, grad_, ctx_);
 }
 
-Tensor Tensor::add(const Tensor& other) const {
-  Tensor t = this->ops_->add(*this, other);
-  
-  if (device_.type == DeviceType::CPU)
-    t.set_ctx({*this, other}, CpuAutograd::add);
-  else if (device_.type == DeviceType::CUDA)
-    t.set_ctx({*this, other}, CudaAutograd::add);
+Tensor Tensor::neg() const {
+  return this->ops_->neg(*this);
+}
 
-  return t;
+Tensor Tensor::add(const Tensor& other) const {
+  return this->ops_->add(*this, other);
+}
+
+Tensor Tensor::add(float scalar) const {
+  return this->ops_->add(*this, scalar);
 }
 
 Tensor Tensor::sub(const Tensor& other) const {
-  Tensor t = this->ops_->sub(*this, other);
+  return this->ops_->sub(*this, other);
+}
 
-  if (device_.type == DeviceType::CPU)
-    t.set_ctx({*this, other}, CpuAutograd::sub);
-  else if (device_.type == DeviceType::CUDA)
-    t.set_ctx({*this, other}, CudaAutograd::sub);
-  
-    return t;
+Tensor Tensor::sub(float scalar) const {
+  return this->ops_->sub(*this, scalar);
 }
 
 Tensor Tensor::mul(const Tensor& other) const {
-    Tensor t = this->ops_->mul(*this, other);
+  return this->ops_->mul(*this, other);
+}
 
-    if (device_.type == DeviceType::CPU)
-      t.set_ctx({*this, other}, CpuAutograd::mul);
-    else if (device_.type == DeviceType::CUDA)
-      t.set_ctx({*this, other}, CudaAutograd::mul);
-    
-    return t;
+Tensor Tensor::mul(float scalar) const {
+  return this->ops_->mul(*this, scalar);
+}
+
+Tensor Tensor::div(const Tensor& other) const {
+  return this->ops_->div(*this, other);
+}
+
+Tensor Tensor::div(float other) const {
+  return this->ops_->div(*this, other);
 }
 
 Tensor Tensor::matmul(const Tensor& other) const {
@@ -904,30 +907,6 @@ Tensor Tensor::sum(int dim, bool keepdim) const {
 
 Tensor Tensor::mean(int dim, bool keepdim) const {
   return this->ops_->mean(*this, dim, keepdim);
-}
-
-Tensor Tensor::div(const Tensor& other) const {
-  Tensor t = this->ops_->div(*this, other);
-
-
-  if (device_.type == DeviceType::CPU)
-    t.set_ctx({*this, other}, CpuAutograd::div);
-  else if (device_.type == DeviceType::CUDA)
-    t.set_ctx({*this, other}, CudaAutograd::div);
-
-  return t;
-}
-
-Tensor Tensor::div(float other) const {
-  Tensor t = this->ops_->div(*this, other);
-
-  if (device_.type == DeviceType::CPU)
-    t.set_ctx({*this}, CpuAutograd::div);
-  else if (device_.type == DeviceType::CUDA)
-    t.set_ctx({*this}, CudaAutograd::div);
-
-  return t;
-
 }
 
 std::vector<Tensor> Tensor::build_topo() const {
