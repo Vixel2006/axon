@@ -17,7 +17,8 @@ Tensor CpuOps::sum(const Tensor &a, int dim, bool keepdim) {
     }
 
     std::vector<int64_t> new_shape = reduce_shape(a.shape(), dim, keepdim);
-    Tensor result(new_shape, a.dtype(), deviceToString(a.device()), false);
+    bool result_requires_grad = a.requires_grad();
+    Tensor result(new_shape, a.dtype(), deviceToString(a.device()), result_requires_grad);
 
     const float* in_ptr = static_cast<const float*>(a.data_ptr().get());
     float* out_ptr = static_cast<float*>(result.data_ptr().get());
@@ -74,6 +75,10 @@ Tensor CpuOps::sum(const Tensor &a, int dim, bool keepdim) {
             }
             out_ptr[i] = local_sum;
         }
+    }
+
+    if (result_requires_grad) {
+      result.set_ctx({a}, CpuAutograd::sum);
     }
 
     return result;

@@ -16,7 +16,8 @@ Tensor CpuOps::mean(const Tensor &a, int dim, bool keepdim) {
     }
 
     std::vector<int64_t> new_shape = reduce_shape(a.shape(), dim, keepdim);
-    Tensor result = Tensor(new_shape, a.dtype(), deviceToString(a.device()), false);
+    bool result_requires_grad = a.requires_grad();
+    Tensor result = Tensor(new_shape, a.dtype(), deviceToString(a.device()), result_requires_grad);
 
     const int64_t reduction_size = a.shape()[dim];
 
@@ -74,6 +75,10 @@ Tensor CpuOps::mean(const Tensor &a, int dim, bool keepdim) {
                 out_ptr[out_idx] = local_sum * inv_reduction_size;
             }
         }
+    }
+
+    if (result_requires_grad) {
+      result.set_ctx({a}, CpuAutograd::mean);
     }
 
     return result;

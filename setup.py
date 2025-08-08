@@ -131,7 +131,17 @@ ext_modules = [
             "src/autograd/cuda/bexp.cu",
             "src/autograd/cuda/bmatmul.cu",
             "src/engine/ops/cpu/fill.cpp",
-            "src/engine/ops/cuda/fill.cu"
+            "src/engine/ops/cuda/fill.cu",
+            "src/engine/ops/cpu/neg.cpp",
+            "src/engine/ops/cuda/neg.cu",
+            "src/autograd/cpu/bsum.cpp",
+            "src/autograd/cpu/bmean.cpp",
+            "src/autograd/cuda/bsum.cu",
+            "src/autograd/cuda/bmean.cu",
+            "src/engine/ops/cpu/conv.cpp",
+            "src/engine/ops/cuda/conv.cu",
+            "src/autograd/cpu/bconv.cpp",
+            "src/autograd/cuda/bconv.cu"
         ],
         include_dirs=["include", os.path.join(CUDA_PATH, "include")],
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],

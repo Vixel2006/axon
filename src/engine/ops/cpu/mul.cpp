@@ -17,6 +17,46 @@ struct AlignedDeleter {
     }
 };
 
+Tensor CpuOps::mul(const Tensor &a, float scalar) {
+    const size_t num_elements = a.numel();
+    if (num_elements == 0) {
+        return Tensor({}, {}, a.dtype(), a.device(), nullptr, 0, false, nullptr, std::nullopt);
+    }
+
+    void* c_data_raw = nullptr;
+    #ifdef _MSC_VER
+    c_data_raw = _aligned_malloc(num_elements * sizeof(float), 32);
+    #else
+    if (posix_memalign(&c_data_raw, 32, num_elements * sizeof(float)) != 0) {
+        c_data_raw = nullptr;
+    }
+    #endif
+
+    if (!c_data_raw) {
+        throw std::runtime_error("Failed to allocate aligned memory for the output tensor.");
+    }
+
+    const float* a_data = static_cast<const float*>(a.data_ptr().get());
+    float* c_data = static_cast<float*>(c_data_raw);
+
+    #pragma omp parallel for simd schedule(static)
+    for (size_t i = 0; i < num_elements; ++i) {
+        c_data[i] = a_data[i] * scalar;
+    }
+
+    std::vector<int64_t> c_shape = a.shape();
+    std::vector<int64_t> c_strides = compute_strides_(c_shape);
+    bool c_requires_grad = a.requires_grad();
+    std::shared_ptr<void> data(c_data_raw, AlignedDeleter{});
+    Tensor t = Tensor(c_shape, c_strides, a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+
+    if (c_requires_grad) {
+      t.set_ctx({a}, CpuAutograd::mul);
+    }
+
+    return t;
+}
+
 Tensor CpuOps::mul(const Tensor &a, const Tensor &b) {
     if (a.shape() != b.shape()) {
         throw std::runtime_error("Tensor shapes must be identical for element-wise multiplication.");
@@ -54,6 +94,11 @@ Tensor CpuOps::mul(const Tensor &a, const Tensor &b) {
     bool c_requires_grad = a.requires_grad() || b.requires_grad();
 
     std::shared_ptr<void> data(c_data_raw, AlignedDeleter{});
+    Tensor t = Tensor(c_shape, c_strides, a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
 
-    return Tensor(c_shape, c_strides, a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
+    if (c_requires_grad) {
+      t.set_ctx({a, b}, CpuAutograd::mul);
+    }
+
+    return t;
 }
