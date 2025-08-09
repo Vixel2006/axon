@@ -115,4 +115,3 @@ Tensor CpuOps::mean(const Tensor &a, int dim, bool keepdim) {
 
     return result;
 }
-
