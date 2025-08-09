@@ -9,10 +9,10 @@
 Tensor CpuOps::mean(const Tensor &a) {
     std::vector<int64_t> new_shape = {1};
     bool result_requires_grad = a.requires_grad();
-    Tensor result = Tensor(new_shape, a.dtype(), deviceToString(a.device()), result_requires_grad);
+    Tensor result(new_shape, a.dtype(), deviceToString(a.device()), result_requires_grad);
 
-    const int64_t num_elements = a.numel();
     float* out_ptr = static_cast<float*>(result.data_ptr().get());
+    const int64_t num_elements = a.numel();
 
     if (num_elements == 0) {
         out_ptr[0] = 0.0f;
@@ -21,16 +21,18 @@ Tensor CpuOps::mean(const Tensor &a) {
 
     const float* in_ptr = static_cast<const float*>(a.data_ptr().get());
     float total_sum = 0.0f;
+    const int64_t reduction_size = a.numel();
+    const float inv_reduction_size = 1.0f / static_cast<float>(reduction_size);
 
     #pragma omp parallel for reduction(+:total_sum)
     for (int64_t i = 0; i < num_elements; ++i) {
         total_sum += in_ptr[i];
     }
 
-    out_ptr[0] = total_sum / static_cast<float>(num_elements);
+    out_ptr[0] = total_sum * inv_reduction_size;
 
     if (result_requires_grad) {
-      result.set_ctx({a}, CpuAutograd::mean);
+      result.set_ctx({a}, CpuAutograd::sum);
     }
 
     return result;
@@ -113,4 +115,3 @@ Tensor CpuOps::mean(const Tensor &a, int dim, bool keepdim) {
 
     return result;
 }
-

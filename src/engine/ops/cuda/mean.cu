@@ -15,7 +15,6 @@ __global__ void full_reduction_mean_kernel(
     size_t num_elements
 ) {
     extern __shared__ float sdata[];
-
     int tid = threadIdx.x;
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
@@ -212,3 +211,4 @@ Tensor CudaOps::mean(const Tensor &a, int dim, bool keepdim) {
 
     return result;
 }
+
