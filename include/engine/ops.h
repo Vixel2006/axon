@@ -15,6 +15,8 @@ struct Ops {
   virtual Tensor div(const Tensor &numerator, const Tensor& denominator) = 0;
   virtual Tensor matmul(const Tensor& a, const Tensor& b) = 0;
   virtual Tensor sum(const Tensor& a, int dim, bool keepdim) = 0;
+  virtual Tensor sum(const Tensor& a) = 0;
+  virtual Tensor mean(const Tensor& a) = 0;
   virtual Tensor mean(const Tensor& a, int dim, bool keepdim) = 0;
   virtual Tensor relu(const Tensor& t) = 0;
   virtual Tensor log(const Tensor& t) = 0;
@@ -41,7 +43,9 @@ struct CpuOps: Ops {
   Tensor div(const Tensor &numerator, const Tensor& denominator) override;
   Tensor matmul(const Tensor& a, const Tensor& b) override;
   Tensor sum(const Tensor& a, int dim, bool keepdim) override;
+  Tensor sum(const Tensor& a) override;
   Tensor mean(const Tensor& a, int dim, bool keepdim) override;
+  Tensor mean(const Tensor& a) override;
   Tensor relu(const Tensor& t) override;
   Tensor log(const Tensor& t) override;
   Tensor exp(const Tensor& t) override;
@@ -67,7 +71,9 @@ struct CudaOps: Ops {
   Tensor div(const Tensor &numerator, const Tensor& denominator) override;
   Tensor matmul(const Tensor& a, const Tensor& b) override;
   Tensor sum(const Tensor& a, int dim, bool keepdim) override;
+  Tensor sum(const Tensor& a) override;
   Tensor mean(const Tensor& a, int dim, bool keepdim) override;
+  Tensor mean(const Tensor& a) override;
   Tensor relu(const Tensor& t) override;
   Tensor log(const Tensor& t) override;
   Tensor exp(const Tensor& t) override;
