@@ -45,4 +45,3 @@ void CpuAutograd::mean(const Tensor& out, std::vector<Tensor>& prev) {
         grad_a_ptr[i] += grad_out_ptr[out_idx] * scale;
     }
 }
-

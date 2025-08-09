@@ -335,5 +335,3 @@ PYBIND11_MODULE(cnawah, m) {
           "Creates a tensor of ones with the same properties as another tensor.");
 
 }
-
-
