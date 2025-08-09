@@ -2,12 +2,15 @@ import nawah_api as nw
 import time
 
 t = nw.Tensor([[1,3,4], [2,3,4]], requires_grad=True, device="cuda:0")
+n = nw.Tensor([[3,4,5], [4,5,6]], requires_grad=True, device="cuda:0")
 
-t1 = t.sum()
+t1 = (t + n).mean()
 
 t1.backward()
 
 print(t.grad)
+print(n.grad)
+print(t1)
 
 net = nw.Net()
 
@@ -22,5 +25,3 @@ net.summary([1, 128])
 
 print("Registered params")
 print(net.params.keys())
-
-print(net(x))

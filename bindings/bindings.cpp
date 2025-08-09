@@ -62,7 +62,6 @@ Tensor conv_dispatcher(const Tensor &a, const Tensor& kernel, int stride, int pa
     } else if (a.device().type == DeviceType::CUDA) {
         return cuda_ops.conv2d(a, kernel, stride, padding);
     } else {
-        // Throw an error for unsupported devices.
         throw std::runtime_error("Unsupported device for conv2d: " + deviceToString(a.device()));
     }
 }
@@ -233,6 +232,12 @@ PYBIND11_MODULE(cnawah, m) {
       .def("__neg__", &Tensor::neg)
 
       .def("sum",
+          [](const Tensor &self) {
+            return self.sum();
+          }
+      )
+
+      .def("sum",
           [](const Tensor &self, py::object dim_arg, bool keepdim) {
             if (dim_arg.is_none()) {
               return self.sum(-1, keepdim);
@@ -245,6 +250,12 @@ PYBIND11_MODULE(cnawah, m) {
           "Calculates the sum of tensor elements over a given dimension.",
           py::arg("dim") = py::none(),
           py::arg("keepdim") = false
+      )
+
+      .def("mean",
+          [](const Tensor &self) {
+            return self.mean();
+          }
       )
 
       .def("mean",

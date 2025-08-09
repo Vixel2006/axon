@@ -8,6 +8,35 @@
 #include <stdexcept>
 #include <vector>
 
+__global__ void full_reduction_sum_kernel(
+    const float* in_data,
+    float* out_data,
+    size_t num_elements
+) {
+    extern __shared__ float sdata[];
+
+    int tid = threadIdx.x;
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    float local_sum = 0.0f;
+    for (size_t i = index; i < num_elements; i += stride) {
+        local_sum += in_data[i];
+    }
+    sdata[tid] = local_sum;
+    __syncthreads();
+
+    for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) {
+            sdata[tid] += sdata[tid + s];
+        }
+        __syncthreads();
+    }
+
+    if (tid == 0) {
+        atomicAdd(out_data, sdata[0]);
+    }
+}
 __global__ void sum_reduction_kernel(
     const float* in_data,
     float* out_data,
@@ -63,6 +92,47 @@ __global__ void sum_reduction_kernel(
     if (threadIdx.x == 0) {
         out_data[output_idx] = sdata[0];
     }
+}
+
+Tensor CudaOps::sum(const Tensor &a) {
+    if (a.device().type != DeviceType::CUDA) {
+        throw std::runtime_error("Input tensor for CudaOps::sum must be on the CUDA device.");
+    }
+
+    // The result of a full reduction is a scalar tensor.
+    std::vector<int64_t> new_shape = {1};
+    bool result_requires_grad = a.requires_grad();
+    Tensor result(new_shape, a.dtype(), deviceToString(a.device()), result_requires_grad);
+
+    const size_t num_elements = a.numel();
+    if (num_elements == 0) {
+        float* d_result = static_cast<float*>(result.raw_ptr());
+        CUDA_CHECK(cudaMemset(d_result, 0, sizeof(float)));
+        return result;
+    }
+
+    const float* d_a = static_cast<const float*>(a.raw_ptr());
+    float* d_result = static_cast<float*>(result.raw_ptr());
+
+    CUDA_CHECK(cudaMemset(d_result, 0, sizeof(float)));
+
+    const int threadsPerBlock = 256;
+    const int blocksPerGrid = std::min(
+        (int)((num_elements + threadsPerBlock - 1) / threadsPerBlock),
+        4096
+    );
+    const size_t shmem_size = threadsPerBlock * sizeof(float);
+
+    full_reduction_sum_kernel<<<blocksPerGrid, threadsPerBlock, shmem_size>>>(
+        d_a, d_result, num_elements
+    );
+    CUDA_CHECK(cudaGetLastError());
+
+    if (result_requires_grad) {
+      result.set_ctx({a}, CudaAutograd::sum);
+    }
+
+    return result;
 }
 
 Tensor CudaOps::sum(const Tensor &a, int dim, bool keepdim) {
