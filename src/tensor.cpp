@@ -898,8 +898,16 @@ Tensor Tensor::matmul(const Tensor& other) const {
   return this->ops_->matmul(*this, other);
 }
 
+Tensor Tensor::sum() const {
+  return this->ops_->sum(*this);
+}
+
 Tensor Tensor::sum(int dim, bool keepdim) const {
   return this->ops_->sum(*this, dim, keepdim);
+}
+
+Tensor Tensor::mean() const {
+  return this->ops_->mean(*this);
 }
 
 Tensor Tensor::mean(int dim, bool keepdim) const {

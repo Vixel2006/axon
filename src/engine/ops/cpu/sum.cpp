@@ -6,6 +6,36 @@
 #include <stdexcept>
 #include <omp.h>
 
+Tensor CpuOps::sum(const Tensor &a) {
+    std::vector<int64_t> new_shape = {1};
+    bool result_requires_grad = a.requires_grad();
+    Tensor result(new_shape, a.dtype(), deviceToString(a.device()), result_requires_grad);
+
+    float* out_ptr = static_cast<float*>(result.data_ptr().get());
+    const int64_t num_elements = a.numel();
+
+    if (num_elements == 0) {
+        out_ptr[0] = 0.0f;
+        return result;
+    }
+
+    const float* in_ptr = static_cast<const float*>(a.data_ptr().get());
+    float total_sum = 0.0f;
+
+    #pragma omp parallel for reduction(+:total_sum)
+    for (int64_t i = 0; i < num_elements; ++i) {
+        total_sum += in_ptr[i];
+    }
+
+    out_ptr[0] = total_sum;
+
+    if (result_requires_grad) {
+      result.set_ctx({a}, CpuAutograd::sum);
+    }
+
+    return result;
+}
+
 Tensor CpuOps::sum(const Tensor &a, int dim, bool keepdim) {
     int ndim = a.ndim();
     if (dim < 0) {

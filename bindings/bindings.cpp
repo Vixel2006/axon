@@ -56,6 +56,19 @@ Tensor softmax_dispatcher(const Tensor &a) {
     }
 }
 
+<<<<<<< Updated upstream
+=======
+Tensor conv_dispatcher(const Tensor &a, const Tensor& kernel, int stride, int padding) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.conv2d(a, kernel, stride, padding);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.conv2d(a, kernel, stride, padding);
+    } else {
+        throw std::runtime_error("Unsupported device for conv2d: " + deviceToString(a.device()));
+    }
+}
+
+>>>>>>> Stashed changes
 namespace py = pybind11;
 
 PYBIND11_MODULE(cnawah, m) {
@@ -218,6 +231,12 @@ PYBIND11_MODULE(cnawah, m) {
              "Performs element-wise division with a scalar.")
 
       .def("sum",
+          [](const Tensor &self) {
+            return self.sum();
+          }
+      )
+
+      .def("sum",
           [](const Tensor &self, py::object dim_arg, bool keepdim) {
             if (dim_arg.is_none()) {
               return self.sum(-1, keepdim);
@@ -230,6 +249,12 @@ PYBIND11_MODULE(cnawah, m) {
           "Calculates the sum of tensor elements over a given dimension.",
           py::arg("dim") = py::none(),
           py::arg("keepdim") = false
+      )
+
+      .def("mean",
+          [](const Tensor &self) {
+            return self.mean();
+          }
       )
 
       .def("mean",
