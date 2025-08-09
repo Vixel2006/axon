@@ -233,29 +233,36 @@ PYBIND11_MODULE(cnawah, m) {
       .def("__neg__", &Tensor::neg)
 
       .def("sum",
+          [](const Tensor &self) {
+              return self.sum();
+          }
+      )
+
+      .def("sum",
           [](const Tensor &self, py::object dim_arg, bool keepdim) {
-            if (dim_arg.is_none()) {
-              return self.sum(-1, keepdim);
-            }
             if (py::isinstance<py::int_>(dim_arg)) {
               return self.sum(dim_arg.cast<int>(), keepdim);
             }
-            throw py::type_error("sum(): 'dim' argument must be None or an integer.");
+            throw py::type_error("sum(): 'dim' argument must be an integer.");
           },
           "Calculates the sum of tensor elements over a given dimension.",
           py::arg("dim") = py::none(),
           py::arg("keepdim") = false
       )
 
+
+      .def("mean",
+          [](const Tensor &self) {
+              return self.mean();
+          }
+      )
+
       .def("mean",
           [](const Tensor &self, py::object dim_arg, bool keepdim) {
-            if (dim_arg.is_none()) {
-              return self.mean(-1, keepdim);
-            }
             if (py::isinstance<py::int_>(dim_arg)) {
               return self.mean(dim_arg.cast<int>(), keepdim);
             }
-            throw py::type_error("mean(): 'dim' argument must be None or an integer.");
+            throw py::type_error("mean(): 'dim' argument must be an integer.");
           },
           "Calculates the mean of tensor elements over a given dimension.",
           py::arg("dim") = py::none(),
