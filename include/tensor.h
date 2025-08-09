@@ -90,9 +90,13 @@ public:
     void flatten_list(const py::list &data, float *ptr);
     void get_shape(const py::list &data, std::vector<__int64_t> &shape, size_t depth);
 
+    Tensor neg() const;
     Tensor add(const Tensor& other) const;
+    Tensor add(float scalar) const;
     Tensor sub(const Tensor& other) const;
+    Tensor sub(float scalar) const;
     Tensor mul(const Tensor& other) const;
+    Tensor mul(float scalar) const;
     Tensor div(const Tensor& other) const;
     Tensor div(float other) const;
     Tensor matmul(const Tensor& other) const;

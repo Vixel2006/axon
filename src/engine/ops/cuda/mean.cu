@@ -1,31 +1,13 @@
 #include "engine/ops.h"
+#include "autograd/ops.h"
 #include "tensor.h"
 #include "helpers.h"
+#include "utils.h"
+#include "allocator/allocatorFactory.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
+#include <vector>
 
-<<<<<<< Updated upstream
-#define CUDA_CHECK(call)                                                    \
-    do {                                                                    \
-        cudaError_t err = call;                                             \
-        if (err != cudaSuccess) {                                           \
-            throw std::runtime_error(std::string("CUDA Error in " #call " : ") + \
-                                     cudaGetErrorString(err));              \
-        }                                                                   \
-    } while (0)
-
-struct AlignedDeleter {
-    void operator()(void* ptr) const {
-        #ifdef _MSC_VER
-        _aligned_free(ptr);
-        #else
-        free(ptr);
-        #endif
-    }
-};
-
-__global__ void sum_reduce_kernel_for_mean(const float* input_data, float* output_data, size_t num_elements) {
-=======
 __global__ void full_reduction_mean_kernel(
     const float* in_data,
     float* out_data,
@@ -63,7 +45,6 @@ __global__ void full_reduction_mean_kernel(
     }
 }
 
-
 __global__ void mean_reduction_kernel(
     const float* in_data,
     float* out_data,
@@ -75,34 +56,56 @@ __global__ void mean_reduction_kernel(
     bool keepdim,
     size_t num_output_elements
 ) {
->>>>>>> Stashed changes
     extern __shared__ float sdata[];
-    unsigned int tid = threadIdx.x;
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned int stride = gridDim.x * blockDim.x;
 
-    float my_sum = 0.0f;
-    for (size_t j = i; j < num_elements; j += stride) {
-        my_sum += input_data[j];
+    int64_t output_idx = blockIdx.x;
+    if (output_idx >= num_output_elements) {
+        return;
     }
-    sdata[tid] = my_sum;
+
+    const int64_t reduction_size = d_in_shape[reduction_dim];
+    const int64_t reduction_stride = d_in_strides[reduction_dim];
+
+    int64_t start_in_offset = 0;
+    int64_t temp_i = output_idx;
+    int out_dim_idx = 0;
+    for (int in_dim_idx = 0; in_dim_idx < ndim; ++in_dim_idx) {
+        if (in_dim_idx == reduction_dim) {
+            if (keepdim) {
+                out_dim_idx++;
+            }
+            continue;
+        }
+
+        const int64_t coord = temp_i / d_out_strides[out_dim_idx];
+        start_in_offset += coord * d_in_strides[in_dim_idx];
+        temp_i %= d_out_strides[out_dim_idx];
+        out_dim_idx++;
+    }
+
+    float sum = 0.0f;
+    for (int64_t j = threadIdx.x; j < reduction_size; j += blockDim.x) {
+        sum += in_data[start_in_offset + j * reduction_stride];
+    }
+    sdata[threadIdx.x] = sum;
     __syncthreads();
 
     for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (tid < s) {
-            sdata[tid] += sdata[tid + s];
+        if (threadIdx.x < s) {
+            sdata[threadIdx.x] += sdata[threadIdx.x + s];
         }
         __syncthreads();
     }
 
-    if (tid == 0) {
-        output_data[blockIdx.x] = sdata[0];
+    if (threadIdx.x == 0) {
+        if (reduction_size > 0) {
+            out_data[output_idx] = sdata[0] / reduction_size;
+        } else {
+            out_data[output_idx] = 0.0f;
+        }
     }
 }
 
-<<<<<<< Updated upstream
-Tensor CudaOps::mean(const Tensor &a, int axis, bool keep_dims) {
-=======
 Tensor CudaOps::mean(const Tensor &a) {
     if (a.device().type != DeviceType::CUDA) {
         throw std::runtime_error("Input tensor must be on CUDA device.");
@@ -208,6 +211,4 @@ Tensor CudaOps::mean(const Tensor &a, int dim, bool keepdim) {
     }
 
     return result;
->>>>>>> Stashed changes
 }
-
