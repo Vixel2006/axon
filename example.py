@@ -1,9 +1,37 @@
 import nawah_api as nw
 import time
 
+<<<<<<< Updated upstream
 t = nw.randn([2,3,4])
 print(t)
 
 t1 = nw.zeros_like(t)
 print(t1)
 
+=======
+t = nw.Tensor([[1,3,4], [2,3,4]], requires_grad=True, device="cuda:0")
+n = nw.Tensor([[3,4,5], [4,5,6]], requires_grad=True, device="cuda:0")
+
+t1 = (t + n).mean()
+
+t1.backward()
+
+print(t.grad)
+print(n.grad)
+print(t1)
+
+net = nw.Net()
+
+x = nw.Tensor([1, 128])
+
+net.add("fc1", nw.layers.linear(128, 256))
+net.add("relu1", nw.activations.relu())
+net.add("fc2", nw.layers.linear(256, 512))
+
+print(net)
+net.summary([1, 128])
+
+print("Registered params")
+print(net.params.keys())
+
+>>>>>>> Stashed changes
