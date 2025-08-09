@@ -37,6 +37,8 @@ __global__ void full_reduction_sum_kernel(
         atomicAdd(out_data, sdata[0]);
     }
 }
+
+
 __global__ void sum_reduction_kernel(
     const float* in_data,
     float* out_data,
@@ -99,7 +101,6 @@ Tensor CudaOps::sum(const Tensor &a) {
         throw std::runtime_error("Input tensor for CudaOps::sum must be on the CUDA device.");
     }
 
-    // The result of a full reduction is a scalar tensor.
     std::vector<int64_t> new_shape = {1};
     bool result_requires_grad = a.requires_grad();
     Tensor result(new_shape, a.dtype(), deviceToString(a.device()), result_requires_grad);

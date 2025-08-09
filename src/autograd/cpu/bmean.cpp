@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <omp.h>
 
-void CpuAutograd::sum(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::mean(const Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
 
@@ -25,6 +25,8 @@ void CpuAutograd::sum(const Tensor& out, std::vector<Tensor>& prev) {
     const auto& in_strides = a.strides();
     const auto& out_strides = out.strides();
     const int ndim = a.ndim();
+    const int64_t reduction_size = a.numel();
+    const float scale = 1.0f / static_cast<float>(reduction_size);
 
     #pragma omp parallel for schedule(static)
     for (int64_t i = 0; i < a.numel(); ++i) {
@@ -40,6 +42,6 @@ void CpuAutograd::sum(const Tensor& out, std::vector<Tensor>& prev) {
             }
         }
 
-        grad_a_ptr[i] += grad_out_ptr[out_idx];
+        grad_a_ptr[i] += grad_out_ptr[out_idx] * scale;
     }
 }

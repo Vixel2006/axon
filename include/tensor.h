@@ -101,8 +101,8 @@ public:
     Tensor div(float other) const;
     Tensor matmul(const Tensor& other) const;
     Tensor sum() const;
-    Tensor mean() const;
     Tensor sum(int dim, bool keepdim = false) const;
+    Tensor mean() const;
     Tensor mean(int dim, bool keepdim = false) const;
 
     std::vector<Tensor> build_topo() const;
