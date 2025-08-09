@@ -1,66 +1,129 @@
 #include "engine/ops.h"
 #include "tensor.h"
 #include "helpers.h"
+#include "init.h"
 #include <vector>
+#include <complex>
+#include <numeric>
+#include <cmath>
+
+void fft(std::vector<std::complex<double>>& x) {
+    int N = x.size();
+    if (N <= 1) return;
+    std::vector<std::complex<double>> even(N/2), odd(N/2);
+    for (int i = 0; i < N / 2; ++i) {
+        even[i] = x[i*2];
+        odd[i] = x[i*2 + 1];
+    }
+    fft(even);
+    fft(odd);
+    for (int k = 0; k < N / 2; ++k) {
+        std::complex<double> t = std::polar(1.0, -2 * M_PI * k / N) * odd[k];
+        x[k] = even[k] + t;
+        x[k + N / 2] = even[k] - t;
+    }
+}
+
+void ifft(std::vector<std::complex<double>>& x) {
+    int N = x.size();
+    for (auto& val : x) val = std::conj(val);
+    fft(x);
+    for (auto& val : x) val = std::conj(val) / static_cast<double>(N);
+}
+
+void fft2d(std::vector<std::complex<double>>& data, int H, int W) {
+    std::vector<std::complex<double>> row(W);
+    for (int i = 0; i < H; ++i) {
+        for (int j = 0; j < W; ++j) row[j] = data[i * W + j];
+        fft(row);
+        for (int j = 0; j < W; ++j) data[i * W + j] = row[j];
+    }
+    std::vector<std::complex<double>> col(H);
+    for (int j = 0; j < W; ++j) {
+        for (int i = 0; i < H; ++i) col[i] = data[i * W + j];
+        fft(col);
+        for (int i = 0; i < H; ++i) data[i * W + j] = col[i];
+    }
+}
+
+void ifft2d(std::vector<std::complex<double>>& data, int H, int W) {
+    std::vector<std::complex<double>> row(W);
+    for (int i = 0; i < H; ++i) {
+        for (int j = 0; j < W; ++j) row[j] = data[i * W + j];
+        ifft(row);
+        for (int j = 0; j < W; ++j) data[i * W + j] = row[j];
+    }
+    std::vector<std::complex<double>> col(H);
+    for (int j = 0; j < W; ++j) {
+        for (int i = 0; i < H; ++i) col[i] = data[i * W + j];
+        ifft(col);
+        for (int i = 0; i < H; ++i) data[i * W + j] = col[i];
+    }
+}
 
 Tensor CpuOps::conv2d(const Tensor& a, const Tensor& kernel, int stride, int padding) {
-    const auto& in_shape = a.shape();
-    const auto& k_shape = kernel.shape();
+    const std::vector<int64_t>& in_shape = a.shape();
+    const std::vector<int64_t>& kernel_shape = kernel.shape();
 
-    const int64_t N = in_shape[0];
-    const int64_t C_in = in_shape[1];
-    const int64_t H_in = in_shape[2];
-    const int64_t W_in = in_shape[3];
+    const int64_t H_in = in_shape[in_shape.size() - 2];
+    const int64_t W_in = in_shape[in_shape.size() - 1];
+    const int64_t H_k = kernel_shape[kernel_shape.size() - 2];
+    const int64_t W_k = kernel_shape[kernel_shape.size() - 1];
 
-    const int64_t C_out = k_shape[0];
-    const int64_t KH = k_shape[2];
-    const int64_t KW = k_shape[3];
+    const int64_t H_fft = H_in + H_k - 1;
+    const int64_t W_fft = W_in + W_k - 1;
 
-    const int64_t H_out = (H_in + 2 * padding - KH) / stride + 1;
-    const int64_t W_out = (W_in + 2 * padding - KW) / stride + 1;
+    int64_t batch_dims = 1;
+    for (size_t i = 0; i < in_shape.size() - 2; ++i) {
+        batch_dims *= in_shape[i];
+    }
 
-    std::vector<int64_t> out_shape = {N, C_out, H_out, W_out};
-    Tensor result(out_shape, a.dtype(), deviceToString(a.device()), a.requires_grad() || kernel.requires_grad());
+    std::vector<int64_t> out_shape(in_shape.begin(), in_shape.end() - 2);
+    out_shape.push_back(H_fft);
+    out_shape.push_back(W_fft);
+    Tensor out = zeros(out_shape, deviceToString(a.device()), a.requires_grad());
 
-    const float* a_data = static_cast<const float*>(a.data_ptr().get());
-    const float* k_data = static_cast<const float*>(kernel.data_ptr().get());
-    float* res_data = static_cast<float*>(result.data_ptr().get());
+    float* a_data = static_cast<float*>(a.data_ptr().get());
+    float* kernel_data = static_cast<float*>(kernel.data_ptr().get());
+    float* out_data = static_cast<float*>(out.data_ptr().get());
     
-    const auto& a_strides = a.strides();
-    const auto& k_strides = kernel.strides();
-    const auto& res_strides = result.strides();
+    const int64_t in_slice_size = H_in * W_in;
+    const int64_t kernel_slice_size = H_k * W_k;
+    const int64_t fft_slice_size = H_fft * W_fft;
 
-    #pragma omp parallel for collapse(4) schedule(static)
-    for (int64_t n = 0; n < N; ++n) {
-        for (int64_t c_out = 0; c_out < C_out; ++c_out) {
-            for (int64_t h_out = 0; h_out < H_out; ++h_out) {
-                for (int64_t w_out = 0; w_out < W_out; ++w_out) {
-                    
-                    float acc = 0.0f;
-                    for (int64_t c_in = 0; c_in < C_in; ++c_in) {
-                        for (int64_t kh = 0; kh < KH; ++kh) {
-                            for (int64_t kw = 0; kw < KW; ++kw) {
-                                int64_t h_in = h_out * stride + kh - padding;
-                                int64_t w_in = w_out * stride + kw - padding;
+    for (int64_t b = 0; b < batch_dims; ++b) {
+        std::vector<std::complex<double>> in_fft(fft_slice_size, {0.0, 0.0});
+        std::vector<std::complex<double>> kernel_fft(fft_slice_size, {0.0, 0.0});
 
-                                if (h_in >= 0 && h_in < H_in && w_in >= 0 && w_in < W_in) {
-                                    int64_t a_idx = n * a_strides[0] + c_in * a_strides[1] + h_in * a_strides[2] + w_in * a_strides[3];
-                                    int64_t k_idx = c_out * k_strides[0] + c_in * k_strides[1] + kh * k_strides[2] + kw * k_strides[3];
-                                    acc += a_data[a_idx] * k_data[k_idx];
-                                }
-                            }
-                        }
-                    }
-                    res_data[n * res_strides[0] + c_out * res_strides[1] + h_out * res_strides[2] + w_out * res_strides[3]] = acc;
-                }
+        float* in_slice_ptr = a_data + b * in_slice_size;
+        float* kernel_slice_ptr = kernel_data + b * kernel_slice_size;
+        
+        for (int64_t h = 0; h < H_in; ++h) {
+            for (int64_t w = 0; w < W_in; ++w) {
+                in_fft[h * W_fft + w] = std::complex<double>(in_slice_ptr[h * W_in + w], 0.0);
             }
+        }
+        
+        for (int64_t h = 0; h < H_k; ++h) {
+            for (int64_t w = 0; w < W_k; ++w) {
+                kernel_fft[h * W_fft + w] = std::complex<double>(kernel_slice_ptr[h * W_k + w], 0.0);
+            }
+        }
+        
+        fft2d(in_fft, H_fft, W_fft);
+        fft2d(kernel_fft, H_fft, W_fft);
+        
+        for (int i = 0; i < fft_slice_size; ++i) {
+            in_fft[i] *= kernel_fft[i];
+        }
+
+        ifft2d(in_fft, H_fft, W_fft);
+        
+        float* out_slice_ptr = out_data + b * fft_slice_size;
+        for (int i = 0; i < fft_slice_size; ++i) {
+            out_slice_ptr[i] = in_fft[i].real();
         }
     }
 
-    if (result.requires_grad()) {
-        result.set_ctx({a, kernel}, [stride, padding](const Tensor& out, std::vector<Tensor>& prev) {
-            CpuAutograd::conv2d(out, prev, stride, padding);
-        });
-    }
-    return result;
+    return out;
 }
