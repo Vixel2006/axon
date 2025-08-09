@@ -1,12 +1,13 @@
 #include "engine/ops.h"
+#include "autograd/ops.h"
 #include "tensor.h"
 #include "helpers.h"
 #include "utils.h"
+#include "allocator/allocatorFactory.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
+#include <vector>
 
-<<<<<<< Updated upstream
-=======
 __global__ void full_reduction_sum_kernel(
     const float* in_data,
     float* out_data,
@@ -36,7 +37,6 @@ __global__ void full_reduction_sum_kernel(
         atomicAdd(out_data, sdata[0]);
     }
 }
-
 __global__ void sum_reduction_kernel(
     const float* in_data,
     float* out_data,
@@ -93,7 +93,6 @@ __global__ void sum_reduction_kernel(
         out_data[output_idx] = sdata[0];
     }
 }
->>>>>>> Stashed changes
 
 Tensor CudaOps::sum(const Tensor &a) {
     if (a.device().type != DeviceType::CUDA) {
@@ -137,4 +136,70 @@ Tensor CudaOps::sum(const Tensor &a) {
 }
 
 Tensor CudaOps::sum(const Tensor &a, int dim, bool keepdim) {
+    if (a.device().type != DeviceType::CUDA) {
+        throw std::runtime_error("Input tensor for CudaOps::sum must be on the CUDA device.");
+    }
+    int ndim = a.ndim();
+    if (dim < 0) {
+        dim += ndim;
+    }
+    if (dim < 0 || dim >= ndim) {
+        throw std::runtime_error("Reduction dimension is out of bounds.");
+    }
+
+    std::vector<int64_t> new_shape = reduce_shape(a.shape(), dim, keepdim);
+    bool result_requires_grad = a.requires_grad();
+    Tensor result(new_shape, a.dtype(), deviceToString(a.device()), result_requires_grad);
+
+    if (a.numel() == 0) {
+        return result;
+    }
+    const size_t num_output_elements = result.numel();
+
+    const float* d_a = static_cast<const float*>(a.raw_ptr());
+    float* d_result = static_cast<float*>(result.raw_ptr());
+
+    const auto& in_shape_vec = a.shape();
+    const auto& in_strides_vec = a.strides();
+    const auto& out_strides_vec = result.strides();
+
+    int64_t* d_in_shape;
+    int64_t* d_in_strides;
+    int64_t* d_out_strides;
+
+    CUDA_CHECK(cudaMalloc(&d_in_shape, in_shape_vec.size() * sizeof(int64_t)));
+    CUDA_CHECK(cudaMalloc(&d_in_strides, in_strides_vec.size() * sizeof(int64_t)));
+    CUDA_CHECK(cudaMalloc(&d_out_strides, out_strides_vec.size() * sizeof(int64_t)));
+
+    CUDA_CHECK(cudaMemcpy(d_in_shape, in_shape_vec.data(), in_shape_vec.size() * sizeof(int64_t), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_in_strides, in_strides_vec.data(), in_strides_vec.size() * sizeof(int64_t), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_out_strides, out_strides_vec.data(), out_strides_vec.size() * sizeof(int64_t), cudaMemcpyHostToDevice));
+
+    const int threadsPerBlock = 256;
+    const int blocksPerGrid = num_output_elements;
+    const size_t shmem_size = threadsPerBlock * sizeof(float);
+
+    sum_reduction_kernel<<<blocksPerGrid, threadsPerBlock, shmem_size>>>(
+        d_a,
+        d_result,
+        d_in_strides,
+        d_out_strides,
+        d_in_shape,
+        ndim,
+        dim,
+        keepdim,
+        num_output_elements
+    );
+    CUDA_CHECK(cudaGetLastError());
+
+    CUDA_CHECK(cudaFree(d_in_shape));
+    CUDA_CHECK(cudaFree(d_in_strides));
+    CUDA_CHECK(cudaFree(d_out_strides));
+
+    if (result_requires_grad) {
+      result.set_ctx({a}, CudaAutograd::sum);
+    }
+
+
+    return result;
 }

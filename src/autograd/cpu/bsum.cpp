@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <omp.h>
 
-void CpuAutograd::mean(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::sum(const Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
 
@@ -41,7 +41,6 @@ void CpuAutograd::mean(const Tensor& out, std::vector<Tensor>& prev) {
                 out_idx += coord * out_strides[dim_idx];
             }
         }
-
         grad_a_ptr[i] += grad_out_ptr[out_idx] * scale;
     }
 }

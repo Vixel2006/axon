@@ -1,16 +1,8 @@
 #include "autograd/ops.h"
 #include "tensor.h"
+#include "utils.h"
 #include <cuda_runtime.h>
 #include <stdexcept>
-
-#define CUDA_CHECK(call)                                                    \
-    do {                                                                    \
-        cudaError_t err = call;                                             \
-        if (err != cudaSuccess) {                                           \
-            throw std::runtime_error(std::string("CUDA Error in " #call " : ") + \
-                                     cudaGetErrorString(err));              \
-        }                                                                   \
-    } while (0)
 
 #define TILE_DIM 32
 

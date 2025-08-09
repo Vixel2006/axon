@@ -1,5 +1,6 @@
 from .python.core.tensor import Tensor
 from .python.api import pipe
+from .python.nn import Net, layers, activations
 
 import cnawah as nw
 
@@ -33,6 +34,9 @@ __all__ = [
     "randn",
     "uniform",
     "zeros_like",
-    "ones_like"
+    "ones_like",
+    "Net",
+    "layers",
+    "activations"
 ]
 
