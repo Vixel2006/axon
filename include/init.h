@@ -10,7 +10,7 @@
 #include "helpers.h"
 #include <string>
 
-Ops* get_ops_for_device(const std::string& device_str) {
+inline Ops* get_ops_for_device(const std::string& device_str) {
     Device dev = parse_device(device_str);
     if (dev.type == DeviceType::CPU) {
         return get_cpu_ops();
@@ -21,7 +21,7 @@ Ops* get_ops_for_device(const std::string& device_str) {
 }
 
 
-Tensor zeros(const std::vector<__int64_t> &shape, const std::string& device = "cpu", bool requires_grad = false)
+inline Tensor zeros(const std::vector<__int64_t> &shape, const std::string& device = "cpu", bool requires_grad = false)
 {
     Tensor t(shape, DType::float32, device, requires_grad);
     
@@ -33,7 +33,7 @@ Tensor zeros(const std::vector<__int64_t> &shape, const std::string& device = "c
 }
 
 
-Tensor ones(const std::vector<__int64_t> &shape, const std::string& device = "cpu", bool requires_grad = false)
+inline Tensor ones(const std::vector<__int64_t> &shape, const std::string& device = "cpu", bool requires_grad = false)
 {
     Tensor t(shape, DType::float32, device, requires_grad);
     Ops* ops = get_ops_for_device(device);
@@ -41,7 +41,7 @@ Tensor ones(const std::vector<__int64_t> &shape, const std::string& device = "cp
     return t;
 }
 
-Tensor randn(const std::vector<__int64_t> &shape, const std::string& device = "cpu", bool requires_grad = false)
+inline Tensor randn(const std::vector<__int64_t> &shape, const std::string& device = "cpu", bool requires_grad = false)
 {
     Tensor t(shape, DType::float32, device, requires_grad);
     Ops* ops = get_ops_for_device(device);
@@ -49,7 +49,7 @@ Tensor randn(const std::vector<__int64_t> &shape, const std::string& device = "c
     return t;
 }
 
-Tensor uniform(const std::vector<__int64_t> &shape, const std::string& device = "cpu", bool requires_grad = false)
+inline Tensor uniform(const std::vector<__int64_t> &shape, const std::string& device = "cpu", bool requires_grad = false)
 {
     Tensor t(shape, DType::float32, device, requires_grad);
     Ops* ops = get_ops_for_device(device);
@@ -57,12 +57,12 @@ Tensor uniform(const std::vector<__int64_t> &shape, const std::string& device = 
     return t;
 }
 
-Tensor zeros_like(const Tensor& other) {
+inline Tensor zeros_like(const Tensor& other) {
     return zeros(other.shape(), deviceToString(other.device()), other.requires_grad());
 }
 
 
-Tensor ones_like(const Tensor& other) {
+inline Tensor ones_like(const Tensor& other) {
     return ones(other.shape(), deviceToString(other.device()), other.requires_grad());
 }
 #endif
