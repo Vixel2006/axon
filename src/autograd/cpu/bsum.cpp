@@ -5,20 +5,6 @@
 #include <stdexcept>
 #include <omp.h>
 
-/**
- * @brief Backward pass for the sum reduction on the CPU, using in-place accumulation.
- *
- * This function propagates the gradient from the output of the sum operation
- * back to its input. The core logic is a broadcast: the gradient from an
- * element in the output is *added* to all the input elements that were
-_summed
- * to create it.
- *
- * @param out The output tensor from the forward `sum` operation. Its gradient
- *            is the source for the backward pass.
- * @param prev A vector containing the single input tensor to the `sum` operation.
- *             Its gradient will be accumulated into.
- */
 void CpuAutograd::sum(const Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];

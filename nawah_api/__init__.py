@@ -12,6 +12,7 @@ relu = nw.relu
 log = nw.log
 exp = nw.exp
 softmax = nw.softmax
+conv2d = nw.conv2d
 ones = nw.ones
 zeros = nw.zeros
 randn = nw.randn
