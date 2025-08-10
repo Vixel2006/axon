@@ -10,7 +10,7 @@ inp = nw.Tensor(
         [4, 5, 6],
         [7, 8, 9] ]]],
     requires_grad=True,
-    device="cpu"
+    device="cuda:0"
 )
 
 # Kernel tensor (shape 1×1×2×2)
@@ -18,7 +18,7 @@ kernel = nw.Tensor(
     [[[ [1, 0],
         [0, -1] ]]],
     requires_grad=True,
-    device="cpu"
+    device="cuda:0"
 )
 
 print(nw.conv2d(inp, kernel))

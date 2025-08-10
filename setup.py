@@ -145,7 +145,7 @@ ext_modules = [
         ],
         include_dirs=["include", os.path.join(CUDA_PATH, "include")],
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],
-        libraries=["cudart"],
+        libraries=["cudart", "cufft"],
         language="c++",
         
         extra_compile_args=[
