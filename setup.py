@@ -1,14 +1,12 @@
 import os
 import subprocess
-import sysconfig # Import sysconfig to find Python paths
+import sysconfig
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 from setuptools import setup, find_packages
 
 
 def find_cuda():
-    """Finds the CUDA install path."""
-    # (Same as your version)
     cuda_home = os.environ.get("CUDA_HOME") or "/usr/local/cuda"
     if os.path.exists(cuda_home):
         return cuda_home
@@ -141,7 +139,8 @@ ext_modules = [
             "src/engine/ops/cpu/conv.cpp",
             "src/engine/ops/cuda/conv.cu",
             "src/autograd/cpu/bconv.cpp",
-            "src/autograd/cuda/bconv.cu"
+            "src/autograd/cuda/bconv.cu",
+            "src/utils.cu"
         ],
         include_dirs=["include", os.path.join(CUDA_PATH, "include")],
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],
@@ -149,15 +148,15 @@ ext_modules = [
         language="c++",
         
         extra_compile_args=[
-            "-std=c++17", 
-            "-g", 
-            "-O3", 
-            "-mavx2",       
-            "-mfma",        
-            "-fopenmp"      
+            "-std=c++17",
+            "-g",
+            "-O3",
+            "-mavx2",
+            "-mfma",
+            "-fopenmp"
         ],
         extra_link_args=[
-            "-fopenmp",     
+            "-fopenmp",
             "-lcuda"
         ]
     ),

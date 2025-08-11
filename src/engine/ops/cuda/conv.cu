@@ -9,120 +9,133 @@
 #include <stdexcept>
 #include <vector>
 
-int next_power_of_2(int n) {
-    int power = 1;
-    while (power < n) {
-        power *= 2;
-    }
-    return power;
-}
-
-
-__global__ void pad_kernel(const float* input, float* padded_output,
-                         const int W_in, const int H_in,
-                         const int W_padded, const int H_padded) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if (x < W_padded && y < H_padded) {
-        int padded_idx = y * W_padded + x;
-        if (x < W_in && y < H_in) {
-            int input_idx = y * W_in + x;
-            padded_output[padded_idx] = input[input_idx];
-        } else {
-            padded_output[padded_idx] = 0.0f;
-        }
-    }
-}
-
-__global__ void complex_mult_and_scale_kernel(cufftComplex* a, const cufftComplex* b, int n, float scale) {
+__global__ void complex_mult_accumulate_kernel(cufftComplex* accumulator, const cufftComplex* a, const cufftComplex* b, int n) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
     if (idx < n) {
         float ar = a[idx].x;
         float ai = a[idx].y;
         float br = b[idx].x;
         float bi = b[idx].y;
+        
+        // C = A * B
+        float cr = ar * br - ai * bi;
+        float ci = ar * bi + ai * br;
 
-        a[idx].x = (ar * br - ai * bi) * scale;
-        a[idx].y = (ar * bi + ai * br) * scale;
+        // Accumulator += C
+        atomicAdd(&accumulator[idx].x, cr);
+        atomicAdd(&accumulator[idx].y, ci);
     }
 }
 
+
 Tensor CudaOps::conv2d(const Tensor& a, const Tensor& kernel, int stride, int padding) {
-  if (stride != 1) {
-    throw std::runtime_error("FFT-based conv2d only supports stride = 1.");
-  }
-  
-  std::vector<int64_t> a_shape = a.shape();
-  std::vector<int64_t> kernel_shape = kernel.shape();
+    const std::vector<int64_t>& in_shape = a.shape();
+    const std::vector<int64_t>& kernel_shape = kernel.shape();
 
-  const int H_in = a_shape[a_shape.size() - 2];
-  const int W_in = a_shape[a_shape.size() - 1];
-  const int H_k = kernel_shape[kernel_shape.size() - 2];
-  const int W_k = kernel_shape[kernel_shape.size() - 1];
+    const int64_t N = in_shape[0];
+    const int64_t C_in = in_shape[1];
+    const int64_t H_in = in_shape[2];
+    const int64_t W_in = in_shape[3];
 
-  const int H_fft = next_power_of_2(H_in + H_k - 1);
-  const int W_fft = next_power_of_2(W_in + W_k - 1);
+    const int64_t C_out = kernel_shape[0];
+    const int64_t H_k = kernel_shape[2];
+    const int64_t W_k = kernel_shape[3];
 
-  float *d_a, *d_kernel, *d_out;
-  cufftComplex *d_a_fft, *d_k_fft;
-  
-  const size_t real_size = W_fft * H_fft * sizeof(float);
-  const int W_fft_complex = (W_fft / 2) + 1;
-  const size_t complex_size = W_fft_complex * H_fft * sizeof(cufftComplex);
+    const int64_t H_out = (H_in + 2 * padding - H_k) / stride + 1;
+    const int64_t W_out = (W_in + 2 * padding - W_k) / stride + 1;
 
-  CUDA_CHECK(cudaMalloc(&d_a, real_size));
-  CUDA_CHECK(cudaMalloc(&d_kernel, real_size));
-  CUDA_CHECK(cudaMalloc(&d_a_fft, complex_size));
-  CUDA_CHECK(cudaMalloc(&d_k_fft, complex_size));
+    const int64_t H_fft = next_power_of_2(H_in + H_k - 1);
+    const int64_t W_fft = next_power_of_2(W_in + W_k - 1);
+    const int64_t W_fft_complex = (W_fft / 2) + 1;
 
-  dim3 block_dim(16, 16);
-  dim3 grid_dim((W_fft + block_dim.x - 1) / block_dim.x, (H_fft + block_dim.y - 1) / block_dim.y);
-  
-  pad_kernel<<<grid_dim, block_dim>>>(static_cast<float*>(a.data_ptr().get()), d_a, W_in, H_in, W_fft, H_fft);
-  pad_kernel<<<grid_dim, block_dim>>>(static_cast<float*>(kernel.data_ptr().get()), d_kernel, W_k, H_k, W_fft, H_fft);
+    const size_t fft_real_size = W_fft * H_fft * sizeof(float);
+    const size_t fft_complex_size = W_fft_complex * H_fft * sizeof(cufftComplex);
+    const int    complex_elements = W_fft_complex * H_fft;
 
-  cufftHandle plan_forward, plan_inverse;
-  checkCufftErrors(cufftPlan2d(&plan_forward, H_fft, W_fft, CUFFT_R2C));
-  checkCufftErrors(cufftPlan2d(&plan_inverse, H_fft, W_fft, CUFFT_C2R));
-  
-  checkCufftErrors(cufftExecR2C(plan_forward, (cufftReal*)d_a, d_a_fft));
-  checkCufftErrors(cufftExecR2C(plan_forward, (cufftReal*)d_kernel, d_k_fft));
-  
-  const int complex_elements = W_fft_complex * H_fft;
-  const float scale = 1.0f / (W_fft * H_fft);
-  int threads_per_block_mult = 256;
-  int blocks_mult = (complex_elements + threads_per_block_mult - 1) / threads_per_block_mult;
+    Tensor out({N, C_out, H_out, W_out}, a.dtype(), deviceToString(a.device()), a.requires_grad());
+    float* d_out_full = static_cast<float*>(out.data_ptr().get());
 
-  complex_mult_and_scale_kernel<<<blocks_mult, threads_per_block_mult>>>(d_a_fft, d_k_fft, complex_elements, scale);
+    cufftHandle plan_r2c, plan_c2r;
+    checkCufftErrors(cufftPlan2d(&plan_r2c, H_fft, W_fft, CUFFT_R2C));
+    checkCufftErrors(cufftPlan2d(&plan_c2r, H_fft, W_fft, CUFFT_C2R));
 
-  checkCufftErrors(cufftExecC2R(plan_inverse, d_a_fft, (cufftReal*)d_a));
-  
-  const int H_out = (H_in + 2 * padding - H_k) / stride + 1;
-  const int W_out = (W_in + 2 * padding - W_k) / stride + 1;
-  
-  std::vector<int64_t> out_shape;
-  if (a_shape.size() > 2) {
-      out_shape.insert(out_shape.end(), a_shape.begin(), a_shape.end() - 2);
-  }
-  out_shape.push_back(H_out);
-  out_shape.push_back(W_out);
-  
-  Tensor out(out_shape, a.dtype(), deviceToString(a.device()), a.requires_grad());
-  d_out = static_cast<float*>(out.data_ptr().get());
+    float* d_kernel_all = nullptr;
+    cufftComplex* d_kernels_fft_all = nullptr;
+    CUDA_CHECK(cudaMalloc(&d_kernel_all, kernel.numel()));
+    CUDA_CHECK(cudaMalloc(&d_kernels_fft_all, C_out * C_in * fft_complex_size));
+    CUDA_CHECK(cudaMemcpy(d_kernel_all, kernel.data_ptr().get(), kernel.numel(), cudaMemcpyHostToDevice));
 
-  CUDA_CHECK(cudaMemcpy2D(d_out, W_out * sizeof(float),
-                                d_a, W_fft * sizeof(float),
-                                W_out * sizeof(float), H_out,
-                                cudaMemcpyDeviceToDevice));
-  
-  CUDA_CHECK(cudaFree(d_a));
-  CUDA_CHECK(cudaFree(d_kernel));
-  CUDA_CHECK(cudaFree(d_a_fft));
-  CUDA_CHECK(cudaFree(d_k_fft));
-  checkCufftErrors(cufftDestroy(plan_forward));
-  checkCufftErrors(cufftDestroy(plan_inverse));
-  
-  return out;
+    float* h_kernel_slice = new float[H_k * W_k];
+    float* d_padded_temp;
+    CUDA_CHECK(cudaMalloc(&d_padded_temp, fft_real_size));
+    
+    for (int64_t c_out = 0; c_out < C_out; ++c_out) {
+        for (int64_t c_in = 0; c_in < C_in; ++c_in) {
+            const int64_t kernel_channel_offset = (c_out * C_in + c_in) * H_k * W_k;
+            const int64_t kernel_fft_offset = (c_out * C_in + c_in) * complex_elements;
+
+            pad_kernel<<<dim3((W_fft+15)/16, (H_fft+15)/16), dim3(16,16)>>>(
+                d_kernel_all + kernel_channel_offset, d_padded_temp, W_k, H_k, W_fft, H_fft);
+            
+            checkCufftErrors(cufftExecR2C(plan_r2c, (cufftReal*)d_padded_temp, d_kernels_fft_all + kernel_fft_offset));
+        }
+    }
+    delete[] h_kernel_slice;
+    CUDA_CHECK(cudaFree(d_padded_temp));
+
+
+    float* d_input_all = nullptr;
+    float* d_padded_input = nullptr;
+    cufftComplex* d_input_fft = nullptr;
+    cufftComplex* d_acc_fft = nullptr;
+    float* d_conv_result_padded = nullptr;
+    CUDA_CHECK(cudaMalloc(&d_input_all, a.numel()));
+    CUDA_CHECK(cudaMalloc(&d_padded_input, fft_real_size));
+    CUDA_CHECK(cudaMalloc(&d_input_fft, fft_complex_size));
+    CUDA_CHECK(cudaMalloc(&d_acc_fft, fft_complex_size));
+    CUDA_CHECK(cudaMalloc(&d_conv_result_padded, fft_real_size));
+    CUDA_CHECK(cudaMemcpy(d_input_all, a.data_ptr().get(), a.numel(), cudaMemcpyHostToDevice));
+
+
+    for (int64_t n = 0; n < N; ++n) {
+        for (int64_t c_out = 0; c_out < C_out; ++c_out) {
+            CUDA_CHECK(cudaMemset(d_acc_fft, 0, fft_complex_size));
+
+            for (int64_t c_in = 0; c_in < C_in; ++c_in) {
+                const float* d_current_input_slice = d_input_all + (n * C_in + c_in) * H_in * W_in;
+                const cufftComplex* d_current_kernel_fft = d_kernels_fft_all + (c_out * C_in + c_in) * complex_elements;
+
+                pad_kernel<<<dim3((W_fft+15)/16, (H_fft+15)/16), dim3(16,16)>>>(
+                    d_current_input_slice, d_padded_input, W_in, H_in, W_fft, H_fft);
+
+                checkCufftErrors(cufftExecR2C(plan_r2c, (cufftReal*)d_padded_input, d_input_fft));
+
+                int threads = 256;
+                int blocks = (complex_elements + threads - 1) / threads;
+                complex_mult_accumulate_kernel<<<blocks, threads>>>(
+                    d_acc_fft, d_input_fft, d_current_kernel_fft, complex_elements);
+            }
+
+            checkCufftErrors(cufftExecC2R(plan_c2r, d_acc_fft, (cufftReal*)d_conv_result_padded));
+            
+            float* d_current_out_slice = d_out_full + (n * C_out + c_out) * H_out * W_out;
+            dim3 crop_block_dim(16, 16);
+            dim3 crop_grid_dim((W_out + 15) / 16, (H_out + 15) / 16);
+            crop_and_stride_kernel<<<crop_grid_dim, crop_block_dim>>>(
+                d_conv_result_padded, d_current_out_slice, W_fft, W_out, H_out, W_k, H_k, stride, padding);
+        }
+    }
+    
+    CUDA_CHECK(cudaFree(d_kernel_all));
+    CUDA_CHECK(cudaFree(d_kernels_fft_all));
+    CUDA_CHECK(cudaFree(d_input_all));
+    CUDA_CHECK(cudaFree(d_padded_input));
+    CUDA_CHECK(cudaFree(d_input_fft));
+    CUDA_CHECK(cudaFree(d_acc_fft));
+    CUDA_CHECK(cudaFree(d_conv_result_padded));
+    checkCufftErrors(cufftDestroy(plan_r2c));
+    checkCufftErrors(cufftDestroy(plan_c2r));
+    
+    return out;
 }
+
