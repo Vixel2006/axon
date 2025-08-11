@@ -10,7 +10,7 @@ inp = nw.Tensor(
         [4, 5, 6],
         [7, 8, 9] ]]],
     requires_grad=True,
-    device="cuda:0"
+    device="cpu"
 )
 
 # Kernel tensor (shape 1×1×2×2)
@@ -18,11 +18,15 @@ kernel = nw.Tensor(
     [[[ [1, 0],
         [0, -1] ]]],
     requires_grad=True,
-    device="cuda:0"
+    device="cpu"
 )
 
-print(nw.conv2d(inp, kernel))
+out = nw.conv2d(inp, kernel)
 
+out.backward()
+
+print(inp.grad)
+print(kernel.grad)
 
 print(t.shape)
 
@@ -36,15 +40,16 @@ print(t1)
 
 net = nw.Net()
 
-x = nw.Tensor([1, 128])
 
-net.add("fc1", nw.layers.linear(128, 256))
+net.add("conv2d_first", nw.layers.conv2d(in_channels=1, out_channels=3, kernel_size=(2,2))) # 1 * 3 * 2 * 2
 net.add("relu1", nw.activations.relu())
-net.add("fc2", nw.layers.linear(256, 512))
+net.add("Flatten", nw.layers.flatten())
+net.add("fc2", nw.layers.linear(12, 1))
 
-print(net)
-net.summary([1, 128])
+print(net(inp))
+net.summary([1, 1, 3, 3])
 
 print("Registered params")
 print(net.params.keys())
+
 

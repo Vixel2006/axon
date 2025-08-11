@@ -7,6 +7,8 @@
 #include <vector>
 #include <stdexcept>
 #include <cuda_runtime.h>
+#include <complex>
+#include <omp.h>
 #include "tensor.h"
 
 
@@ -122,6 +124,74 @@ inline void cuda_synchronize() {
     cudaError_t err = cudaDeviceSynchronize();
     if (err != cudaSuccess) {
         throw std::runtime_error(cudaGetErrorString(err));
+    }
+}
+
+
+inline int64_t next_power_of_2(int64_t n) {
+    if (n == 0) return 1;
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n |= n >> 32;
+    n++;
+    return n;
+}
+
+inline void fft(std::vector<std::complex<double>>& x) {
+    int N = x.size();
+    if (N <= 1) return;
+    std::vector<std::complex<double>> even(N/2), odd(N/2);
+    for (int i = 0; i < N / 2; ++i) {
+        even[i] = x[i*2];
+        odd[i] = x[i*2 + 1];
+    }
+    fft(even);
+    fft(odd);
+    for (int k = 0; k < N / 2; ++k) {
+        std::complex<double> t = std::polar(1.0, -2 * M_PI * k / N) * odd[k];
+        x[k] = even[k] + t;
+        x[k + N / 2] = even[k] - t;
+    }
+}
+
+inline void ifft(std::vector<std::complex<double>>& x) {
+    int N = x.size();
+    for (auto& val : x) val = std::conj(val);
+    fft(x);
+    for (auto& val : x) val = std::conj(val) / static_cast<double>(N);
+}
+
+inline void fft2d(std::vector<std::complex<double>>& data, int H, int W) {
+    std::vector<std::complex<double>> row(W);
+    for (int i = 0; i < H; ++i) {
+        for (int j = 0; j < W; ++j) row[j] = data[i * W + j];
+        fft(row);
+        for (int j = 0; j < W; ++j) data[i * W + j] = row[j];
+    }
+    std::vector<std::complex<double>> col(H);
+    for (int j = 0; j < W; ++j) {
+        for (int i = 0; i < H; ++i) col[i] = data[i * W + j];
+        fft(col);
+        for (int i = 0; i < H; ++i) data[i * W + j] = col[i];
+    }
+}
+
+inline void ifft2d(std::vector<std::complex<double>>& data, int H, int W) {
+    std::vector<std::complex<double>> row(W);
+    for (int i = 0; i < H; ++i) {
+        for (int j = 0; j < W; ++j) row[j] = data[i * W + j];
+        ifft(row);
+        for (int j = 0; j < W; ++j) data[i * W + j] = row[j];
+    }
+    std::vector<std::complex<double>> col(H);
+    for (int j = 0; j < W; ++j) {
+        for (int i = 0; i < H; ++i) col[i] = data[i * W + j];
+        ifft(col);
+        for (int i = 0; i < H; ++i) data[i * W + j] = col[i];
     }
 }
 

@@ -15,7 +15,7 @@ struct CpuAutograd {
   static void pow(const Tensor& out, std::vector<Tensor>& prev);
   static void sum(const Tensor& out, std::vector<Tensor>& prev);
   static void mean(const Tensor& out, std::vector<Tensor>& prev);
-  static void conv2d(const Tensor& out, std::vector<Tensor>& prev, int stride, int padding);
+  static void conv2d(const Tensor& out, std::vector<Tensor>& prev);
 };
 
 struct CudaAutograd {
@@ -29,7 +29,7 @@ struct CudaAutograd {
   static void pow(const Tensor& out, std::vector<Tensor>& prev);
   static void sum(const Tensor& out, std::vector<Tensor>& prev);
   static void mean(const Tensor& out, std::vector<Tensor>& prev);
-  static void conv2d(const Tensor& out, std::vector<Tensor>& prev, int stride, int padding);
+  static void conv2d(const Tensor& out, std::vector<Tensor>& prev);
 };
 
 
