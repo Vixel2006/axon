@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <omp.h>
 
-void CpuAutograd::sum(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::sum(Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
 

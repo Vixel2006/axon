@@ -5,7 +5,7 @@
 
 #define PARALLEL_THRESHOLD 4096
 
-void CpuAutograd::log(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::log(Tensor& out, std::vector<Tensor>& prev) {
     if (prev.size() != 1) {
         throw std::invalid_argument("Invalid number of previous tensors for 'log' backward pass. Expected 1.");
     }

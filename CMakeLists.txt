@@ -34,7 +34,7 @@ target_include_directories(nawah PRIVATE
 target_link_libraries(nawah PRIVATE
     pybind11::module
     CUDA::toolkit
-    CUDA::cufft
+    CUDA::cublas
     OpenMP::OpenMP_CXX
 )
 

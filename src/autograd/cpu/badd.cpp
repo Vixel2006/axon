@@ -4,7 +4,7 @@
 #include <numeric>
 
 #pragma omp declare simd
-void CpuAutograd::add(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::add(Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     const float* out_grad_p = static_cast<const float*>(t.grad_ptr().get());
     if (!out_grad_p) {
