@@ -367,4 +367,3 @@ PYBIND11_MODULE(cnawah, m) {
 
     m.def("SGD", &SGD, py::arg("params"), py::arg("lr"));
 }
-
