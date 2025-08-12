@@ -43,7 +43,7 @@ __global__ void mul_scalar_backward_kernel(const float* out_grad_p,
     }
 }
 
-void CudaAutograd::mul(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::mul(Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     const size_t num_elements = out.numel();
     if (num_elements == 0) return;

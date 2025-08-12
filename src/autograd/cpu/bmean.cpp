@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <omp.h>
 
-void CpuAutograd::mean(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::mean(Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
 

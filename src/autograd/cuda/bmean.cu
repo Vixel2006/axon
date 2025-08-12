@@ -36,7 +36,7 @@ __global__ void mean_backward_kernel(
 }
 
 
-void CudaAutograd::mean(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::mean(Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
 

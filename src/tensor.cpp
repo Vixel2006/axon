@@ -14,6 +14,8 @@
 #include "autograd/ops.h"
 #include "backend_registery.h"
 
+
+
 bool Tensor::is_contiguous() const {
     int64_t stride = 1;
     for (int i = shape_.size() - 1; i >= 0; --i) {
@@ -336,6 +338,40 @@ void Tensor::fill(py::list &output) const {
     } else {
         std::vector<size_t> indices(shape_.size(), 0);
         fill_helper(output, 0, indices);
+    }
+}
+
+void Tensor::zero_grad() {
+    if (!requires_grad_) {
+        return;
+    }
+
+    size_t num_elements = this->numel();
+    if (num_elements == 0) {
+        return;
+    }
+    size_t size_in_bytes = num_elements * DtypeToSize(dtype_);
+
+    if (grad_ == nullptr) {
+        auto allocator = AllocatorFactory::get(device_);
+        auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
+
+        void *raw_grad_ptr = allocator->allocate(size_in_bytes);
+        if (raw_grad_ptr == nullptr) {
+            throw std::runtime_error("Memory allocation failed for gradient in zero_grad on device " + deviceToString(device_));
+        }
+        grad_ = std::shared_ptr<void>(raw_grad_ptr, deleter);
+    }
+
+    void* raw_grad_ptr = grad_.get();
+    if (device_.type == DeviceType::CPU) {
+        std::memset(raw_grad_ptr, 0, size_in_bytes);
+    } else if (device_.type == DeviceType::CUDA) {
+        cudaError_t err = cudaMemset(raw_grad_ptr, 0, size_in_bytes);
+        if (err != cudaSuccess) {
+            throw std::runtime_error("Failed to zero out gradient tensor in zero_grad on CUDA device: " +
+                                     std::string(cudaGetErrorString(err)));
+        }
     }
 }
 
@@ -942,7 +978,7 @@ std::vector<Tensor> Tensor::build_topo() const {
 }
 
 void Tensor::backward() {
-  if (!requires_grad_ || !ctx_.has_value()) { return ; }
+  if (!requires_grad_ || !ctx_.has_value()) { return; }
 
   seed_gradient();
   std::vector<Tensor> topo_sorted_graph = build_topo();
@@ -950,9 +986,15 @@ void Tensor::backward() {
   for (auto it = topo_sorted_graph.rbegin(); it != topo_sorted_graph.rend(); ++it) {
     Tensor& t = *it;
 
-    if (t.ctx().has_value()) {
-      auto& tape = t.ctx();
-      std::vector<Tensor> inputs = tape->prev;
+    if (t.ctx_.has_value()) {
+      auto& tape = t.ctx_;
+      std::vector<Tensor>& inputs = tape->prev;
+
+      for (auto& parent : inputs) {
+        if (parent.requires_grad() && parent.grad_ptr() == nullptr) {
+          parent.zero_grad();
+        }
+      }
 
       tape->backward_fn(t, inputs);
     }

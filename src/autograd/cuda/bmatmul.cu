@@ -104,7 +104,7 @@ __global__ void bmatmul_grad_B_kernel_optimized(
     }
 }
 
-void CudaAutograd::matmul(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::matmul(Tensor& out, std::vector<Tensor>& prev) {
     Tensor& a = prev[0];
     Tensor& b = prev[1];
     Tensor out_grad = out;

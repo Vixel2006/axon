@@ -20,6 +20,16 @@ class Tensor;
         }                                                                   \
     } while (0)
 
+#define CUBLAS_CHECK(call)                                                \
+    do {                                                                  \
+        cublasStatus_t status = call;                                     \
+        if (status != CUBLAS_STATUS_SUCCESS) {                            \
+            fprintf(stderr, "cuBLAS Error at %s:%d Status: %d\n", __FILE__, __LINE__, status); \
+            exit(EXIT_FAILURE);                                           \
+        }                                                                 \
+    } while (0)
+
+
 inline const char* _cufftGetErrorEnum(cufftResult error) {
     switch (error) {
         case CUFFT_SUCCESS:            return "CUFFT_SUCCESS";
@@ -141,5 +151,17 @@ __global__ void crop_and_add_kernel(const float* full_conv_result, float* grad_t
 __global__ void complex_mult_and_scale_kernel(cufftComplex* a, const cufftComplex* b, int n, float scale);
 __global__ void pad_kernel(const float* input, float* padded_output, const int W_in, const int H_in, const int W_padded, const int H_padded);
 __global__ void crop_and_stride_kernel(const float* full_conv_result, float* output, const int W_full, const int W_out, const int H_out, const int W_k, const int H_k, const int stride, const int padding);
+
+__global__ void im2col_kernel(const float* data_im, float* data_col,
+                              const int C_in, const int H_in, const int W_in,
+                              const int H_k, const int W_k,
+                              const int H_out, const int W_out,
+                              const int stride, const int padding);
+
+__global__ void col2im_kernel(const float* data_col, float* data_im,
+                              const int C_in, const int H_in, const int W_in,
+                              const int H_k, const int W_k,
+                              const int H_out, const int W_out,
+                              const int stride, const int padding);
 
 #endif

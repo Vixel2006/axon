@@ -21,35 +21,36 @@ kernel = nw.Tensor(
     device="cpu"
 )
 
-out = nw.conv2d(inp, kernel)
+print("Here comes flatten")
+x = nw.flatten(inp)
+print(x)
 
-out.backward()
+x.backward()
 
+print(x.grad)
 print(inp.grad)
-print(kernel.grad)
-
-print(t.shape)
-
-t1 = (t+n).mean()
-
-t1.backward()
-
-print(n.grad)
-print(t.grad)
-print(t1)
 
 net = nw.Net()
 
-
-net.add("conv2d_first", nw.layers.conv2d(in_channels=1, out_channels=3, kernel_size=(2,2))) # 1 * 3 * 2 * 2
+net.add("conv2d_first", nw.layers.conv2d(in_channels=1, out_channels=3, kernel_size=(2,2)))
 net.add("relu1", nw.activations.relu())
 net.add("Flatten", nw.layers.flatten())
-net.add("fc2", nw.layers.linear(12, 1))
+net.add("fc1", nw.layers.linear(12, 1, has_bias=False))
 
-print(net(inp))
+pred = net(inp)
+
+print(pred)
+
 net.summary([1, 1, 3, 3])
 
-print("Registered params")
-print(net.params.keys())
 
+print("Registered params")
+
+print(net.params)
+
+
+pred.backward()
+nw.SGD(net.params.values(), lr=0.1)
+
+print(net.params)
 
