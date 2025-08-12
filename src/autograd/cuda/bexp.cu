@@ -13,13 +13,13 @@ __global__ void bexp_kernel(const float* out_grad_p,
 
     for (size_t i = index; i < num_elements; i += stride) {
         const float grad = out_grad_p[i];
-        const float out_val = out_p[i]; // This is exp(a_val)
+        const float out_val = out_p[i];
         
         a_grad_p[i] += grad * out_val;
     }
 }
 
-void CudaAutograd::exp(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::exp(Tensor& out, std::vector<Tensor>& prev) {
     if (prev.size() != 1) {
         throw std::runtime_error("Exp backward operation requires exactly one previous tensor.");
     }

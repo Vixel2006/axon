@@ -20,7 +20,7 @@ __global__ void blog_kernel(const float* out_grad_p,
 }
 
 
-void CudaAutograd::log(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::log(Tensor& out, std::vector<Tensor>& prev) {
     if (prev.size() != 1) {
         throw std::runtime_error("Log backward operation requires exactly one previous tensor.");
     }

@@ -37,6 +37,7 @@ public:
     }
 
 
+    void zero_grad();
     void seed_gradient();
 
     py::list data() const;
@@ -52,7 +53,7 @@ public:
     size_t ndim() const { return shape_.size(); }
     const std::optional<Tape>& ctx() const { return ctx_; }
 
-    void set_ctx(const std::vector<Tensor>& prev, std::function<void(const Tensor&, std::vector<Tensor>&)> backward_fn) {
+    void set_ctx(const std::vector<Tensor>& prev, std::function<void(Tensor&, std::vector<Tensor>&)> backward_fn) {
         if (requires_grad_ && !ctx_.has_value()) {
             ctx_ = Tape();
         }

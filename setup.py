@@ -140,11 +140,17 @@ ext_modules = [
             "src/engine/ops/cuda/conv.cu",
             "src/autograd/cpu/bconv.cpp",
             "src/autograd/cuda/bconv.cu",
-            "src/utils.cu"
+            "src/utils.cu",
+            "src/optimizers/cpu/sgd.cpp",
+            "src/optimizers/cuda/sgd.cu",
+            "src/engine/ops/cpu/flatten.cpp",
+            "src/engine/ops/cuda/flatten.cu",
+            "src/autograd/cpu/bflatten.cpp",
+            "src/autograd/cuda/bflatten.cu"
         ],
         include_dirs=["include", os.path.join(CUDA_PATH, "include")],
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],
-        libraries=["cudart", "cufft"],
+        libraries=["cudart", "cublas"],
         language="c++",
         
         extra_compile_args=[
@@ -157,7 +163,8 @@ ext_modules = [
         ],
         extra_link_args=[
             "-fopenmp",
-            "-lcuda"
+            "-lcuda",
+            "-lcublas"
         ]
     ),
 ]

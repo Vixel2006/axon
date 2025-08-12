@@ -27,7 +27,7 @@ __global__ void bsub_kernel(const float* out_grad_p,
     }
 }
 
-void CudaAutograd::sub(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::sub(Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
     Tensor& b = prev[1];

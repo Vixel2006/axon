@@ -6,5 +6,5 @@
 #include <vector>
 
 
-void CudaAutograd::div(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::div(Tensor& out, std::vector<Tensor>& prev) {
 }

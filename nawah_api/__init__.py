@@ -19,6 +19,8 @@ randn = nw.randn
 uniform = nw.uniform
 zeros_like = nw.zeros_like
 ones_like = nw.ones_like
+flatten = nw.flatten
+SGD = nw.SGD
 cuda_synchronize = nw.cuda_synchronize
 
 __all__ = [
@@ -38,6 +40,7 @@ __all__ = [
     "ones_like",
     "Net",
     "layers",
-    "activations"
+    "activations",
+    "flatten"
 ]
 

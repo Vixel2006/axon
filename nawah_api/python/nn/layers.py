@@ -1,4 +1,4 @@
-import nawah_api as nw
+import cnawah as nw
 
 def linear(in_dims: int, out_dims: int, has_bias: bool = True):
     if not isinstance(in_dims, int) or in_dims <= 0:
@@ -8,14 +8,11 @@ def linear(in_dims: int, out_dims: int, has_bias: bool = True):
     if not isinstance(has_bias, bool):
         raise TypeError(f"[linear] 'has_bias' must be a boolean, got {type(has_bias).__name__}")
 
-    params = {
-        "w": nw.randn([in_dims, out_dims], requires_grad=True)
-    }
+    params = {}
 
-    if has_bias:
-        params['b'] = nw.zeros([1, out_dims], requires_grad=True)
 
     def linear_fn_(x):
+        nonlocal params
         if not hasattr(x, "shape"):
             raise TypeError(f"[linear_fn_] input must have a 'shape' attribute (likely a Tensor), got {type(x).__name__}")
         if len(x.shape) != 2:
@@ -23,8 +20,19 @@ def linear(in_dims: int, out_dims: int, has_bias: bool = True):
         if x.shape[1] != in_dims:
             raise ValueError(f"[linear_fn_] input dim mismatch: expected {in_dims}, got {x.shape[1]}")
         
+        batch_size = x.shape[0]
+
+        if "w" not in params:
+            params = {
+                "w": nw.randn([batch_size, in_dims, out_dims], requires_grad=True)
+            }
+
         out = x @ params['w']
-        if 'b' in params:
+        
+        if has_bias:
+            if "b" not in params:
+                params['b'] = nw.zeros([batch_size, out_dims], requires_grad=True)
+
             out = out + params['b']
 
         return out
@@ -84,8 +92,8 @@ def rnn(input_dim: int, hidden_dim: int, has_bias: bool = True):
     assert isinstance(has_bias, bool), "has_bias must be a boolean."
 
     params = {
-        "W_ih": nw.uniform([hidden_dim, input_dim]),
-        "W_hh": nw.uniform([hidden_dim, hidden_dim])
+        "W_ih": nw.uniform([hidden_dim, input_dim], requires_grad=True),
+        "W_hh": nw.uniform([hidden_dim, hidden_dim], requires_grad=True)
     }
 
     if has_bias:
@@ -167,8 +175,7 @@ def layer_norm(normalized_shape, eps=1e-5):
 
 def flatten():
     def flatten_fn_(x):
-        batch_size = x.shape[0]
-        return x.view([batch_size, -1])
+        return x.view([x.shape[0], -1])
 
     return {
         "name": "Flatten",
