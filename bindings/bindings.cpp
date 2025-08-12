@@ -4,11 +4,15 @@
 #include "helpers.h"
 #include "tensor.h"
 #include "init.h"
+#include "optimizers.h"
 #include "engine/ops.h"
 #include <stdexcept>
 
 static CpuOps cpu_ops;
 static CudaOps cuda_ops;
+static CpuOptimizers cpu_optim;
+static CudaOptimizers cuda_optim;
+
 
 Tensor relu_dispatcher(const Tensor &a) {
     if (a.device().type == DeviceType::CPU) {
@@ -21,6 +25,17 @@ Tensor relu_dispatcher(const Tensor &a) {
     }
 }
 
+
+Tensor flatten_dispatcher(Tensor &a) {
+    if (a.device().type == DeviceType::CPU) {
+        return cpu_ops.flatten(a);
+    } else if (a.device().type == DeviceType::CUDA) {
+        return cuda_ops.flatten(a);
+    } else {
+        // Throw an error for unsupported devices.
+        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
+    }
+}
 
 Tensor log_dispatcher(const Tensor &a) {
     if (a.device().type == DeviceType::CPU) {
@@ -67,6 +82,16 @@ Tensor conv_dispatcher(const Tensor &a, const Tensor& kernel, int stride, int pa
     }
 }
 
+void SGD(std::vector<std::shared_ptr<Tensor>>& params, float lr) {
+  if (params[0].get()->device().type == DeviceType::CPU) {
+    cpu_optim.SGD(params, lr);
+  } else if (params[0].get()->device().type == DeviceType::CUDA) {
+    cuda_optim.SGD(params, lr);
+  } else {
+    throw std::runtime_error("Unsupported device for SGD: " + deviceToString(params[0].get()->device()));
+  }
+}
+
 namespace py = pybind11;
 
 PYBIND11_MODULE(cnawah, m) {
@@ -98,7 +123,7 @@ PYBIND11_MODULE(cnawah, m) {
     .def_readwrite("prev", &Tape::prev)
     .def_readwrite("backward_fn", &Tape::backward_fn);
 
-  py::class_<Tensor>(m, "Tensor")
+  py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init<const std::vector<int64_t> &, DType, const std::string &,
                     bool>(),
            py::arg("shape"), py::arg("dtype") = DType::float32,
@@ -281,6 +306,12 @@ PYBIND11_MODULE(cnawah, m) {
         py::arg("a")
     );
 
+    m.def(
+        "flatten",
+        &flatten_dispatcher,
+        "flatten the tensor",
+        py::arg("a")
+    );
 
     m.def(
         "log",
@@ -313,7 +344,7 @@ PYBIND11_MODULE(cnawah, m) {
         py::arg("a"),
         py::arg("kernel"),
         py::arg("stride") = 1,
-        py::arg("padding") = 1
+        py::arg("padding") = 0
     );
 
     m.def("zeros", &zeros, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,
@@ -334,4 +365,5 @@ PYBIND11_MODULE(cnawah, m) {
     m.def("ones_like", &ones_like, py::arg("other"),
           "Creates a tensor of ones with the same properties as another tensor.");
 
+    m.def("SGD", &SGD, py::arg("params"), py::arg("lr"));
 }

@@ -48,7 +48,7 @@ __global__ void bpow_ts_kernel(const float* out_grad_p, const float* out_p,
     }
 }
 
-void CudaAutograd::pow(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::pow(Tensor& out, std::vector<Tensor>& prev) {
     const size_t num_elements = out.numel();
     if (num_elements == 0) {
         return;

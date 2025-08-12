@@ -8,7 +8,7 @@ class Tensor;
 
 struct Tape {
   std::vector<Tensor> prev;
-  std::function<void(const Tensor&, std::vector<Tensor>&)> backward_fn;
+  std::function<void(Tensor&, std::vector<Tensor>&)> backward_fn;
   
   Tape() = default;
   ~Tape() = default;

@@ -5,7 +5,7 @@
 
 #define PARALLEL_THRESHOLD 4096
 
-void CpuAutograd::matmul(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::matmul(Tensor& out, std::vector<Tensor>& prev) {
     Tensor& a = prev[0];
     Tensor& b = prev[1];
     Tensor out_grad = out;

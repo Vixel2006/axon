@@ -26,7 +26,7 @@ __global__ void badd_kernel(const float* out_grad_p,
     }
 }
 
-void CudaAutograd::add(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::add(Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     const size_t num_elements = out.numel();
     if (num_elements == 0) {

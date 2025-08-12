@@ -30,6 +30,7 @@ struct Ops {
   virtual void fill_ones(Tensor& t) const = 0;
   virtual void fill_uniform(Tensor& t) const = 0;
   virtual void fill_randn(Tensor& t) const = 0;
+  virtual Tensor flatten(Tensor& t) = 0;
 };
 
 struct CpuOps: Ops {
@@ -58,6 +59,7 @@ struct CpuOps: Ops {
   void fill_zeros(Tensor& t) const override;
   void fill_uniform(Tensor& t) const override;
   void fill_randn(Tensor& t) const override;
+  Tensor flatten(Tensor& t) override;
 };
 
 struct CudaOps: Ops {
@@ -86,6 +88,7 @@ struct CudaOps: Ops {
   void fill_zeros(Tensor& t) const override;
   void fill_uniform(Tensor& t) const override;
   void fill_randn(Tensor& t) const override;
+  Tensor flatten(Tensor& t) override;
 };
 
 #endif

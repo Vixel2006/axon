@@ -34,7 +34,7 @@ __global__ void sum_backward_kernel(
     }
 }
 
-void CudaAutograd::sum(const Tensor& out, std::vector<Tensor>& prev) {
+void CudaAutograd::sum(Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     Tensor& a = prev[0];
 

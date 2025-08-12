@@ -5,7 +5,7 @@
 
 #define PARALLEL_THRESHOLD 4096
 
-void CpuAutograd::div(const Tensor& out, std::vector<Tensor>& prev) {
+void CpuAutograd::div(Tensor& out, std::vector<Tensor>& prev) {
     Tensor t = out;
     const size_t num_elements = out.numel();
     const float* out_grad_p = static_cast<const float*>(t.grad_ptr().get());
