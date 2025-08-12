@@ -25,6 +25,8 @@ void CpuAutograd::sum(Tensor& out, std::vector<Tensor>& prev) {
     const auto& in_strides = a.strides();
     const auto& out_strides = out.strides();
     const int ndim = a.ndim();
+    const int64_t reduction_size = a.numel() / out.numel();
+    const float scale = 1.0f / static_cast<float>(reduction_size);
 
     #pragma omp parallel for schedule(static)
     for (int64_t i = 0; i < a.numel(); ++i) {
@@ -39,7 +41,6 @@ void CpuAutograd::sum(Tensor& out, std::vector<Tensor>& prev) {
                 out_idx += coord * out_strides[dim_idx];
             }
         }
-
-        grad_a_ptr[i] += grad_out_ptr[out_idx];
+        grad_a_ptr[i] += grad_out_ptr[out_idx] * scale;
     }
 }
