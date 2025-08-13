@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.18)
 
 project(nawah LANGUAGES CXX CUDA)
 
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    message(STATUS "Using ccache to speed up compilation")
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+    set(CMAKE_CUDA_COMPILER_LAUNCHER ccache)
+endif()
+
 message(STATUS "Using C++ compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "Using CUDA compiler: ${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION}")
 
@@ -44,3 +51,4 @@ target_compile_options(nawah PRIVATE
   $<$<CONFIG:Debug>:-g>
   $<$<CONFIG:Release>:-O3 -DNDEBUG>
 )
+
