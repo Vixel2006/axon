@@ -146,7 +146,9 @@ ext_modules = [
             "src/engine/ops/cpu/flatten.cpp",
             "src/engine/ops/cuda/flatten.cu",
             "src/autograd/cpu/bflatten.cpp",
-            "src/autograd/cuda/bflatten.cu"
+            "src/autograd/cuda/bflatten.cu",
+            "src/autograd/cpu/brelu.cpp",
+            "src/autograd/cuda/brelu.cu"
         ],
         include_dirs=["include", os.path.join(CUDA_PATH, "include")],
         library_dirs=[os.path.join(CUDA_PATH, "lib64")],

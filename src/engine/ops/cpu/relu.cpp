@@ -56,11 +56,9 @@ Tensor CpuOps::relu(const Tensor &a) {
 
     Tensor t = Tensor(a.shape(), a.strides(), a.dtype(), a.device(), data, 0, c_requires_grad, nullptr, std::nullopt);
 
-    /*
-    if (c_requries_grad) {
+    if (c_requires_grad) {
         t.set_ctx({a}, CpuAutograd::relu);
     }
-    */
 
     return t;
 }

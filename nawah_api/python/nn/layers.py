@@ -8,31 +8,26 @@ def linear(in_dims: int, out_dims: int, has_bias: bool = True):
     if not isinstance(has_bias, bool):
         raise TypeError(f"[linear] 'has_bias' must be a boolean, got {type(has_bias).__name__}")
 
-    params = {}
+    # --- FIX: Initialize parameters EAGERLY, not lazily ---
+    # Create the parameters immediately, just like in your conv2d layer.
+    params = {
+        "w": nw.randn([in_dims, out_dims], requires_grad=True)
+    }
+    if has_bias:
+        params['b'] = nw.zeros([out_dims], requires_grad=True)
 
 
     def linear_fn_(x):
-        nonlocal params
         if not hasattr(x, "shape"):
             raise TypeError(f"[linear_fn_] input must have a 'shape' attribute (likely a Tensor), got {type(x).__name__}")
         if len(x.shape) != 2:
             raise ValueError(f"[linear_fn_] expected input shape (batch_size, in_dims), got shape {x.shape}")
         if x.shape[1] != in_dims:
             raise ValueError(f"[linear_fn_] input dim mismatch: expected {in_dims}, got {x.shape[1]}")
-        
-        batch_size = x.shape[0]
-
-        if "w" not in params:
-            params = {
-                "w": nw.randn([batch_size, in_dims, out_dims], requires_grad=True)
-            }
 
         out = x @ params['w']
         
-        if has_bias:
-            if "b" not in params:
-                params['b'] = nw.zeros([batch_size, out_dims], requires_grad=True)
-
+        if 'b' in params:
             out = out + params['b']
 
         return out
@@ -175,7 +170,7 @@ def layer_norm(normalized_shape, eps=1e-5):
 
 def flatten():
     def flatten_fn_(x):
-        return x.view([x.shape[0], -1])
+        return nw.flatten(x)
 
     return {
         "name": "Flatten",
