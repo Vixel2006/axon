@@ -7,11 +7,9 @@
 
 #pragma omp declare simd
 void CpuAutograd::add(Tensor& out, std::vector<Tensor>& prev) {
-    // The gradient of the output is treated as a tensor itself for easier handling of shape/strides.
     Tensor out_grad = Tensor(out.shape(), out.strides(), out.dtype(), out.device(), out.grad_ptr(), 0, false, nullptr, std::nullopt);
     
     if (prev.size() == 2) {
-        // Case for Tensor + Tensor
         Tensor& a = prev[0];
         Tensor& b = prev[1];
         
@@ -19,7 +17,6 @@ void CpuAutograd::add(Tensor& out, std::vector<Tensor>& prev) {
         sum_gradient_for_broadcast(b, out_grad);
 
     } else if (prev.size() == 1) {
-        // Case for Tensor + scalar
         Tensor& a = prev[0];
         sum_gradient_for_broadcast(a, out_grad);
         

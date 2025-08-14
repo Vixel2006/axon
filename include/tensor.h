@@ -53,6 +53,8 @@ public:
     size_t ndim() const { return shape_.size(); }
     const std::optional<Tape>& ctx() const { return ctx_; }
 
+    void to(std::string device);
+
     void set_ctx(const std::vector<Tensor>& prev, std::function<void(Tensor&, std::vector<Tensor>&)> backward_fn) {
         if (requires_grad_ && !ctx_.has_value()) {
             ctx_ = Tape();

@@ -5,11 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
-// This is a reasonable maximum, consistent with many frameworks.
 #define MAX_DIMS 8
 
-// Kernel for non-broadcasted, element-wise multiplication backward pass.
-// This is faster when no broadcasting is involved as it avoids atomic operations.
 __global__ void mul_tensor_backward_kernel(const float* out_grad_p,
                                          const float* a_data_p,
                                          const float* b_data_p,
@@ -32,13 +29,11 @@ __global__ void mul_tensor_backward_kernel(const float* out_grad_p,
     }
 }
 
-// Broadcasting-aware kernel for multiplication backward pass.
-// It uses the same stride-based indexing as your forward pass kernel.
 __global__ void mul_broadcast_backward_kernel(const float* out_grad_p,
                                               const float* a_data_p,
-                                              const int64_t* a_strides_b, // Broadcasted strides
+                                              const int64_t* a_strides_b,
                                               const float* b_data_p,
-                                              const int64_t* b_strides_b, // Broadcasted strides
+                                              const int64_t* b_strides_b,
                                               float* a_grad_p,
                                               float* b_grad_p,
                                               bool a_req_grad,
@@ -51,7 +46,6 @@ __global__ void mul_broadcast_backward_kernel(const float* out_grad_p,
         return;
     }
 
-    // This logic mirrors your forward pass to find the correct source elements.
     int64_t temp_i = i;
     size_t a_offset = 0;
     size_t b_offset = 0;
@@ -66,8 +60,6 @@ __global__ void mul_broadcast_backward_kernel(const float* out_grad_p,
     const float grad_out = out_grad_p[i];
 
     if (a_req_grad) {
-        // atomicAdd is crucial here. It performs the reduction sum for gradients
-        // across broadcasted dimensions, preventing race conditions.
         atomicAdd(&a_grad_p[a_offset], grad_out * b_data_p[b_offset]);
     }
     if (b_req_grad) {
@@ -76,10 +68,6 @@ __global__ void mul_broadcast_backward_kernel(const float* out_grad_p,
 }
 
 
-// Backward pass for tensor-scalar multiplication.
-// WARNING: This kernel re-calculates the scalar by division (out / a).
-// This is numerically unstable if a_data can be zero. A better design
-// would be to save the scalar value in the context during the forward pass.
 __global__ void mul_scalar_backward_kernel(const float* out_grad_p,
                                            const float* a_data_p,
                                            const float* out_data_p,
@@ -97,7 +85,6 @@ __global__ void mul_scalar_backward_kernel(const float* out_grad_p,
     }
 }
 
-// Helper to copy shape/stride data to the GPU
 template<typename T>
 void copy_to_device(const std::vector<T>& vec, T*& d_ptr) {
     if (vec.empty()) {
@@ -122,7 +109,7 @@ void CudaAutograd::mul(Tensor& out, std::vector<Tensor>& prev) {
     const int threadsPerBlock = 256;
     const int blocksPerGrid = (num_elements + threadsPerBlock - 1) / threadsPerBlock;
 
-    if (prev.size() == 2) { // Tensor-Tensor multiplication
+    if (prev.size() == 2) {
         Tensor& a = prev[0];
         Tensor& b = prev[1];
         const bool a_req_grad = a.requires_grad();
@@ -135,25 +122,20 @@ void CudaAutograd::mul(Tensor& out, std::vector<Tensor>& prev) {
         float* a_grad_p = a_req_grad ? static_cast<float*>(a.grad_ptr().get()) : nullptr;
         float* b_grad_p = b_req_grad ? static_cast<float*>(b.grad_ptr().get()) : nullptr;
         
-        // Check if broadcasting occurred in the forward pass.
         bool is_broadcasted = a.shape() != out.shape() || b.shape() != out.shape();
 
         if (!is_broadcasted) {
-            // Use the faster, non-atomic kernel if shapes match.
             mul_tensor_backward_kernel<<<blocksPerGrid, threadsPerBlock>>>(
                 out_grad_p, a_data_p, b_data_p, a_grad_p, b_grad_p, a_req_grad, b_req_grad, num_elements
             );
         } else {
-            // Broadcasting path
             if (out.ndim() > MAX_DIMS) {
                 throw std::runtime_error("Tensor exceeds maximum supported dimensions for broadcasting.");
             }
 
-            // Get broadcasted views to easily access the correct strides, just like in the forward pass.
             Tensor a_broad = a.broadcast(out.shape());
             Tensor b_broad = b.broadcast(out.shape());
 
-            // Allocate and copy shape/stride metadata to the GPU.
             int64_t *d_out_shape, *d_a_strides, *d_b_strides;
             copy_to_device(out.shape(), d_out_shape);
             copy_to_device(a_broad.strides(), d_a_strides);
@@ -165,13 +147,12 @@ void CudaAutograd::mul(Tensor& out, std::vector<Tensor>& prev) {
                 d_out_shape, out.ndim(), num_elements
             );
 
-            // Free the temporary metadata from the GPU.
             CUDA_CHECK(cudaFree(d_out_shape));
             CUDA_CHECK(cudaFree(d_a_strides));
             CUDA_CHECK(cudaFree(d_b_strides));
         }
 
-    } else if (prev.size() == 1) { // Tensor-Scalar multiplication
+    } else if (prev.size() == 1) {
         Tensor& a = prev[0];
         if (!a.requires_grad()) return;
 
