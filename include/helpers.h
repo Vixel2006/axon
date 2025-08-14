@@ -10,7 +10,99 @@
 #include <complex>
 #include <omp.h>
 #include "tensor.h"
+#include "strided_indexer.h"
 
+
+inline void sum_gradient_for_broadcast(Tensor& a, const Tensor& out_grad) {
+    if (!a.requires_grad()) {
+        return;
+    }
+
+    float* a_grad_p = static_cast<float*>(a.grad_ptr().get());
+    const float* out_grad_p = static_cast<const float*>(out_grad.data_ptr().get());
+
+    if (!a_grad_p) throw std::runtime_error("Gradient pointer for tensor 'a' is null.");
+    if (!out_grad_p) throw std::runtime_error("Output gradient pointer is null.");
+
+    const auto& a_shape = a.shape();
+    const auto& out_shape = out_grad.shape();
+    size_t num_elements_out = out_grad.numel();
+
+    if (a_shape == out_shape) {
+        #pragma omp parallel for simd schedule(static)
+        for (size_t i = 0; i < num_elements_out; ++i) {
+            a_grad_p[i] += out_grad_p[i];
+        }
+        return;
+    }
+
+    StridedIndexer out_indexer(out_grad.shape(), out_grad.strides());
+    StridedIndexer a_indexer(a.shape(), a.strides());
+
+    #pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < num_elements_out; ++i) {
+        std::vector<int64_t> multi_index(out_shape.size());
+        size_t temp_i = i;
+        for (int j = out_shape.size() - 1; j >= 0; --j) {
+            if (out_shape[j] > 0) {
+                multi_index[j] = temp_i % out_shape[j];
+                temp_i /= out_shape[j];
+            }
+        }
+        
+        size_t a_flat_index = 0;
+        size_t stride_multiplier = 1;
+        for (int j = a.shape().size() - 1; j >= 0; --j) {
+            int out_dim_idx = j + (out_shape.size() - a.shape().size());
+            int64_t coord = (a.shape()[j] == 1) ? 0 : multi_index[out_dim_idx];
+            a_flat_index += coord * stride_multiplier;
+            stride_multiplier *= a.shape()[j];
+        }
+
+        size_t out_offset = out_indexer.get_offset(i);
+        size_t a_offset = a_indexer.get_offset(a_flat_index);
+
+        #pragma omp atomic
+        a_grad_p[a_offset] += out_grad_p[out_offset];
+    }
+}
+
+
+inline std::vector<int64_t> compute_broadcast_shape(
+    const std::vector<int64_t>& shape_a, 
+    const std::vector<int64_t>& shape_b) {
+    
+    // Start from the trailing dimensions
+    auto it_a = shape_a.rbegin();
+    auto it_b = shape_b.rbegin();
+    
+    std::vector<int64_t> result_shape;
+
+    // Iterate while there are dimensions in either shape
+    while (it_a != shape_a.rend() || it_b != shape_b.rend()) {
+        const int64_t dim_a = (it_a != shape_a.rend()) ? *it_a : 1;
+        const int64_t dim_b = (it_b != shape_b.rend()) ? *it_b : 1;
+
+        if (dim_a != dim_b && dim_a != 1 && dim_b != 1) {
+            throw std::runtime_error("Operands could not be broadcast together with shapes");
+        }
+        
+        // The resulting dimension is the max of the two
+        result_shape.push_back(std::max(dim_a, dim_b));
+
+        if (it_a != shape_a.rend()) {
+            ++it_a;
+        }
+        if (it_b != shape_b.rend()) {
+            ++it_b;
+        }
+    }
+    
+    // The result shape was built in reverse, so reverse it back
+    std::reverse(result_shape.begin(), result_shape.end());
+    
+    return result_shape;
+}
 
 inline std::vector<__int64_t> compute_strides_(const std::vector<__int64_t> &shape)
 {
