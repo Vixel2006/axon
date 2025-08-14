@@ -1,7 +1,7 @@
 #include <cuda_runtime.h>
 #include "tensor.h"
 #include "utils.h"
-#include <cublas_v2.h> // Make sure to link with -lcublas
+#include <cublas_v2.h>
 
 __global__ void pad_grad_kernel(const float* out_grad, float* padded_grad,
                               const int W_out, const int H_out,
@@ -100,29 +100,38 @@ __global__ void crop_and_stride_kernel(const float* full_conv_result, float* out
 }
 
 __global__ void im2col_kernel(const float* data_im, float* data_col,
-                              const int C_in, const int H_in, const int W_in,
-                              const int H_k, const int W_k,
-                              const int H_out, const int W_out,
-                              const int stride, const int padding) {
-    for (int idx = blockIdx.x * blockDim.x + threadIdx.x;
-         idx < (C_in * H_k * W_k * H_out * W_out);
-         idx += blockDim.x * gridDim.x) {
+                                        const int C_in, const int H_in, const int W_in,
+                                        const int H_k, const int W_k,
+                                        const int H_out, const int W_out,
+                                        const int stride, const int padding) {
+    for (int l = blockIdx.x * blockDim.x + threadIdx.x;
+         l < (H_out * W_out);
+         l += blockDim.x * gridDim.x) {
 
-        const int w_out = idx % W_out;
-        const int h_out = (idx / W_out) % H_out;
-        const int w_k = (idx / (W_out * H_out)) % W_k;
-        const int h_k = (idx / (W_out * H_out * W_k)) % H_k;
-        const int c_in = (idx / (W_out * H_out * W_k * H_k));
+        const int w_out = l % W_out;
+        const int h_out = l / W_out;
+        const int w_in_start = w_out * stride - padding;
+        const int h_in_start = h_out * stride - padding;
 
-        const int h_in = h_out * stride - padding + h_k;
-        const int w_in = w_out * stride - padding + w_k;
+        for (int c = 0; c < C_in; ++c) {
+            for (int kh = 0; kh < H_k; ++kh) {
+                for (int kw = 0; kw < W_k; ++kw) {
+                    const int h_in = h_in_start + kh;
+                    const int w_in = w_in_start + kw;
 
-        float val = 0;
-        if (h_in >= 0 && h_in < H_in && w_in >= 0 && w_in < W_in) {
-            val = data_im[(c_in * H_in + h_in) * W_in + w_in];
+                    const int k = (c * H_k + kh) * W_k + kw;
+                    
+                    const int idx_col = k * (H_out * W_out) + l;
+
+                    if (h_in >= 0 && h_in < H_in && w_in >= 0 && w_in < W_in) {
+                        const int idx_im = (c * H_in + h_in) * W_in + w_in;
+                        data_col[idx_col] = data_im[idx_im];
+                    } else {
+                        data_col[idx_col] = 0.0f;
+                    }
+                }
+            }
         }
-
-        data_col[idx] = val;
     }
 }
 

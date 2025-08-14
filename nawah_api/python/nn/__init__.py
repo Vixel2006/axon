@@ -1,5 +1,5 @@
-from .nn import Net
+from .sequential import Sequential
 from .activations import *
 from .layers import *
 
-__all__ = ["Net", "layers", "activations"]
+__all__ = ["Sequential", "layers", "activations"]

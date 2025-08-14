@@ -15,6 +15,113 @@
 #include "engine/ops.h"
 #include "helpers.h"
 
+void Tensor::to(std::string device_str) {
+  Device new_device = parse_device(device_str);
+  Device old_device = this->device_;
+
+  if (new_device.type == old_device.type && new_device.index == old_device.index) {
+    return;
+  }
+
+  if (!this->is_contiguous()) {
+    throw std::runtime_error(
+        "to(): can only be called on a contiguous tensor. Please call "
+        ".contiguous() first if you have a view.");
+  }
+
+  size_t num_elements = this->numel();
+  if (num_elements == 0) {
+    this->device_ = new_device;
+    if (new_device.type == DeviceType::CPU) {
+      ops_ = get_cpu_ops();
+    } else if (new_device.type == DeviceType::CUDA) {
+      ops_ = get_gpu_ops();
+    }
+    return;
+  }
+
+  size_t size_in_bytes = num_elements * DtypeToSize(dtype_);
+  auto new_allocator = AllocatorFactory::get(new_device);
+  auto deleter = [new_allocator](void* ptr) { new_allocator->deallocate(ptr); };
+
+  void* new_raw_data_ptr = new_allocator->allocate(size_in_bytes);
+  if (new_raw_data_ptr == nullptr) {
+    throw std::runtime_error(
+        "Memory allocation failed for tensor data on device " + device_str);
+  }
+
+  void* old_raw_ptr = this->raw_ptr();
+  cudaError_t err = cudaSuccess;
+
+  if (old_device.type == DeviceType::CPU && new_device.type == DeviceType::CUDA) {
+    err = cudaMemcpy(new_raw_data_ptr, old_raw_ptr, size_in_bytes,
+                     cudaMemcpyHostToDevice);
+  } else if (old_device.type == DeviceType::CUDA &&
+             new_device.type == DeviceType::CPU) {
+    err = cudaMemcpy(new_raw_data_ptr, old_raw_ptr, size_in_bytes,
+                     cudaMemcpyDeviceToHost);
+  } else if (old_device.type == DeviceType::CUDA &&
+             new_device.type == DeviceType::CUDA) {
+    err = cudaMemcpy(new_raw_data_ptr, old_raw_ptr, size_in_bytes,
+                     cudaMemcpyDeviceToDevice);
+  } else if (old_device.type == DeviceType::CPU &&
+             new_device.type == DeviceType::CPU) {
+    std::memcpy(new_raw_data_ptr, old_raw_ptr, size_in_bytes);
+  }
+
+  if (err != cudaSuccess) {
+    new_allocator->deallocate(new_raw_data_ptr);
+    throw std::runtime_error("Failed to copy tensor data to " + device_str +
+                             ": " + std::string(cudaGetErrorString(err)));
+  }
+
+  data_ptr_ = std::shared_ptr<void>(new_raw_data_ptr, deleter);
+
+  if (requires_grad_ && grad_ != nullptr) {
+    void* new_raw_grad_ptr = new_allocator->allocate(size_in_bytes);
+    if (new_raw_grad_ptr == nullptr) {
+      throw std::runtime_error(
+          "Memory allocation failed for gradient on device " + device_str);
+    }
+
+    void* old_grad_ptr = grad_.get();
+    cudaError_t grad_err = cudaSuccess;
+
+    if (old_device.type == DeviceType::CPU && new_device.type == DeviceType::CUDA) {
+      grad_err = cudaMemcpy(new_raw_grad_ptr, old_grad_ptr, size_in_bytes,
+                            cudaMemcpyHostToDevice);
+    } else if (old_device.type == DeviceType::CUDA &&
+               new_device.type == DeviceType::CPU) {
+      grad_err = cudaMemcpy(new_raw_grad_ptr, old_grad_ptr, size_in_bytes,
+                            cudaMemcpyDeviceToHost);
+    } else if (old_device.type == DeviceType::CUDA &&
+               new_device.type == DeviceType::CUDA) {
+      grad_err = cudaMemcpy(new_raw_grad_ptr, old_grad_ptr, size_in_bytes,
+                            cudaMemcpyDeviceToDevice);
+    } else if (old_device.type == DeviceType::CPU &&
+               new_device.type == DeviceType::CPU) {
+      std::memcpy(new_raw_grad_ptr, old_grad_ptr, size_in_bytes);
+    }
+
+    if (grad_err != cudaSuccess) {
+      new_allocator->deallocate(new_raw_grad_ptr);
+      throw std::runtime_error("Failed to copy gradient data to " + device_str +
+                               ": " + std::string(cudaGetErrorString(grad_err)));
+    }
+    grad_ = std::shared_ptr<void>(new_raw_grad_ptr, deleter);
+  }
+
+  this->device_ = new_device;
+  this->offset_ = 0;
+  this->strides_ = compute_strides_(this->shape_);
+
+  if (new_device.type == DeviceType::CPU) {
+    ops_ = get_cpu_ops();
+  } else if (new_device.type == DeviceType::CUDA) {
+    ops_ = get_gpu_ops();
+  }
+}
+
 bool Tensor::is_contiguous() const {
   int64_t stride = 1;
   for (int i = shape_.size() - 1; i >= 0; --i) {

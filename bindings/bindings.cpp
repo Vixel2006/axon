@@ -263,6 +263,9 @@ PYBIND11_MODULE(cnawah, m) {
           }
       )
 
+
+      .def("to", &Tensor::to)
+
       .def("sum",
           [](const Tensor &self, py::object dim_arg, bool keepdim) {
             if (py::isinstance<py::int_>(dim_arg)) {

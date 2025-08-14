@@ -7,7 +7,6 @@
 #include <cuda_runtime.h>
 #include <stdexcept>
 
-// A generic, broadcasting-aware kernel for element-wise multiplication.
 __global__ void broadcast_mul_kernel(
     const float* a_data,
     const int64_t* a_strides,
@@ -23,20 +22,14 @@ __global__ void broadcast_mul_kernel(
         return;
     }
 
-    // From the linear index 'i', calculate the multi-dimensional coordinates
-    // based on the output tensor's shape 'c_shape'.
     int64_t temp_i = i;
     size_t a_offset = 0;
     size_t b_offset = 0;
 
-    // Iterate through dimensions from right to left to calculate offsets
     for (int d = c_ndim - 1; d >= 0; --d) {
         int64_t coord = temp_i % c_shape[d];
         temp_i /= c_shape[d];
 
-        // Use the coordinate to calculate the offset for each input tensor.
-        // If a dimension was broadcasted, its stride will be 0, correctly
-        // re-using the single element.
         a_offset += coord * a_strides[d];
         b_offset += coord * b_strides[d];
     }
@@ -97,7 +90,6 @@ Tensor CudaOps::mul(const Tensor& a, const Tensor& b) {
         throw std::runtime_error("Input tensors for CudaOps::mul must be on the CUDA device.");
     }
 
-    // 1. Compute the final shape after broadcasting.
     std::vector<int64_t> c_shape = compute_broadcast_shape(a.shape(), b.shape());
     size_t num_elements = std::accumulate(c_shape.begin(), c_shape.end(), 1, std::multiplies<int64_t>());
     int c_ndim = c_shape.size();
@@ -106,19 +98,16 @@ Tensor CudaOps::mul(const Tensor& a, const Tensor& b) {
         return Tensor(c_shape, a.dtype(), deviceToString(a.device()), false);
     }
 
-    // 2. Create broadcasted "views" of the input tensors.
     Tensor a_broad = a.broadcast(c_shape);
     Tensor b_broad = b.broadcast(c_shape);
 
     const float* d_a = static_cast<const float*>(a_broad.raw_ptr());
     const float* d_b = static_cast<const float*>(b_broad.raw_ptr());
 
-    // 3. Allocate memory for the output tensor.
     auto allocator = AllocatorFactory::get(a.device());
     void* d_c_raw = allocator->allocate(num_elements * sizeof(float));
     float* d_c = static_cast<float*>(d_c_raw);
 
-    // 4. Allocate and copy shape/stride metadata to the GPU.
     int64_t *d_a_strides, *d_b_strides, *d_c_shape;
     CUDA_CHECK(cudaMalloc(&d_a_strides, c_ndim * sizeof(int64_t)));
     CUDA_CHECK(cudaMalloc(&d_b_strides, c_ndim * sizeof(int64_t)));
@@ -128,7 +117,6 @@ Tensor CudaOps::mul(const Tensor& a, const Tensor& b) {
     CUDA_CHECK(cudaMemcpy(d_b_strides, b_broad.strides().data(), c_ndim * sizeof(int64_t), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_c_shape, c_shape.data(), c_ndim * sizeof(int64_t), cudaMemcpyHostToDevice));
 
-    // 5. Launch the broadcasting-aware kernel.
     const int threadsPerBlock = 256;
     const int blocksPerGrid = (num_elements + threadsPerBlock - 1) / threadsPerBlock;
     broadcast_mul_kernel<<<blocksPerGrid, threadsPerBlock>>>(
@@ -138,12 +126,10 @@ Tensor CudaOps::mul(const Tensor& a, const Tensor& b) {
     );
     CUDA_CHECK(cudaGetLastError());
 
-    // 6. Free the temporary metadata from the GPU.
     CUDA_CHECK(cudaFree(d_a_strides));
     CUDA_CHECK(cudaFree(d_b_strides));
     CUDA_CHECK(cudaFree(d_c_shape));
 
-    // 7. Create the final output Tensor object.
     auto deleter = [allocator](void* ptr) { allocator->deallocate(ptr); };
     std::shared_ptr<void> data(d_c_raw, deleter);
 

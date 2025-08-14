@@ -8,8 +8,6 @@ def linear(in_dims: int, out_dims: int, has_bias: bool = True):
     if not isinstance(has_bias, bool):
         raise TypeError(f"[linear] 'has_bias' must be a boolean, got {type(has_bias).__name__}")
 
-    # --- FIX: Initialize parameters EAGERLY, not lazily ---
-    # Create the parameters immediately, just like in your conv2d layer.
     params = {
         "w": nw.randn([in_dims, out_dims], requires_grad=True)
     }
@@ -49,7 +47,7 @@ def conv2d(in_channels: int, out_channels: int, kernel_size: tuple[int, int], st
     assert isinstance(has_bias, bool), "has_bias must be a boolean."
 
     params = {
-        "W": nw.uniform([out_channels, in_channels, *kernel_size], requires_grad=True),
+        "W": nw.uniform([out_channels, in_channels, *kernel_size],requires_grad=True),
     }
 
     if has_bias:
