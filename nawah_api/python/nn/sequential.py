@@ -2,7 +2,7 @@ from ..core import Tensor
 import numpy as np
 import cnawah as nw
 
-class Net:
+class Sequential:
     def __init__(self, modules={}):
         self.modules = modules
         self.params = {}
@@ -35,6 +35,9 @@ class Net:
             else:
                 self.buffers[full_name] = param
 
+    def remove(self, module_name):
+        self._deregister_module(module_name)
+
     def forward(self, x):
         for module in self.modules.values():
             x = module['fn'](x)
@@ -45,7 +48,7 @@ class Net:
 
     def __repr__(self):
         lines = [f"  ({name}): {module.get('name', 'Module')}" for name, module in self.modules.items()]
-        return "Net(\n" + "\n".join(lines) + "\n)"
+        return "Sequential(\n" + "\n".join(lines) + "\n)"
 
     def __setitem__(self, name, module):
         if not isinstance(module, dict) or 'fn' not in module:
@@ -66,12 +69,18 @@ class Net:
     def __getitem__(self, name):
         return self.modules[name]
 
+    def to(self, device: str):
+        for _, param in self.params.items():
+            param.to(device)
+        for _, buffer in self.buffers.items():
+            param.to(device)
+
     def summary(self, input_shape):
         col_widths = {"Layer": 12, "Type": 15, "Output Shape": 22, "Trainable": 13}
         header = (f"| {'Layer':<{col_widths['Layer']}} | {'Type':<{col_widths['Type']}} | {'Output Shape':<{col_widths['Output Shape']}} | {'Trainable':<{col_widths['Trainable']}} |")
         separator = "=" * len(header)
 
-        summary_str = f"Net (Input: {list(input_shape)})\n{separator}\n{header}\n"
+        summary_str = f"Sequential (Input: {list(input_shape)})\n{separator}\n{header}\n"
         summary_str += f"|{'-'*(col_widths['Layer']+2)}|{'-'*(col_widths['Type']+2)}|{'-'*(col_widths['Output Shape']+2)}|{'-'*(col_widths['Trainable']+2)}|\n"
 
         dummy_tensor = nw.zeros(input_shape)
@@ -100,11 +109,6 @@ class Net:
 
         print(summary_str)
 
-
-    def state_dict(self):
-        combined_dict = {**self.params, **self.buffers}
-        state_dict = {name: tensor.data for name, tensor in combined_dict.items()}
-        return state_dict
 
     def load_state_dict(self, state_dict):
         current_model_tensors = {**self.params, **self.buffers}
