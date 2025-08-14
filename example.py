@@ -22,29 +22,31 @@ inp = nw.Tensor(
         [4, 5, 6],
         [7, 8, 9] ]]],
     requires_grad=True,
-    device="cpu"
+    device="cuda:0"
 )
 
-net = nw.Net()
+inpt = nw.Tensor([[1,3,4], [1,3,4]], requires_grad=True, device="cuda:0")
 
-net.add("conv2d_first", nw.layers.conv2d(in_channels=1, out_channels=3, kernel_size=(2,2)))
+net = nw.Sequential()
+
+net.add("conv2d_first", nw.layers.linear(3, 12))
 net.add("relu1", nw.activations.relu())
-net.add("Flatten", nw.layers.flatten())
 net.add("fc1", nw.layers.linear(12, 1))
 
-pred = net(inp)
+net.to("cuda:0")
+
+net.summary([2,3])
+
+pred = net(inpt)
 
 print("Prediction:")
 print(pred)
 
-net.summary([3, 1, 3, 3])
 
 
 print("Registered params")
 
-print(net.params)
-
-truth = nw.ones([1,1], requires_grad=True)
+truth = nw.ones([1,1], requires_grad=True, device="cuda:0")
 
 
 loss = truth - pred
@@ -55,3 +57,15 @@ nw.SGD(net.params.values(), lr=0.1)
 print("-------------------------------------------------")
 print(net.params)
 
+"""
+net1 = nw.Sequential({
+    "Conv2D": nw.layers.conv2d(in_channels=1, out_channels=3, kernel_size=(2,2)),
+    "ReLU": nw.activations.relu(),
+    "Flatten": nw.layers.flatten(),
+    "FC1": nw.layers.linear(12, 1)
+})
+
+net1.to("cuda:0")
+
+net1.summary([3,1,3,3])
+"""
