@@ -144,7 +144,6 @@ inline std::shared_ptr<int64_t> copy_strides_to_device(const std::vector<int64_t
     return std::shared_ptr<int64_t>(d_ptr, deleter);
 }
 
-
 __global__ void pad_grad_kernel(const float* out_grad, float* padded_grad, const int W_out, const int H_out, const int W_fft, const int H_fft, const int W_k, const int H_k, const int stride, const int padding);
 __global__ void pad_and_rotate_kernel(const float* kernel, float* padded_rotated_kernel, const int W_k, const int H_k, const int W_fft, const int H_fft);
 __global__ void crop_and_add_kernel(const float* full_conv_result, float* grad_tensor, const int W_crop, const int H_crop, const int W_fft);

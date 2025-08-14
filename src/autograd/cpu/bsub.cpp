@@ -1,42 +1,43 @@
 #include "tensor.h"
 #include "autograd/ops.h"
+#include "helpers.h"
+#include "strided_indexer.h"
 #include <stdexcept>
 
-#define PARALLEL_THRESHOLD 4096
 
 void CpuAutograd::sub(Tensor& out, std::vector<Tensor>& prev) {
-    Tensor t = out;
-    Tensor& a = prev[0];
-    Tensor& b = prev[1];
-    const size_t num_elements = a.numel();
+    // Wrap the output gradient in a Tensor for easier handling of shape/strides
+    Tensor out_grad = Tensor(out.shape(), out.strides(), out.dtype(), out.device(), out.grad_ptr(), 0, false, nullptr, std::nullopt);
 
-    const float* out_grad_p = static_cast<const float*>(t.grad_ptr().get());
-    float* a_grad_p = static_cast<float*>(a.grad_ptr().get());
-    float* b_grad_p = static_cast<float*>(b.grad_ptr().get());
+    // Case for Tensor - Tensor
+    if (prev.size() == 2) {
+        Tensor& a = prev[0];
+        Tensor& b = prev[1];
 
-    if (!out_grad_p || !a_grad_p || !b_grad_p) {
-        throw std::runtime_error("A gradient pointer is null in 'sub' backward pass.");
+        // For input 'a', the gradient is +out_grad (da/da = 1)
+        if (a.requires_grad()) {
+            sum_gradient_for_broadcast(a, out_grad);
+        }
+
+        // For input 'b', the gradient is -out_grad (da/db = -1)
+        if (b.requires_grad()) {
+            // Create a temporary tensor containing the negated output gradient
+            Tensor neg_out_grad = out_grad.neg();
+            // Accumulate the negated gradient into b
+            sum_gradient_for_broadcast(b, neg_out_grad);
+        }
     }
-
-    const bool a_req_grad = a.requires_grad();
-    const bool b_req_grad = b.requires_grad();
-
-    if (a_req_grad && b_req_grad) {
-        #pragma omp parallel for simd schedule(static) if(num_elements > PARALLEL_THRESHOLD)
-        for (size_t i = 0; i < num_elements; ++i) {
-            const float grad_out = out_grad_p[i];
-            a_grad_p[i] += grad_out;
-            b_grad_p[i] -= grad_out;
+    // Case for Tensor - scalar
+    else if (prev.size() == 1) {
+        Tensor& a = prev[0];
+        // The gradient only flows back to the tensor, not the scalar
+        if (a.requires_grad()) {
+            sum_gradient_for_broadcast(a, out_grad);
         }
-    } else if (a_req_grad) {
-        #pragma omp parallel for simd schedule(static) if(num_elements > PARALLEL_THRESHOLD)
-        for (size_t i = 0; i < num_elements; ++i) {
-            a_grad_p[i] += out_grad_p[i];
-        }
-    } else if (b_req_grad) {
-        #pragma omp parallel for simd schedule(static) if(num_elements > PARALLEL_THRESHOLD)
-        for (size_t i = 0; i < num_elements; ++i) {
-            b_grad_p[i] -= out_grad_p[i];
-        }
+    }
+    else {
+        throw std::runtime_error("Invalid number of inputs for sub backward pass.");
     }
 }
+
+
