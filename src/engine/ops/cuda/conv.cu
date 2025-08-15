@@ -34,7 +34,7 @@ Tensor CudaOps::conv2d(const Tensor& a, const Tensor& kernel, int stride, int pa
 
     cublasHandle_t cublas_handle;
     CUBLAS_CHECK(cublasCreate(&cublas_handle));
-
+    
     const int64_t M = C_out;
     const int64_t K = C_in * H_k * W_k;
     const int64_t L = H_out * W_out;
@@ -77,4 +77,3 @@ Tensor CudaOps::conv2d(const Tensor& a, const Tensor& kernel, int stride, int pa
 
     return out;
 }
-
