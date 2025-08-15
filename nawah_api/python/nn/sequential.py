@@ -7,6 +7,7 @@ class Sequential:
         self.modules = modules
         self.params = {}
         self.buffers = {}
+        self.device = "cpu"
 
     def _deregister_module(self, module_name):
         params_to_remove = [p for p in self.params if p.startswith(f"{module_name}.")]
@@ -74,6 +75,7 @@ class Sequential:
             param.to(device)
         for _, buffer in self.buffers.items():
             param.to(device)
+        self.device = device
 
     def summary(self, input_shape):
         col_widths = {"Layer": 12, "Type": 15, "Output Shape": 22, "Trainable": 13}
@@ -83,7 +85,7 @@ class Sequential:
         summary_str = f"Sequential (Input: {list(input_shape)})\n{separator}\n{header}\n"
         summary_str += f"|{'-'*(col_widths['Layer']+2)}|{'-'*(col_widths['Type']+2)}|{'-'*(col_widths['Output Shape']+2)}|{'-'*(col_widths['Trainable']+2)}|\n"
 
-        dummy_tensor = nw.zeros(input_shape)
+        dummy_tensor = nw.zeros(input_shape, device=self.device)
         total_params = 0
         trainable_params = 0
 

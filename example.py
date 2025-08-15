@@ -2,7 +2,9 @@ import nawah_api as nw
 import time
 
 a = nw.Tensor([[[1,3,4], [3,4,5], [3,4,5]]], device="cuda:0", requires_grad=True)
-b = nw.Tensor([[[1,3,4]]], device="cuda:0", requires_grad=True)
+b = nw.Tensor([[[1,3,4]]], device="cpu", requires_grad=True)
+
+b.to("cuda:0")
 
 c = a * b
 print("---------------------")
@@ -57,7 +59,6 @@ nw.SGD(net.params.values(), lr=0.1)
 print("-------------------------------------------------")
 print(net.params)
 
-"""
 net1 = nw.Sequential({
     "Conv2D": nw.layers.conv2d(in_channels=1, out_channels=3, kernel_size=(2,2)),
     "ReLU": nw.activations.relu(),
@@ -68,4 +69,4 @@ net1 = nw.Sequential({
 net1.to("cuda:0")
 
 net1.summary([3,1,3,3])
-"""
+
