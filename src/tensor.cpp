@@ -799,7 +799,7 @@ Tensor Tensor::squeeze(int dim) {
                 requires_grad_, grad_, ctx_);
 }
 
-Tensor Tensor::unsqueeze(int dim) {
+Tensor Tensor::unsqueeze(int dim) const {
   const int ndim = shape_.size();
 
   if (dim < 0) {
@@ -1035,6 +1035,14 @@ Tensor Tensor::cat(const std::vector<Tensor> &tensors, int dim) {
     throw std::out_of_range("Concatenation dimension out of range.");
   }
 
+  for (const auto &t : tensors) {
+    if (!t.is_contiguous()) {
+      throw std::runtime_error(
+          "cat(): can only be called on a contiguous tensor. Please call "
+          ".contiguous() first if you have a view.");
+    }
+  }
+
   for (size_t i = 1; i < tensors.size(); ++i) {
     if (tensors[i].dtype() != common_dtype) {
       throw std::runtime_error(
@@ -1069,30 +1077,48 @@ Tensor Tensor::cat(const std::vector<Tensor> &tensors, int dim) {
 
   size_t element_size = DtypeToSize(common_dtype);
   char *result_raw_ptr = static_cast<char *>(result.raw_ptr());
-  __int64_t current_offset_bytes = 0;
+  __int64_t offset_in_dim = 0;
+
+  __int64_t outer_size = 1;
+  for (int i = 0; i < dim; ++i) {
+    outer_size *= tensors[0].shape()[i];
+  }
+
+  __int64_t inner_size = 1;
+  for (size_t i = dim + 1; i < ndim; ++i) {
+    inner_size *= tensors[0].shape()[i];
+  }
+
+  __int64_t result_cat_dim_stride = result.shape()[dim] * inner_size;
 
   for (const auto &t : tensors) {
-    __int64_t num_elements_to_copy = t.numel();
     const char *source_raw_ptr = static_cast<const char *>(t.raw_ptr());
+    const auto &t_shape = t.shape();
+    __int64_t t_cat_dim_size = t_shape[dim];
+    __int64_t t_cat_dim_stride = t_cat_dim_size * inner_size;
 
-    if (common_device.type == DeviceType::CPU) {
-      std::memcpy(result_raw_ptr + current_offset_bytes, source_raw_ptr,
-                  num_elements_to_copy * element_size);
-    } else if (common_device.type == DeviceType::CUDA) {
-      cudaError_t err = cudaMemcpy(
-          result_raw_ptr + current_offset_bytes, source_raw_ptr,
-          num_elements_to_copy * element_size, cudaMemcpyDeviceToDevice);
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA memcpy failed during concatenation: " +
-                                 std::string(cudaGetErrorString(err)));
+    for (__int64_t i = 0; i < outer_size; ++i) {
+      __int64_t dest_offset =
+          (i * result_cat_dim_stride + offset_in_dim * inner_size) *
+          element_size;
+      __int64_t src_offset = i * t_cat_dim_stride * element_size;
+      __int64_t copy_size_bytes = t_cat_dim_stride * element_size;
+
+      if (common_device.type == DeviceType::CPU) {
+        std::memcpy(result_raw_ptr + dest_offset, source_raw_ptr + src_offset,
+                    copy_size_bytes);
+      } else if (common_device.type == DeviceType::CUDA) {
+        cudaError_t err =
+            cudaMemcpy(result_raw_ptr + dest_offset,
+                       source_raw_ptr + src_offset, copy_size_bytes,
+                       cudaMemcpyDeviceToDevice);
+        if (err != cudaSuccess) {
+          throw std::runtime_error("CUDA memcpy failed during concatenation: " +
+                                   std::string(cudaGetErrorString(err)));
+        }
       }
-    } else {
-      throw std::runtime_error(
-          "Concatenation not implemented for device type: " +
-          deviceToString(common_device));
     }
-
-    current_offset_bytes += num_elements_to_copy * element_size;
+    offset_in_dim += t_cat_dim_size;
   }
 
   bool any_requires_grad = false;
@@ -1105,53 +1131,70 @@ Tensor Tensor::cat(const std::vector<Tensor> &tensors, int dim) {
   result.requires_grad_ = any_requires_grad;
 
   if (result.requires_grad()) {
-    result.set_ctx(tensors, [dim, common_device,
-                             common_dtype](Tensor &out_grad,
-                                           std::vector<Tensor> &prev_tensors
+    result.set_ctx(
+        tensors,
+        [dim, ndim, common_device, common_dtype](
+            Tensor &out_grad, std::vector<Tensor> &prev_tensors) {
+          size_t element_size = DtypeToSize(common_dtype);
+          const char *out_grad_raw_ptr =
+              static_cast<const char *>(out_grad.raw_ptr());
+          __int64_t offset_in_dim = 0;
 
-                            ) {
-      size_t element_size = DtypeToSize(common_dtype);
-      const char *out_grad_raw_ptr =
-          static_cast<const char *>(out_grad.raw_ptr());
-      __int64_t current_offset_bytes = 0;
-
-      for (auto &t : prev_tensors) {
-        if (!t.requires_grad()) {
-          current_offset_bytes += t.numel() * element_size;
-          continue;
-        }
-
-        char *t_grad_raw_ptr = static_cast<char *>(t.grad_ptr().get());
-
-        if (t_grad_raw_ptr == nullptr) {
-          throw std::runtime_error(
-              "Internal error: Gradient buffer is null for a tensor "
-              "requiring grad during cat backward.");
-        }
-
-        __int64_t num_elements_to_copy = t.numel();
-
-        if (common_device.type == DeviceType::CPU) {
-          std::memcpy(t_grad_raw_ptr, out_grad_raw_ptr + current_offset_bytes,
-                      num_elements_to_copy * element_size);
-        } else if (common_device.type == DeviceType::CUDA) {
-          cudaError_t err = cudaMemcpy(
-              t_grad_raw_ptr, out_grad_raw_ptr + current_offset_bytes,
-              num_elements_to_copy * element_size, cudaMemcpyDeviceToDevice);
-          if (err != cudaSuccess) {
-            throw std::runtime_error(
-                "CUDA memcpy failed during cat backward pass: " +
-                std::string(cudaGetErrorString(err)));
+          __int64_t outer_size = 1;
+          for (int i = 0; i < dim; ++i) {
+            outer_size *= prev_tensors[0].shape()[i];
           }
-        } else {
-          throw std::runtime_error(
-              "Concatenation backward not implemented for device type: " +
-              deviceToString(common_device));
-        }
 
-        current_offset_bytes += num_elements_to_copy * element_size;
-      }
-    });
+          __int64_t inner_size = 1;
+          for (size_t i = dim + 1; i < ndim; ++i) {
+            inner_size *= prev_tensors[0].shape()[i];
+          }
+
+          __int64_t out_grad_cat_dim_stride = out_grad.shape()[dim] * inner_size;
+
+          for (auto &t : prev_tensors) {
+            if (!t.requires_grad()) {
+              offset_in_dim += t.shape()[dim];
+              continue;
+            }
+
+            char *t_grad_raw_ptr = static_cast<char *>(t.grad_ptr().get());
+
+            if (t_grad_raw_ptr == nullptr) {
+              throw std::runtime_error(
+                  "Internal error: Gradient buffer is null for a tensor "
+                  "requiring grad during cat backward.");
+            }
+
+            const auto &t_shape = t.shape();
+            __int64_t t_cat_dim_size = t_shape[dim];
+            __int64_t t_cat_dim_stride = t_cat_dim_size * inner_size;
+
+            for (__int64_t i = 0; i < outer_size; ++i) {
+              __int64_t src_offset =
+                  (i * out_grad_cat_dim_stride + offset_in_dim * inner_size) *
+                  element_size;
+              __int64_t dest_offset = i * t_cat_dim_stride * element_size;
+              __int64_t copy_size_bytes = t_cat_dim_stride * element_size;
+
+              if (common_device.type == DeviceType::CPU) {
+                std::memcpy(t_grad_raw_ptr + dest_offset,
+                            out_grad_raw_ptr + src_offset, copy_size_bytes);
+              } else if (common_device.type == DeviceType::CUDA) {
+                cudaError_t err = cudaMemcpy(
+                    t_grad_raw_ptr + dest_offset,
+                    out_grad_raw_ptr + src_offset, copy_size_bytes,
+                    cudaMemcpyDeviceToDevice);
+                if (err != cudaSuccess) {
+                  throw std::runtime_error(
+                      "CUDA memcpy failed during cat backward pass: " +
+                      std::string(cudaGetErrorString(err)));
+                }
+              }
+            }
+            offset_in_dim += t_cat_dim_size;
+          }
+        });
   }
 
   return result;
