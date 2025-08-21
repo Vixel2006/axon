@@ -1,9 +1,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "helpers.h"
-// #include "dataset.h"
+#include "dataset.h"
 #include "engine/ops.h"
+#include "helpers.h"
 #include "init.h"
 #include "optimizers.h"
 #include "tensor.h"
@@ -129,6 +129,20 @@ PYBIND11_MODULE(cnawah, m) {
       .def_readwrite("prev", &Tape::prev)
       .def_readwrite("backward_fn", &Tape::backward_fn);
 
+  py::class_<TensorDataset, std::shared_ptr<TensorDataset>>(m, "TensorDataset")
+      .def(py::init<const std::vector<Tensor> &>(), py::arg("input_tensors"),
+           "Initializes a TensorDataset by concatenating a list of Tensors "
+           "along dimension 0.")
+      .def(py::init<std::shared_ptr<Tensor>>(), py::arg("data_tensor"),
+           "Initializes a TensorDataset with a shared_ptr to a single Tensor.")
+      .def(py::init<Tensor>(), py::arg("data_tensor"),
+           "Initializes a TensorDataset with a single Tensor.")
+      .def("__len__", &TensorDataset::__len__,
+           "Returns the number of items in the dataset (size of the first "
+           "dimension).")
+      .def("__getitem__", &TensorDataset::__getitem__, py::arg("idx"),
+           "Retrieves a single item (row/slice) from the dataset by index.");
+
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init<const std::vector<int64_t> &, DType, const std::string &,
                     bool>(),
@@ -161,6 +175,7 @@ PYBIND11_MODULE(cnawah, m) {
       .def("transpose", &Tensor::transpose, py::arg("n"), py::arg("m"))
       .def("expand", &Tensor::expand, py::arg("shape"))
       .def("broadcast", &Tensor::broadcast, py::arg("shape"))
+      .def("zero_grad", &Tensor::zero_grad)
       .def("flatten", &Tensor::flatten, py::arg("start") = 0,
            py::arg("end") = -1)
       .def_static(

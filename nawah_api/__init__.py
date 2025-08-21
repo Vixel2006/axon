@@ -8,6 +8,7 @@ DType = nw.DType
 Device = nw.Device
 DeviceType = nw.DeviceType
 Tape = nw.Tape
+TensorDataset = nw.TensorDataset
 relu = nw.relu
 log = nw.log
 exp = nw.exp
@@ -41,6 +42,6 @@ __all__ = [
     "Sequential",
     "layers",
     "activations",
-    "flatten"
+    "flatten",
+    "TensorDataset",
 ]
-
