@@ -96,44 +96,8 @@ __global__ void crop_and_stride_kernel(const float* full_conv_result, float* out
     int dst_idx = y_out * W_out + x_out;
     int src_idx = y_src * W_full + x_src;
 
-    output[dst_idx] = full_conv_result[src_idx];
-}
+    output[dst_idx] = full_conv_result[src_idx]; }
 
-__global__ void im2col_kernel(const float* data_im, float* data_col,
-                                        const int C_in, const int H_in, const int W_in,
-                                        const int H_k, const int W_k,
-                                        const int H_out, const int W_out,
-                                        const int stride, const int padding) {
-    for (int l = blockIdx.x * blockDim.x + threadIdx.x;
-         l < (H_out * W_out);
-         l += blockDim.x * gridDim.x) {
-
-        const int w_out = l % W_out;
-        const int h_out = l / W_out;
-        const int w_in_start = w_out * stride - padding;
-        const int h_in_start = h_out * stride - padding;
-
-        for (int c = 0; c < C_in; ++c) {
-            for (int kh = 0; kh < H_k; ++kh) {
-                for (int kw = 0; kw < W_k; ++kw) {
-                    const int h_in = h_in_start + kh;
-                    const int w_in = w_in_start + kw;
-
-                    const int k = (c * H_k + kh) * W_k + kw;
-                    
-                    const int idx_col = k * (H_out * W_out) + l;
-
-                    if (h_in >= 0 && h_in < H_in && w_in >= 0 && w_in < W_in) {
-                        const int idx_im = (c * H_in + h_in) * W_in + w_in;
-                        data_col[idx_col] = data_im[idx_im];
-                    } else {
-                        data_col[idx_col] = 0.0f;
-                    }
-                }
-            }
-        }
-    }
-}
 
 __global__ void col2im_kernel(const float* data_col, float* data_im,
                               const int C_in, const int H_in, const int W_in,

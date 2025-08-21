@@ -2,10 +2,11 @@
 #include <pybind11/stl.h>
 
 #include "helpers.h"
-#include "tensor.h"
+// #include "dataset.h"
+#include "engine/ops.h"
 #include "init.h"
 #include "optimizers.h"
-#include "engine/ops.h"
+#include "tensor.h"
 #include <stdexcept>
 
 static CpuOps cpu_ops;
@@ -13,82 +14,87 @@ static CudaOps cuda_ops;
 static CpuOptimizers cpu_optim;
 static CudaOptimizers cuda_optim;
 
-
 Tensor relu_dispatcher(const Tensor &a) {
-    if (a.device().type == DeviceType::CPU) {
-        return cpu_ops.relu(a);
-    } else if (a.device().type == DeviceType::CUDA) {
-        return cuda_ops.relu(a);
-    } else {
-        // Throw an error for unsupported devices.
-        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
-    }
+  if (a.device().type == DeviceType::CPU) {
+    return cpu_ops.relu(a);
+  } else if (a.device().type == DeviceType::CUDA) {
+    return cuda_ops.relu(a);
+  } else {
+    // Throw an error for unsupported devices.
+    throw std::runtime_error("Unsupported device for relu: " +
+                             deviceToString(a.device()));
+  }
 }
 
-
 Tensor flatten_dispatcher(Tensor &a) {
-    if (a.device().type == DeviceType::CPU) {
-        return cpu_ops.flatten(a);
-    } else if (a.device().type == DeviceType::CUDA) {
-        return cuda_ops.flatten(a);
-    } else {
-        // Throw an error for unsupported devices.
-        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
-    }
+  if (a.device().type == DeviceType::CPU) {
+    return cpu_ops.flatten(a);
+  } else if (a.device().type == DeviceType::CUDA) {
+    return cuda_ops.flatten(a);
+  } else {
+    // Throw an error for unsupported devices.
+    throw std::runtime_error("Unsupported device for relu: " +
+                             deviceToString(a.device()));
+  }
 }
 
 Tensor log_dispatcher(const Tensor &a) {
-    if (a.device().type == DeviceType::CPU) {
-        return cpu_ops.log(a);
-    } else if (a.device().type == DeviceType::CUDA) {
-        return cuda_ops.log(a);
-    } else {
-        // Throw an error for unsupported devices.
-        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
-    }
+  if (a.device().type == DeviceType::CPU) {
+    return cpu_ops.log(a);
+  } else if (a.device().type == DeviceType::CUDA) {
+    return cuda_ops.log(a);
+  } else {
+    // Throw an error for unsupported devices.
+    throw std::runtime_error("Unsupported device for relu: " +
+                             deviceToString(a.device()));
+  }
 }
 
 Tensor exp_dispatcher(const Tensor &a) {
-    if (a.device().type == DeviceType::CPU) {
-        return cpu_ops.exp(a);
-    } else if (a.device().type == DeviceType::CUDA) {
-        return cuda_ops.exp(a);
-    } else {
-        // Throw an error for unsupported devices.
-        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
-    }
+  if (a.device().type == DeviceType::CPU) {
+    return cpu_ops.exp(a);
+  } else if (a.device().type == DeviceType::CUDA) {
+    return cuda_ops.exp(a);
+  } else {
+    // Throw an error for unsupported devices.
+    throw std::runtime_error("Unsupported device for relu: " +
+                             deviceToString(a.device()));
+  }
 }
-
 
 Tensor softmax_dispatcher(const Tensor &a) {
-    if (a.device().type == DeviceType::CPU) {
-        return cpu_ops.softmax(a);
-    } else if (a.device().type == DeviceType::CUDA) {
-        return cuda_ops.softmax(a);
-    } else {
-        // Throw an error for unsupported devices.
-        throw std::runtime_error("Unsupported device for relu: " + deviceToString(a.device()));
-    }
+  if (a.device().type == DeviceType::CPU) {
+    return cpu_ops.softmax(a);
+  } else if (a.device().type == DeviceType::CUDA) {
+    return cuda_ops.softmax(a);
+  } else {
+    // Throw an error for unsupported devices.
+    throw std::runtime_error("Unsupported device for relu: " +
+                             deviceToString(a.device()));
+  }
 }
 
-Tensor conv_dispatcher(const Tensor &a, const Tensor& kernel, int stride, int padding) {
-    if (a.device().type == DeviceType::CPU) {
-        return cpu_ops.conv2d(a, kernel, stride, padding);
-    } else if (a.device().type == DeviceType::CUDA) {
-        return cuda_ops.conv2d(a, kernel, stride, padding);
-    } else {
-        // Throw an error for unsupported devices.
-        throw std::runtime_error("Unsupported device for conv2d: " + deviceToString(a.device()));
-    }
+Tensor conv_dispatcher(const Tensor &a, const Tensor &kernel, int stride,
+                       int padding) {
+  if (a.device().type == DeviceType::CPU) {
+    return cpu_ops.conv2d(a, kernel, stride, padding);
+  } else if (a.device().type == DeviceType::CUDA) {
+    return cuda_ops.conv2d(a, kernel, stride, padding);
+  } else {
+    // Throw an error for unsupported devices.
+    throw std::runtime_error("Unsupported device for conv2d: " +
+                             deviceToString(a.device()));
+  }
 }
 
-void SGD(std::vector<std::shared_ptr<Tensor>>& params, float lr) {
+void SGD(std::vector<std::shared_ptr<Tensor>> &params, float lr) {
   if (params[0].get()->device().type == DeviceType::CPU) {
     cpu_optim.SGD(params, lr);
   } else if (params[0].get()->device().type == DeviceType::CUDA) {
     cuda_optim.SGD(params, lr);
   } else {
-    throw std::runtime_error("Unsupported device for SGD: " + deviceToString(params[0].get()->device()));
+    throw std::runtime_error("Unsupported device for SGD: " +
+                             deviceToString(params[0].get()->device()));
   }
 }
 
@@ -119,9 +125,9 @@ PYBIND11_MODULE(cnawah, m) {
       });
 
   py::class_<Tape>(m, "Tape")
-    .def(py::init<>())
-    .def_readwrite("prev", &Tape::prev)
-    .def_readwrite("backward_fn", &Tape::backward_fn);
+      .def(py::init<>())
+      .def_readwrite("prev", &Tape::prev)
+      .def_readwrite("backward_fn", &Tape::backward_fn);
 
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init<const std::vector<int64_t> &, DType, const std::string &,
@@ -133,7 +139,6 @@ PYBIND11_MODULE(cnawah, m) {
            py::arg("dtype") = DType::float32, py::arg("device") = "cpu",
            py::arg("requires_grad") = false,
            "Initialize Tensor from a Python list")
-
 
       .def_property_readonly("shape", &Tensor::shape,
                              py::return_value_policy::reference_internal)
@@ -158,6 +163,19 @@ PYBIND11_MODULE(cnawah, m) {
       .def("broadcast", &Tensor::broadcast, py::arg("shape"))
       .def("flatten", &Tensor::flatten, py::arg("start") = 0,
            py::arg("end") = -1)
+      .def_static(
+          "cat",
+          [](const py::list &tensors_py_list, int dim) {
+            std::vector<Tensor> cpp_tensors;
+            cpp_tensors.reserve(tensors_py_list.size());
+
+            for (py::handle item : tensors_py_list) {
+              cpp_tensors.push_back(*py::cast<std::shared_ptr<Tensor>>(item));
+            }
+            return Tensor::cat(cpp_tensors, dim);
+          },
+          py::arg("tensors"), py::arg("dim"),
+          "Concatenates a sequence of tensors along a given dimension.")
 
       .def("__getitem__",
            [](const Tensor &t, py::object obj) {
@@ -244,29 +262,33 @@ PYBIND11_MODULE(cnawah, m) {
              return ss.str();
            })
 
-      .def("__add__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::add))
-      .def("__add__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::add))
-      .def("__sub__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::sub))
-      .def("__sub__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::sub))
-      .def("__mul__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::mul))
-      .def("__mul__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::mul))
+      .def("__add__",
+           static_cast<Tensor (Tensor::*)(const Tensor &) const>(&Tensor::add))
+      .def("__add__",
+           static_cast<Tensor (Tensor::*)(float) const>(&Tensor::add))
+      .def("__sub__",
+           static_cast<Tensor (Tensor::*)(const Tensor &) const>(&Tensor::sub))
+      .def("__sub__",
+           static_cast<Tensor (Tensor::*)(float) const>(&Tensor::sub))
+      .def("__mul__",
+           static_cast<Tensor (Tensor::*)(const Tensor &) const>(&Tensor::mul))
+      .def("__mul__",
+           static_cast<Tensor (Tensor::*)(float) const>(&Tensor::mul))
       .def("__matmul__", &Tensor::matmul)
-      .def("__truediv__", static_cast<Tensor (Tensor::*)(const Tensor&) const>(&Tensor::div),
-             "Performs element-wise division with another tensor.")
-      .def("__truediv__", static_cast<Tensor (Tensor::*)(float) const>(&Tensor::div),
-             "Performs element-wise division with a scalar.")
+      .def("__truediv__",
+           static_cast<Tensor (Tensor::*)(const Tensor &) const>(&Tensor::div),
+           "Performs element-wise division with another tensor.")
+      .def("__truediv__",
+           static_cast<Tensor (Tensor::*)(float) const>(&Tensor::div),
+           "Performs element-wise division with a scalar.")
       .def("__neg__", &Tensor::neg)
 
-      .def("sum",
-          [](const Tensor &self) {
-              return self.sum();
-          }
-      )
-
+      .def("sum", [](const Tensor &self) { return self.sum(); })
 
       .def("to", &Tensor::to)
 
-      .def("sum",
+      .def(
+          "sum",
           [](const Tensor &self, py::object dim_arg, bool keepdim) {
             if (py::isinstance<py::int_>(dim_arg)) {
               return self.sum(dim_arg.cast<int>(), keepdim);
@@ -274,18 +296,12 @@ PYBIND11_MODULE(cnawah, m) {
             throw py::type_error("sum(): 'dim' argument must be an integer.");
           },
           "Calculates the sum of tensor elements over a given dimension.",
-          py::arg("dim") = py::none(),
-          py::arg("keepdim") = false
-      )
+          py::arg("dim") = py::none(), py::arg("keepdim") = false)
 
+      .def("mean", [](const Tensor &self) { return self.mean(); })
 
-      .def("mean",
-          [](const Tensor &self) {
-              return self.mean();
-          }
-      )
-
-      .def("mean",
+      .def(
+          "mean",
           [](const Tensor &self, py::object dim_arg, bool keepdim) {
             if (py::isinstance<py::int_>(dim_arg)) {
               return self.mean(dim_arg.cast<int>(), keepdim);
@@ -293,80 +309,52 @@ PYBIND11_MODULE(cnawah, m) {
             throw py::type_error("mean(): 'dim' argument must be an integer.");
           },
           "Calculates the mean of tensor elements over a given dimension.",
-          py::arg("dim") = py::none(),
-          py::arg("keepdim") = false
-      )
-
+          py::arg("dim") = py::none(), py::arg("keepdim") = false)
 
       .def("build_topo", &Tensor::build_topo)
       .def("backward", &Tensor::backward);
 
-    m.def("cuda_synchronize", &cuda_synchronize, "Synchronize CUDA device");
-    m.def(
-        "relu",
-        &relu_dispatcher,
+  m.def("cuda_synchronize", &cuda_synchronize, "Synchronize CUDA device");
+  m.def("relu", &relu_dispatcher,
         "Applies the Rectified Linear Unit function element-wise.",
-        py::arg("a")
-    );
+        py::arg("a"));
 
-    m.def(
-        "flatten",
-        &flatten_dispatcher,
-        "flatten the tensor",
-        py::arg("a")
-    );
+  m.def("flatten", &flatten_dispatcher, "flatten the tensor", py::arg("a"));
 
-    m.def(
-        "log",
-        &log_dispatcher,
-        "Applies the log",
-        py::arg("a")
-    );
+  m.def("log", &log_dispatcher, "Applies the log", py::arg("a"));
 
+  m.def("exp", &exp_dispatcher, "Applies the exp.", py::arg("a"));
 
-    m.def(
-        "exp",
-        &exp_dispatcher,
-        "Applies the exp.",
-        py::arg("a")
-    );
+  m.def("softmax", &softmax_dispatcher, "Applies the softmax operation.",
+        py::arg("a"));
 
+  m.def("conv2d", &conv_dispatcher, "Applies the conv2d operation.",
+        py::arg("a"), py::arg("kernel"), py::arg("stride") = 1,
+        py::arg("padding") = 0);
 
-    m.def(
-        "softmax",
-        &softmax_dispatcher,
-        "Applies the softmax operation.",
-        py::arg("a")
-    );
+  m.def("zeros", &zeros, py::arg("shape"), py::arg("device") = "cpu",
+        py::arg("requires_grad") = false,
+        "Creates a tensor filled with zeros.");
 
+  m.def("ones", &ones, py::arg("shape"), py::arg("device") = "cpu",
+        py::arg("requires_grad") = false, "Creates a tensor filled with ones.");
 
-    m.def(
-        "conv2d",
-        &conv_dispatcher,
-        "Applies the conv2d operation.",
-        py::arg("a"),
-        py::arg("kernel"),
-        py::arg("stride") = 1,
-        py::arg("padding") = 0
-    );
+  m.def("randn", &randn, py::arg("shape"), py::arg("device") = "cpu",
+        py::arg("requires_grad") = false,
+        "Creates a tensor with random numbers from a standard normal "
+        "distribution.");
 
-    m.def("zeros", &zeros, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,
-              "Creates a tensor filled with zeros.");
-              
-    m.def("ones", &ones, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,
-          "Creates a tensor filled with ones.");
-          
-    m.def("randn", &randn, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,
-          "Creates a tensor with random numbers from a standard normal distribution.");
-          
-    m.def("uniform", &uniform, py::arg("shape"), py::arg("device") = "cpu", py::arg("requires_grad") = false,
-          "Creates a tensor with random numbers from a uniform distribution [0, 1).");
-          
-    m.def("zeros_like", &zeros_like, py::arg("other"),
-          "Creates a tensor of zeros with the same properties as another tensor.");
-          
-    m.def("ones_like", &ones_like, py::arg("other"),
-          "Creates a tensor of ones with the same properties as another tensor.");
+  m.def("uniform", &uniform, py::arg("shape"), py::arg("device") = "cpu",
+        py::arg("requires_grad") = false,
+        "Creates a tensor with random numbers from a uniform distribution [0, "
+        "1).");
 
-    m.def("SGD", &SGD, py::arg("params"), py::arg("lr"));
+  m.def(
+      "zeros_like", &zeros_like, py::arg("other"),
+      "Creates a tensor of zeros with the same properties as another tensor.");
+
+  m.def("ones_like", &ones_like, py::arg("other"),
+        "Creates a tensor of ones with the same properties as another tensor.");
+
+  m.def("SGD", &SGD, py::arg("params"), py::arg("lr"));
 }
