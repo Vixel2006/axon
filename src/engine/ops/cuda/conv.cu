@@ -27,18 +27,18 @@ Tensor CudaOps::conv2d(const Tensor& a, const Tensor& kernel, int stride, int pa
     const int64_t W_out = (W_in + 2 * padding - W_k) / stride + 1;
 
     Tensor out({N, C_out, H_out, W_out}, a.dtype(), deviceToString(a.device()), a.requires_grad());
-    
+
     const float* d_a = static_cast<const float*>(a.data_ptr().get());
     const float* d_kernel = static_cast<const float*>(kernel.data_ptr().get());
     float* d_out = static_cast<float*>(out.data_ptr().get());
 
     cublasHandle_t cublas_handle;
     CUBLAS_CHECK(cublasCreate(&cublas_handle));
-    
-    const int64_t M = C_out;
+
     const int64_t K = C_in * H_k * W_k;
     const int64_t L = H_out * W_out;
-    
+    const int64_t M = C_out;
+
     float* d_col_buffer;
     CUDA_CHECK(cudaMalloc(&d_col_buffer, K * L * sizeof(float)));
 
@@ -50,12 +50,13 @@ Tensor CudaOps::conv2d(const Tensor& a, const Tensor& kernel, int stride, int pa
         float* d_out_n = d_out + n * (C_out * H_out * W_out);
 
         int threads_per_block = 256;
-        int num_blocks = (K * L + threads_per_block - 1) / threads_per_block;
+        int num_blocks = (L + threads_per_block - 1) / threads_per_block;
+        /*
         im2col_kernel<<<num_blocks, threads_per_block>>>(
             d_a_n, d_col_buffer, C_in, H_in, W_in, H_k, W_k, H_out, W_out, stride, padding
         );
         CUDA_CHECK(cudaGetLastError());
-
+        */
         CUBLAS_CHECK(cublasSgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
                                  L, M, K,
                                  &alpha,

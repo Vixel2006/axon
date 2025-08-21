@@ -5,9 +5,9 @@
 #include <algorithm>
 #include <functional>
 #include <numeric>
+#include <set>
 #include <stdexcept>
 #include <vector>
-#include <set>
 
 #include "allocator/allocatorFactory.h"
 #include "autograd/ops.h"
@@ -19,7 +19,8 @@ void Tensor::to(std::string device_str) {
   Device new_device = parse_device(device_str);
   Device old_device = this->device_;
 
-  if (new_device.type == old_device.type && new_device.index == old_device.index) {
+  if (new_device.type == old_device.type &&
+      new_device.index == old_device.index) {
     return;
   }
 
@@ -42,18 +43,19 @@ void Tensor::to(std::string device_str) {
 
   size_t size_in_bytes = num_elements * DtypeToSize(dtype_);
   auto new_allocator = AllocatorFactory::get(new_device);
-  auto deleter = [new_allocator](void* ptr) { new_allocator->deallocate(ptr); };
+  auto deleter = [new_allocator](void *ptr) { new_allocator->deallocate(ptr); };
 
-  void* new_raw_data_ptr = new_allocator->allocate(size_in_bytes);
+  void *new_raw_data_ptr = new_allocator->allocate(size_in_bytes);
   if (new_raw_data_ptr == nullptr) {
     throw std::runtime_error(
         "Memory allocation failed for tensor data on device " + device_str);
   }
 
-  void* old_raw_ptr = this->raw_ptr();
+  void *old_raw_ptr = this->raw_ptr();
   cudaError_t err = cudaSuccess;
 
-  if (old_device.type == DeviceType::CPU && new_device.type == DeviceType::CUDA) {
+  if (old_device.type == DeviceType::CPU &&
+      new_device.type == DeviceType::CUDA) {
     err = cudaMemcpy(new_raw_data_ptr, old_raw_ptr, size_in_bytes,
                      cudaMemcpyHostToDevice);
   } else if (old_device.type == DeviceType::CUDA &&
@@ -78,16 +80,17 @@ void Tensor::to(std::string device_str) {
   data_ptr_ = std::shared_ptr<void>(new_raw_data_ptr, deleter);
 
   if (requires_grad_ && grad_ != nullptr) {
-    void* new_raw_grad_ptr = new_allocator->allocate(size_in_bytes);
+    void *new_raw_grad_ptr = new_allocator->allocate(size_in_bytes);
     if (new_raw_grad_ptr == nullptr) {
       throw std::runtime_error(
           "Memory allocation failed for gradient on device " + device_str);
     }
 
-    void* old_grad_ptr = grad_.get();
+    void *old_grad_ptr = grad_.get();
     cudaError_t grad_err = cudaSuccess;
 
-    if (old_device.type == DeviceType::CPU && new_device.type == DeviceType::CUDA) {
+    if (old_device.type == DeviceType::CPU &&
+        new_device.type == DeviceType::CUDA) {
       grad_err = cudaMemcpy(new_raw_grad_ptr, old_grad_ptr, size_in_bytes,
                             cudaMemcpyHostToDevice);
     } else if (old_device.type == DeviceType::CUDA &&
@@ -106,7 +109,8 @@ void Tensor::to(std::string device_str) {
     if (grad_err != cudaSuccess) {
       new_allocator->deallocate(new_raw_grad_ptr);
       throw std::runtime_error("Failed to copy gradient data to " + device_str +
-                               ": " + std::string(cudaGetErrorString(grad_err)));
+                               ": " +
+                               std::string(cudaGetErrorString(grad_err)));
     }
     grad_ = std::shared_ptr<void>(new_raw_grad_ptr, deleter);
   }
@@ -1015,6 +1019,144 @@ Tensor Tensor::flatten(int start, int end) const {
                 requires_grad_, grad_, ctx_);
 }
 
+Tensor Tensor::cat(const std::vector<Tensor> &tensors, int dim) {
+  if (tensors.empty()) {
+    throw std::runtime_error("Cannot concatenate an empty list of tensors.");
+  }
+
+  DType common_dtype = tensors[0].dtype();
+  size_t ndim = tensors[0].ndim();
+  Device common_device = tensors[0].device();
+
+  if (dim < 0) {
+    dim = ndim + dim;
+  }
+  if (dim >= ndim || dim < 0) {
+    throw std::out_of_range("Concatenation dimension out of range.");
+  }
+
+  for (size_t i = 1; i < tensors.size(); ++i) {
+    if (tensors[i].dtype() != common_dtype) {
+      throw std::runtime_error(
+          "All tensors must have the same data type for concatenation.");
+    }
+    if (tensors[i].ndim() != ndim) {
+      throw std::runtime_error("All tensors must have the same number of "
+                               "dimensions for concatenation.");
+    }
+    if (tensors[i].device().type != common_device.type ||
+        tensors[i].device().index != common_device.index) {
+      throw std::runtime_error(
+          "All tensors must be on the same device for concatenation.");
+    }
+
+    for (size_t d = 0; d < ndim; ++d) {
+      if (d != dim && tensors[i].shape()[d] != tensors[0].shape()[d]) {
+        throw std::runtime_error("Sizes of tensors must match except in the "
+                                 "concatenation dimension.");
+      }
+    }
+  }
+
+  std::vector<__int64_t> output_shape = tensors[0].shape();
+  __int64_t total_dim_size = 0;
+  for (const auto &t : tensors) {
+    total_dim_size += t.shape()[dim];
+  }
+  output_shape[dim] = total_dim_size;
+
+  Tensor result(output_shape, common_dtype, deviceToString(common_device));
+
+  size_t element_size = DtypeToSize(common_dtype);
+  char *result_raw_ptr = static_cast<char *>(result.raw_ptr());
+  __int64_t current_offset_bytes = 0;
+
+  for (const auto &t : tensors) {
+    __int64_t num_elements_to_copy = t.numel();
+    const char *source_raw_ptr = static_cast<const char *>(t.raw_ptr());
+
+    if (common_device.type == DeviceType::CPU) {
+      std::memcpy(result_raw_ptr + current_offset_bytes, source_raw_ptr,
+                  num_elements_to_copy * element_size);
+    } else if (common_device.type == DeviceType::CUDA) {
+      cudaError_t err = cudaMemcpy(
+          result_raw_ptr + current_offset_bytes, source_raw_ptr,
+          num_elements_to_copy * element_size, cudaMemcpyDeviceToDevice);
+      if (err != cudaSuccess) {
+        throw std::runtime_error("CUDA memcpy failed during concatenation: " +
+                                 std::string(cudaGetErrorString(err)));
+      }
+    } else {
+      throw std::runtime_error(
+          "Concatenation not implemented for device type: " +
+          deviceToString(common_device));
+    }
+
+    current_offset_bytes += num_elements_to_copy * element_size;
+  }
+
+  bool any_requires_grad = false;
+  for (const auto &t : tensors) {
+    if (t.requires_grad()) {
+      any_requires_grad = true;
+      break;
+    }
+  }
+  result.requires_grad_ = any_requires_grad;
+
+  if (result.requires_grad()) {
+    result.set_ctx(tensors, [dim, common_device,
+                             common_dtype](Tensor &out_grad,
+                                           std::vector<Tensor> &prev_tensors
+
+                            ) {
+      size_t element_size = DtypeToSize(common_dtype);
+      const char *out_grad_raw_ptr =
+          static_cast<const char *>(out_grad.raw_ptr());
+      __int64_t current_offset_bytes = 0;
+
+      for (auto &t : prev_tensors) {
+        if (!t.requires_grad()) {
+          current_offset_bytes += t.numel() * element_size;
+          continue;
+        }
+
+        char *t_grad_raw_ptr = static_cast<char *>(t.grad_ptr().get());
+
+        if (t_grad_raw_ptr == nullptr) {
+          throw std::runtime_error(
+              "Internal error: Gradient buffer is null for a tensor "
+              "requiring grad during cat backward.");
+        }
+
+        __int64_t num_elements_to_copy = t.numel();
+
+        if (common_device.type == DeviceType::CPU) {
+          std::memcpy(t_grad_raw_ptr, out_grad_raw_ptr + current_offset_bytes,
+                      num_elements_to_copy * element_size);
+        } else if (common_device.type == DeviceType::CUDA) {
+          cudaError_t err = cudaMemcpy(
+              t_grad_raw_ptr, out_grad_raw_ptr + current_offset_bytes,
+              num_elements_to_copy * element_size, cudaMemcpyDeviceToDevice);
+          if (err != cudaSuccess) {
+            throw std::runtime_error(
+                "CUDA memcpy failed during cat backward pass: " +
+                std::string(cudaGetErrorString(err)));
+          }
+        } else {
+          throw std::runtime_error(
+              "Concatenation backward not implemented for device type: " +
+              deviceToString(common_device));
+        }
+
+        current_offset_bytes += num_elements_to_copy * element_size;
+      }
+    });
+  }
+
+  return result;
+}
+
 Tensor Tensor::neg() const { return this->ops_->neg(*this); }
 
 Tensor Tensor::add(const Tensor &other) const {
@@ -1064,53 +1206,51 @@ Tensor Tensor::mean(int dim, bool keepdim) const {
 }
 
 std::vector<Tensor> Tensor::build_topo() const {
-    if (!requires_grad_)
-    {
-        return {};
+  if (!requires_grad_) {
+    return {};
+  }
+
+  std::vector<Tensor> topo;
+  std::set<const Tensor *> visited;
+  std::function<void(const Tensor &)> _visit = [&](const Tensor &t) {
+    if (visited.count(&t)) {
+      return;
+    }
+    visited.insert(&t);
+
+    if (t.ctx_.has_value()) {
+      for (const auto &parent : t.ctx_->prev) {
+        if (parent.requires_grad()) {
+          _visit(parent);
+        }
+      }
     }
 
-    std::vector<Tensor> topo;
-    std::set<const Tensor*> visited;
+    topo.push_back(t);
+  };
 
-    std::function<void(const Tensor&)> _visit = 
-        [&](const Tensor& t) {
-            if (visited.count(&t)) {
-                return;
-            }
-            visited.insert(&t);
+  _visit(*this);
 
-            if (t.ctx_.has_value()) {
-                for (const auto& parent : t.ctx_->prev) {
-                    if (parent.requires_grad()) {
-                       _visit(parent);
-                    }
-                }
-            }
-            
-            topo.push_back(t);
-        };
-    
-    _visit(*this);
-
-    return topo;
+  return topo;
 }
 
 void Tensor::backward() {
-    if (!this->requires_grad_) {
-        return;
+  if (!this->requires_grad_) {
+    return;
+  }
+
+  std::vector<Tensor> topo_sorted_graph = this->build_topo();
+
+  this->seed_gradient();
+
+  for (auto it = topo_sorted_graph.rbegin(); it != topo_sorted_graph.rend();
+       ++it) {
+    Tensor &t = *it;
+
+    if (t.ctx_.has_value()) {
+      t.ctx_->backward_fn(t, t.ctx_->prev);
     }
-
-    std::vector<Tensor> topo_sorted_graph = this->build_topo();
-
-    this->seed_gradient();
-
-    for (auto it = topo_sorted_graph.rbegin(); it != topo_sorted_graph.rend(); ++it) {
-        Tensor& t = *it;
-
-        if (t.ctx_.has_value()) {
-            t.ctx_->backward_fn(t, t.ctx_->prev);
-        }
-    }
+  }
 }
 
 Tensor::~Tensor() {}
