@@ -55,14 +55,26 @@ public:
     }
 
     size_t end_idx = std::min(current_idx_ + batch_size_, dataset_size_);
+    Tensor batch;
 
-    py::int_ start_idx(current_idx_);
-    py::int_ end_idx_py(end_idx);
-    py::object none_obj = py::none();
-    py::slice slice(start_idx, end_idx_py, none_obj);
+    if (!shuffle_) {
+      py::int_ start_idx(current_idx_);
+      py::int_ end_idx_py(end_idx);
+      py::object none_obj = py::none();
+      py::slice slice(start_idx, end_idx_py, none_obj);
 
-    Tensor batch = py::cast<Tensor>(dataset_.attr("__getitem__")(slice));
-    current_idx_ += end_idx;
+      batch = py::cast<Tensor>(dataset_.attr("__getitem__")(slice));
+    } else {
+      std::vector<Tensor> batch_tensors;
+      for (size_t i = current_idx_; i < end_idx; ++i) {
+        py::int_ idx(indices_[i]);
+        py::slice slice(idx, py::none(), py::none());
+        Tensor curr = py::cast<Tensor>(dataset_.attr("__getitem__")(idx));
+        batch_tensors.push_back(curr);
+      }
+      batch = Tensor::stack(batch_tensors, 0);
+    }
+    current_idx_ = end_idx;
     return batch;
   }
 
