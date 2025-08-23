@@ -1,7 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "dataset.h"
+#include "dataloader.h"
 #include "engine/ops.h"
 #include "helpers.h"
 #include "init.h"
@@ -98,6 +98,17 @@ void SGD(std::vector<std::shared_ptr<Tensor>> &params, float lr) {
   }
 }
 
+void zero_grad(std::vector<std::shared_ptr<Tensor>> &params) {
+  if (params[0].get()->device().type == DeviceType::CPU) {
+    cpu_optim.zero_grad(params);
+  } else if (params[0].get()->device().type == DeviceType::CUDA) {
+    cuda_optim.zero_grad(params);
+  } else {
+    throw std::runtime_error("Unsupported device for SGD: " +
+                             deviceToString(params[0].get()->device()));
+  }
+}
+
 namespace py = pybind11;
 
 PYBIND11_MODULE(cnawah, m) {
@@ -128,20 +139,6 @@ PYBIND11_MODULE(cnawah, m) {
       .def(py::init<>())
       .def_readwrite("prev", &Tape::prev)
       .def_readwrite("backward_fn", &Tape::backward_fn);
-
-  py::class_<TensorDataset, std::shared_ptr<TensorDataset>>(m, "TensorDataset")
-      .def(py::init<const std::vector<Tensor> &>(), py::arg("input_tensors"),
-           "Initializes a TensorDataset by concatenating a list of Tensors "
-           "along dimension 0.")
-      .def(py::init<std::shared_ptr<Tensor>>(), py::arg("data_tensor"),
-           "Initializes a TensorDataset with a shared_ptr to a single Tensor.")
-      .def(py::init<Tensor>(), py::arg("data_tensor"),
-           "Initializes a TensorDataset with a single Tensor.")
-      .def("__len__", &TensorDataset::__len__,
-           "Returns the number of items in the dataset (size of the first "
-           "dimension).")
-      .def("__getitem__", &TensorDataset::__getitem__, py::arg("idx"),
-           "Retrieves a single item (row/slice) from the dataset by index.");
 
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor")
       .def(py::init<const std::vector<int64_t> &, DType, const std::string &,
@@ -372,4 +369,13 @@ PYBIND11_MODULE(cnawah, m) {
         "Creates a tensor of ones with the same properties as another tensor.");
 
   m.def("SGD", &SGD, py::arg("params"), py::arg("lr"));
+  m.def("zero_grad", &zero_grad, py::arg("params"));
+
+  py::class_<DataLoader>(m, "DataLoader")
+      .def(py::init<py::object, int, int, bool>(), py::arg("dataset"),
+           py::arg("batch_size"), py::arg("num_workers") = 0,
+           py::arg("shuffle") = false)
+      .def("__iter__", &DataLoader::iter)
+      .def("__next__", &DataLoader::next_batch)
+      .def("__len__", &DataLoader::size);
 }

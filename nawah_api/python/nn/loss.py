@@ -4,7 +4,8 @@ import cnawah as nw
 
 def mean_squared_error():
     def mse_fn_(y_pred, y_true):
-        return nw.mean((y_pred - y_true) ** 2)
+        out = y_pred - y_true
+        return out.mean()
 
     return {"name": "MSELoss", "fn": mse_fn_}
 
