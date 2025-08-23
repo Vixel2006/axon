@@ -1,13 +1,14 @@
 import nawah_api as nw
+import time
 
-a = nw.Tensor(
+a = nw.Tensor.from_data(
     [[[1, 3, 4], [23, 4, 5]], [[13, 4, 5], [34, 34, 54]], [[3, 4, 5], [2, 3, 4]]]
 )
 
 
 class Dummyset(nw.Dataset):
     def __init__(self):
-        self.features = nw.Tensor(
+        self.features = nw.Tensor.from_data(
             [[13, 4, 5], [1, 3, 4], [3, 4, 5], [2, 4, 5], [13, 4, 5]]
         )
 
@@ -18,7 +19,9 @@ class Dummyset(nw.Dataset):
         return self.features[idx]
 
 
-dataloader = nw.DataLoader(dataset=Dummyset(), batch_size=1, shuffle=True)
+dataloader = nw.DataLoader(dataset=Dummyset(), batch_size=2)
 
-for feature in dataloader:
-    print(feature)
+print(next(dataloader))
+
+b = nw.Tensor([2, 3])
+print(b)
