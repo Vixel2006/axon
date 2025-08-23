@@ -18,6 +18,7 @@ namespace py = pybind11;
 
 class Tensor {
 public:
+  Tensor();
   Tensor(const std::vector<__int64_t> &shape, DType dtype,
          const std::string &device_str = "cpu", bool requires_grad = false);
   Tensor(const std::vector<__int64_t> &shape,
@@ -97,6 +98,7 @@ public:
   Tensor broadcast(const std::vector<__int64_t> &new_shape) const;
   Tensor flatten(int start, int end) const;
   static Tensor cat(const std::vector<Tensor> &tensors, int dim);
+  static Tensor stack(const std::vector<Tensor> &tensors, int dim);
 
   void flatten_list(const py::list &data, float *ptr);
   void get_shape(const py::list &data, std::vector<__int64_t> &shape,
