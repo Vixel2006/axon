@@ -146,13 +146,21 @@ PYBIND11_MODULE(cnawah, m) {
            py::arg("shape"), py::arg("dtype") = DType::float32,
            py::arg("device") = "cpu", py::arg("requires_grad") = false)
 
-      .def(py::init<py::list, DType, std::string, bool>(), py::arg("data"),
-           py::arg("dtype") = DType::float32, py::arg("device") = "cpu",
-           py::arg("requires_grad") = false,
-           "Initialize Tensor from a Python list")
+      .def_static("from_data", &Tensor::from_data,
+                  py::arg("data"), py::arg("dtype") = DType::float32,
+                  py::arg("device") = "cpu", py::arg("requires_grad") = false,
+                  "Initialize Tensor from Python list or NumPy array")
 
-      .def_property_readonly("shape", &Tensor::shape,
-                             py::return_value_policy::reference_internal)
+      .def_property_readonly(
+          "shape",
+          [](const Tensor &t) {
+            py::tuple shape_tuple(t.shape().size());
+            for (size_t i = 0; i < t.shape().size(); ++i) {
+              shape_tuple[i] = t.shape()[i];
+            }
+            return shape_tuple;
+          },
+          py::return_value_policy::reference_internal)
       .def_property_readonly("strides", &Tensor::strides,
                              py::return_value_policy::reference_internal)
       .def_property_readonly("dtype", &Tensor::dtype)
@@ -162,6 +170,7 @@ PYBIND11_MODULE(cnawah, m) {
       .def_property_readonly("data", &Tensor::data)
       .def_property_readonly("grad", &Tensor::grad)
       .def_property_readonly("ctx", &Tensor::ctx)
+      .def_property_readonly("ndim", &Tensor::ndim)
 
       .def("numel", &Tensor::numel)
       .def("is_contiguous", &Tensor::is_contiguous)
@@ -188,6 +197,20 @@ PYBIND11_MODULE(cnawah, m) {
           },
           py::arg("tensors"), py::arg("dim"),
           "Concatenates a sequence of tensors along a given dimension.")
+
+      .def_static(
+          "stack",
+          [](const py::list &tensors_py_list, int dim) {
+            std::vector<Tensor> cpp_tensors;
+            cpp_tensors.reserve(tensors_py_list.size());
+
+            for (py::handle item : tensors_py_list) {
+              cpp_tensors.push_back(*py::cast<std::shared_ptr<Tensor>>(item));
+            }
+            return Tensor::stack(cpp_tensors, dim);
+          },
+          py::arg("tensors"), py::arg("dim"),
+          "Stacks a sequence of tensors along a new dimension.")
 
       .def("__getitem__",
            [](const Tensor &t, py::object obj) {

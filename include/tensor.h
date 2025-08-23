@@ -25,8 +25,9 @@ public:
          const std::vector<__int64_t> &strides, DType dtype, Device device,
          std::shared_ptr<void> data_ptr, __int64_t offset, bool requires_grad,
          std::shared_ptr<void> grad, std::optional<Tape> ctx);
-  Tensor(const py::list &data, DType dtype = DType::float32,
-         const std::string &device_str = "cpu", bool requires_grad = false);
+  static Tensor from_data(py::object data, DType dtype = DType::float32,
+                            const std::string &device_str = "cpu",
+                            bool requires_grad = false);
 
   void *raw_ptr() const;
 

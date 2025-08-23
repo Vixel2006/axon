@@ -14,6 +14,7 @@
 #include "backend_registery.h"
 #include "engine/ops.h"
 #include "helpers.h"
+#include <pybind11/numpy.h>
 
 void Tensor::to(std::string device_str) {
   Device new_device = parse_device(device_str);
@@ -268,80 +269,6 @@ void Tensor::get_shape(const py::list &data, std::vector<__int64_t> &shape,
         throw std::runtime_error("Tensor elements must be numbers");
       }
     }
-  }
-}
-
-Tensor::Tensor(const py::list &data, DType dtype, const std::string &device_str,
-               bool requires_grad)
-    : dtype_(dtype), device_(parse_device(device_str)), offset_(0),
-      requires_grad_(requires_grad), grad_(nullptr), ctx_(std::nullopt) {
-  get_shape(data, shape_);
-  size_t total_size = numel();
-
-  if (total_size == 0) {
-    if (!data.empty()) {
-      strides_ = compute_strides_(shape_);
-    }
-    return;
-  }
-
-  strides_ = compute_strides_(shape_);
-
-  auto allocator = AllocatorFactory::get(device_);
-  auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
-
-  size_t size_in_bytes = total_size * DtypeToSize(dtype_);
-
-  void *raw_data_ptr = allocator->allocate(size_in_bytes);
-  if (!raw_data_ptr) {
-    throw std::runtime_error("Memory allocation failed for tensor data.");
-  }
-  data_ptr_ = std::shared_ptr<void>(raw_data_ptr, deleter);
-
-  if (device_.type == DeviceType::CPU) {
-    ops_ = get_cpu_ops();
-  } else if (device_.type == DeviceType::CUDA) {
-    ops_ = get_gpu_ops();
-  }
-
-  if (requires_grad_) {
-    void *raw_grad_ptr = allocator->allocate(size_in_bytes);
-    if (!raw_grad_ptr) {
-      throw std::runtime_error("Memory allocation failed for gradient.");
-    }
-
-    if (device_.type == DeviceType::CPU) {
-      std::memset(raw_grad_ptr, 0, size_in_bytes);
-    } else if (device_.type == DeviceType::CUDA) {
-      cudaError_t err = cudaMemset(raw_grad_ptr, 0, size_in_bytes);
-      if (err != cudaSuccess) {
-        allocator->deallocate(raw_grad_ptr);
-        throw std::runtime_error(
-            "Failed to zero out gradient tensor on CUDA device: " +
-            std::string(cudaGetErrorString(err)));
-      }
-    }
-
-    grad_ = std::shared_ptr<void>(raw_grad_ptr, deleter);
-  }
-
-  if (dtype_ == DType::float32) {
-    std::vector<float> temp_host_buffer(total_size);
-    this->flatten_list(data, temp_host_buffer.data());
-
-    if (device_.type == DeviceType::CPU) {
-      std::memcpy(data_ptr_.get(), temp_host_buffer.data(), size_in_bytes);
-    } else if (device_.type == DeviceType::CUDA) {
-      cudaError_t err = cudaMemcpy(data_ptr_.get(), temp_host_buffer.data(),
-                                   size_in_bytes, cudaMemcpyHostToDevice);
-      if (err != cudaSuccess) {
-        throw std::runtime_error("CUDA memcpy failed: " +
-                                 std::string(cudaGetErrorString(err)));
-      }
-    }
-  } else {
-    throw std::runtime_error(
-        "Unsupported DType for Python list initialization.");
   }
 }
 
@@ -640,6 +567,154 @@ void flatten_list_recursive(const py::list &list, float *&ptr) {
 
 void Tensor::flatten_list(const py::list &data, float *ptr) {
   flatten_list_recursive(data, ptr);
+}
+
+Tensor Tensor::from_data(py::object data, DType dtype,
+                         const std::string &device_str, bool requires_grad) {
+  Tensor result;
+  result.dtype_ = dtype;
+  result.device_ = parse_device(device_str);
+  result.offset_ = 0;
+  result.requires_grad_ = requires_grad;
+  result.grad_ = nullptr;
+  result.ctx_ = std::nullopt;
+
+  if (result.device_.type == DeviceType::CPU) {
+    result.ops_ = get_cpu_ops();
+  } else if (result.device_.type == DeviceType::CUDA) {
+    result.ops_ = get_gpu_ops();
+  }
+
+  if (py::isinstance<py::list>(data)) {
+    py::list py_list_data = data.cast<py::list>();
+    result.get_shape(py_list_data, result.shape_);
+    size_t total_size = result.numel();
+
+    if (total_size == 0) {
+      if (!py_list_data.empty()) {
+        result.strides_ = compute_strides_(result.shape_);
+      }
+      return result;
+    }
+
+    result.strides_ = compute_strides_(result.shape_);
+
+    auto allocator = AllocatorFactory::get(result.device_);
+    auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
+
+    size_t size_in_bytes = total_size * DtypeToSize(dtype);
+
+    void *raw_data_ptr = allocator->allocate(size_in_bytes);
+    if (!raw_data_ptr) {
+      throw std::runtime_error("Memory allocation failed for tensor data.");
+    }
+    result.data_ptr_ = std::shared_ptr<void>(raw_data_ptr, deleter);
+
+    if (requires_grad) {
+      void *raw_grad_ptr = allocator->allocate(size_in_bytes);
+      if (!raw_grad_ptr) {
+        throw std::runtime_error("Memory allocation failed for gradient.");
+      }
+
+      if (result.device_.type == DeviceType::CPU) {
+        std::memset(raw_grad_ptr, 0, size_in_bytes);
+      } else if (result.device_.type == DeviceType::CUDA) {
+        cudaError_t err = cudaMemset(raw_grad_ptr, 0, size_in_bytes);
+        if (err != cudaSuccess) {
+          allocator->deallocate(raw_grad_ptr);
+          throw std::runtime_error(
+              "Failed to zero out gradient tensor on CUDA device: " +
+              std::string(cudaGetErrorString(err)));
+        }
+      }
+      result.grad_ = std::shared_ptr<void>(raw_grad_ptr, deleter);
+    }
+
+    if (dtype == DType::float32) {
+      std::vector<float> temp_host_buffer(total_size);
+      result.flatten_list(py_list_data, temp_host_buffer.data());
+
+      if (result.device_.type == DeviceType::CPU) {
+        std::memcpy(result.data_ptr_.get(), temp_host_buffer.data(),
+                    size_in_bytes);
+      } else if (result.device_.type == DeviceType::CUDA) {
+        cudaError_t err =
+            cudaMemcpy(result.data_ptr_.get(), temp_host_buffer.data(),
+                       size_in_bytes, cudaMemcpyHostToDevice);
+        if (err != cudaSuccess) {
+          throw std::runtime_error("CUDA memcpy failed: " +
+                                   std::string(cudaGetErrorString(err)));
+        }
+      }
+    } else {
+      throw std::runtime_error(
+          "Unsupported DType for Python list initialization.");
+    }
+  } else if (py::isinstance<py::array>(data)) {
+    py::array py_array_data = data.cast<py::array>();
+
+    // Get shape
+    for (pybind11::ssize_t i = 0; i < py_array_data.ndim(); ++i) {
+      result.shape_.push_back(py_array_data.shape(i));
+    }
+    size_t total_size = result.numel();
+
+    if (total_size == 0) {
+      result.strides_ = compute_strides_(result.shape_);
+      return result;
+    }
+
+    result.strides_ = compute_strides_(result.shape_);
+
+    auto allocator = AllocatorFactory::get(result.device_);
+    auto deleter = [allocator](void *ptr) { allocator->deallocate(ptr); };
+
+    size_t size_in_bytes = total_size * DtypeToSize(dtype);
+
+    void *raw_data_ptr = allocator->allocate(size_in_bytes);
+    if (!raw_data_ptr) {
+      throw std::runtime_error("Memory allocation failed for tensor data.");
+    }
+    result.data_ptr_ = std::shared_ptr<void>(raw_data_ptr, deleter);
+
+    if (requires_grad) {
+      void *raw_grad_ptr = allocator->allocate(size_in_bytes);
+      if (!raw_grad_ptr) {
+        throw std::runtime_error("Memory allocation failed for gradient.");
+      }
+
+      if (result.device_.type == DeviceType::CPU) {
+        std::memset(raw_grad_ptr, 0, size_in_bytes);
+      } else if (result.device_.type == DeviceType::CUDA) {
+        cudaError_t err = cudaMemset(raw_grad_ptr, 0, size_in_bytes);
+        if (err != cudaSuccess) {
+          allocator->deallocate(raw_grad_ptr);
+          throw std::runtime_error(
+              "Failed to zero out gradient tensor on CUDA device: " +
+              std::string(cudaGetErrorString(err)));
+        }
+      }
+      result.grad_ = std::shared_ptr<void>(raw_grad_ptr, deleter);
+    }
+
+    // Copy data from numpy array
+    if (result.device_.type == DeviceType::CPU) {
+      std::memcpy(result.data_ptr_.get(), py_array_data.data(), size_in_bytes);
+    } else if (result.device_.type == DeviceType::CUDA) {
+      cudaError_t err = cudaMemcpy(result.data_ptr_.get(), py_array_data.data(),
+                                   size_in_bytes, cudaMemcpyHostToDevice);
+      if (err != cudaSuccess) {
+        throw std::runtime_error("CUDA memcpy failed: " +
+                                 std::string(cudaGetErrorString(err)));
+      }
+    }
+  } else {
+    throw std::runtime_error(
+        "Unsupported data type for Tensor initialization. Expected list or "
+        "numpy array.");
+  }
+
+  return result;
 }
 
 py::list Tensor::data() const {
