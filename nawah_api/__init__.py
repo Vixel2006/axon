@@ -1,6 +1,8 @@
 from .python.core.tensor import Tensor
 from .python.api import pipe
-from .python.nn import Sequential, layers, activations
+from .python.nn import Sequential, layers, activations, loss
+from .python.optimizers import SGD, Optimizer
+from .python.data import Dataset
 
 import cnawah as nw
 
@@ -8,7 +10,6 @@ DType = nw.DType
 Device = nw.Device
 DeviceType = nw.DeviceType
 Tape = nw.Tape
-TensorDataset = nw.TensorDataset
 relu = nw.relu
 log = nw.log
 exp = nw.exp
@@ -21,8 +22,9 @@ uniform = nw.uniform
 zeros_like = nw.zeros_like
 ones_like = nw.ones_like
 flatten = nw.flatten
-SGD = nw.SGD
 cuda_synchronize = nw.cuda_synchronize
+
+DataLoader = nw.DataLoader
 
 __all__ = [
     "Tensor",
@@ -42,6 +44,10 @@ __all__ = [
     "Sequential",
     "layers",
     "activations",
+    "loss",
     "flatten",
-    "TensorDataset",
+    "Optimizer",
+    "SGD",
+    "Dataset",
+    "DataLoader",
 ]
