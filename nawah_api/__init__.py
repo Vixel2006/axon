@@ -49,5 +49,4 @@ __all__ = [
     "Optimizer",
     "SGD",
     "Dataset",
-    "DataLoader",
 ]
