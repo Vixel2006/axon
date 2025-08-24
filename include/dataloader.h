@@ -45,7 +45,7 @@ public:
 
   size_t size() const { return dataset_size_; }
 
-  Tensor next_batch() {
+  py::tuple next_batch() {
     if (current_idx_ >= dataset_size_) {
       current_idx_ = 0;
       if (shuffle_) {
@@ -55,7 +55,7 @@ public:
     }
 
     size_t end_idx = std::min(current_idx_ + batch_size_, dataset_size_);
-    Tensor batch;
+    std::vector<Tensor> batch;
 
     if (!shuffle_) {
       py::int_ start_idx(current_idx_);
@@ -63,19 +63,43 @@ public:
       py::object none_obj = py::none();
       py::slice slice(start_idx, end_idx_py, none_obj);
 
-      batch = py::cast<Tensor>(dataset_.attr("__getitem__")(slice));
+      batch =
+          py::cast<std::vector<Tensor>>(dataset_.attr("__getitem__")(slice));
     } else {
-      std::vector<Tensor> batch_tensors;
+      std::vector<std::vector<Tensor>> individual_batch_items;
       for (size_t i = current_idx_; i < end_idx; ++i) {
         py::int_ idx(indices_[i]);
-        py::slice slice(idx, py::none(), py::none());
-        Tensor curr = py::cast<Tensor>(dataset_.attr("__getitem__")(idx));
-        batch_tensors.push_back(curr);
+        std::vector<Tensor> curr =
+            py::cast<std::vector<Tensor>>(dataset_.attr("__getitem__")(idx));
+        individual_batch_items.push_back(curr);
       }
-      batch = Tensor::stack(batch_tensors, 0);
+
+      if (individual_batch_items.empty()) {
+          py::tuple empty_result(0);
+          return empty_result;
+      }
+
+      size_t num_components_per_item = individual_batch_items[0].size();
+      std::vector<std::vector<Tensor>> stacked_tensors(num_components_per_item);
+
+      for (size_t i = 0; i < individual_batch_items.size(); ++i) {
+        for (size_t j = 0; j < num_components_per_item; ++j) {
+          stacked_tensors[j].push_back(individual_batch_items[i][j]);
+        }
+      }
+
+      for (int i = 0; i < stacked_tensors.size(); ++i) {
+        batch.push_back(Tensor::stack(stacked_tensors[i], 0));
+      }
     }
     current_idx_ = end_idx;
-    return batch;
+
+    py::tuple result(batch.size());
+
+    for (int i = 0; i < batch.size(); ++i) {
+      result[i] = batch[i];
+    }
+    return result;
   }
 
   DataLoader &iter() { return *this; }

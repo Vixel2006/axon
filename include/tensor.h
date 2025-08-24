@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 #include <vector>
 
 namespace py = pybind11;
@@ -26,8 +27,8 @@ public:
          std::shared_ptr<void> data_ptr, __int64_t offset, bool requires_grad,
          std::shared_ptr<void> grad, std::optional<Tape> ctx);
   static Tensor from_data(py::object data, DType dtype = DType::float32,
-                            const std::string &device_str = "cpu",
-                            bool requires_grad = false);
+                          const std::string &device_str = "cpu",
+                          bool requires_grad = false);
 
   void *raw_ptr() const;
 

@@ -146,9 +146,9 @@ PYBIND11_MODULE(cnawah, m) {
            py::arg("shape"), py::arg("dtype") = DType::float32,
            py::arg("device") = "cpu", py::arg("requires_grad") = false)
 
-      .def_static("from_data", &Tensor::from_data,
-                  py::arg("data"), py::arg("dtype") = DType::float32,
-                  py::arg("device") = "cpu", py::arg("requires_grad") = false,
+      .def_static("from_data", &Tensor::from_data, py::arg("data"),
+                  py::arg("dtype") = DType::float32, py::arg("device") = "cpu",
+                  py::arg("requires_grad") = false,
                   "Initialize Tensor from Python list or NumPy array")
 
       .def_property_readonly(
@@ -398,6 +398,8 @@ PYBIND11_MODULE(cnawah, m) {
       .def(py::init<py::object, int, int, bool>(), py::arg("dataset"),
            py::arg("batch_size"), py::arg("num_workers") = 0,
            py::arg("shuffle") = false)
+      .def("size", &DataLoader::size)
+      .def("next_batch", &DataLoader::next_batch)
       .def("__iter__", &DataLoader::iter)
       .def("__next__", &DataLoader::next_batch)
       .def("__len__", &DataLoader::size);
