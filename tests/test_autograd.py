@@ -25,8 +25,8 @@ class TestTensorAutograd:
     def test_backward_addition(self, device):
         """Tests the backward pass for a simple addition."""
         skip_if_cuda_not_available(device)
-        a = nw.Tensor([[1, 2, 3]], requires_grad=True, device=device)
-        b = nw.Tensor([[4, 5, 6]], requires_grad=True, device=device)
+        a = nw.Tensor.from_data([[1, 2, 3]], requires_grad=True, device=device)
+        b = nw.Tensor.from_data([[4, 5, 6]], requires_grad=True, device=device)
         
         # We the result to get a scalar loss, which starts the backward pass with a gradient of 1.
         c = a + b
@@ -41,8 +41,8 @@ class TestTensorAutograd:
     def test_backward_subtraction(self, device):
         """Tests the backward pass for a simple subtraction."""
         skip_if_cuda_not_available(device)
-        a = nw.Tensor([[10, 20, 30]], requires_grad=True, device=device)
-        b = nw.Tensor([[1, 2, 3]], requires_grad=True, device=device)
+        a = nw.Tensor.from_data([[10, 20, 30]], requires_grad=True, device=device)
+        b = nw.Tensor.from_data([[1, 2, 3]], requires_grad=True, device=device)
         
         c = a - b
         c.backward()
@@ -59,8 +59,8 @@ class TestTensorAutograd:
         skip_if_cuda_not_available(device)
         a_data = [[2., 5., 10.]]
         b_data = [[3., 4., 6.]]
-        a = nw.Tensor(a_data, requires_grad=True, device=device)
-        b = nw.Tensor(b_data, requires_grad=True, device=device)
+        a = nw.Tensor.from_data(a_data, requires_grad=True, device=device)
+        b = nw.Tensor.from_data(b_data, requires_grad=True, device=device)
         
         c = a * b
         c.backward()
@@ -75,8 +75,8 @@ class TestTensorAutograd:
         skip_if_cuda_not_available(device)
         a_data = np.array([[8., 18., 40.]])
         b_data = np.array([[2., 3., 5.]])
-        a = nw.Tensor([[8., 18., 40.]], requires_grad=True, device=device)
-        b = nw.Tensor([[2., 3., 5.]], requires_grad=True, device=device)
+        a = nw.Tensor.from_data([[8., 18., 40.]], requires_grad=True, device=device)
+        b = nw.Tensor.from_data([[2., 3., 5.]], requires_grad=True, device=device)
 
         c = a / b
         c.backward()
@@ -93,7 +93,7 @@ class TestTensorAutograd:
         skip_if_cuda_not_available(device)
         a_data = np.array([[10., 20., 30.]])
         scalar = 2.0
-        a = nw.Tensor([[10., 20., 30.]], requires_grad=True, device=device)
+        a = nw.Tensor.from_data([[10., 20., 30.]], requires_grad=True, device=device)
 
         c = a / scalar
         c.backward()
@@ -107,7 +107,7 @@ class TestTensorAutograd:
         """Tests the backward pass for the exp function."""
         skip_if_cuda_not_available(device)
         a_data = np.array([[1., -2., 0.]])
-        a = nw.Tensor([[1., -2., 0.]], requires_grad=True, device=device)
+        a = nw.Tensor.from_data([[1., -2., 0.]], requires_grad=True, device=device)
         
         c = nw.exp(a)
         c.backward()
@@ -121,7 +121,7 @@ class TestTensorAutograd:
         """Tests the backward pass for the log function."""
         skip_if_cuda_not_available(device)
         a_data = np.array([[1., 10., 0.5]])
-        a = nw.Tensor([[1., 10., 0.5]], requires_grad=True, device=device)
+        a = nw.Tensor.from_data([[1., 10., 0.5]], requires_grad=True, device=device)
         
         c = nw.log(a)
         c.backward()
@@ -137,8 +137,8 @@ class TestTensorAutograd:
         a_data = np.array([[1., 2., 3.], [4., 5., 6.]]) # (2, 3)
         b_data = np.array([[7., 8.], [9., 10.], [11., 12.]]) # (3, 2)
         
-        a = nw.Tensor([[1., 2., 3.], [4., 5., 6.]], requires_grad=True, device=device)
-        b = nw.Tensor([[7., 8.], [9., 10.], [11., 12.]], requires_grad=True, device=device)
+        a = nw.Tensor.from_data([[1., 2., 3.], [4., 5., 6.]], requires_grad=True, device=device)
+        b = nw.Tensor.from_data([[7., 8.], [9., 10.], [11., 12.]], requires_grad=True, device=device)
         
         c = a @ b # Result is a scalar, c.shape is (2,2) before sum
         c.backward()
