@@ -25,7 +25,7 @@ class TestTensorOps:
         """Test basic tensor creation and property access on all available devices."""
         skip_if_cuda_not_available(device)
         data = [[1.0, 2.0], [3.0, 4.0]]
-        t = nw.Tensor(data, device=device)
+        t = nw.Tensor.from_data(data, device=device)
 
         assert t.shape == [2, 2]
         assert t.device.type == (
