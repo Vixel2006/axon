@@ -5,6 +5,16 @@ from .elnawah_bindings import (
     c_free_tensor,
     c_numel,
     c_compute_strides,
+    c_relu,
+    c_log,
+    c_exp,
+    c_softmax,
+    c_abs,
+    c_neg,
+    c_view,
+    c_unsqueeze,
+    c_squeeze,
+    c_transpose,
     CTensor,
 )
 
@@ -25,7 +35,20 @@ def _flatten_list(nested_list):
 
 
 class Tensor:
-    def __init__(self, shape=None, data=None, requires_grad=True):
+    def __init__(self, shape=None, data=None, requires_grad=True, _c_tensor_ptr=None):
+        if _c_tensor_ptr is not None:
+            self._c_tensor = _c_tensor_ptr
+            # Assuming shape and ndim are already set in the C tensor
+            # We need to read them from the C tensor if we want to expose them as properties
+            if self._c_tensor and self._c_tensor.contents:
+                self._shape = [
+                    self._c_tensor.contents.shape[i]
+                    for i in range(self._c_tensor.contents.ndim)
+                ]
+            else:
+                self._shape = None
+            return
+
         self._c_tensor = None
 
         if shape is None and data is None:
@@ -178,6 +201,109 @@ class Tensor:
         except Exception:
             return False
 
+    def view(self, shape):
+        input_c_tensor = self._c_tensor.contents
+        if c_numel(shape, len(shape)) != c_numel(self.shape, self.ndim):
+            raise RuntimeError(
+                f"Unable to operate view as {c_numel(shape, len(shape))} != {c_numel(self.shape, self.ndim)}"
+            )
+
+        out_c_tensor_ptr = c_malloc_tensor_empty()
+        if not out_c_tensor_ptr:
+            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
+
+        c_view(self._c_tensor, out_c_tensor_ptr, shape, len(shape))
+
+        return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
+
+    def unsqueeze(self, dim: int = 0):
+        input_c_tensor = self._c_tensor.contents
+
+        if dim < 0:
+            dim = self.ndim + dim + 1
+
+        if dim > self.ndim:
+            raise ValueError(f"Can't unsqueeze dim {dim}.")
+
+        out_c_tensor_ptr = c_malloc_tensor_empty()
+        if not out_c_tensor_ptr:
+            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
+
+        c_unsqueeze(self._c_tensor, out_c_tensor_ptr, dim)
+
+        return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
+
+    def squeeze(self, dim: int = 0):
+        input_c_tensor = self._c_tensor.contents
+
+        if dim < 0:
+            dim = self.ndim + dim
+
+        if dim >= self.ndim:
+            raise ValueError(f"Can't squeeze dim {dim} as it doesn't exists.")
+
+        if self.shape[dim] != 1:
+            raise RuntimeError(
+                f"Tensors can be squeezed only on shape[dim] = 1, dim = {self.shape[dim]}"
+            )
+
+        out_c_tensor_ptr = c_malloc_tensor_empty()
+        if not out_c_tensor_ptr:
+            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
+
+        c_squeeze(self._c_tensor, out_c_tensor_ptr, dim)
+
+        return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
+
+    def transpose(self, n: int = -2, m: int = -1):
+        input_c_tensor = self._c_tensor.contents
+
+        if n < 0:
+            n = self.ndim + n
+        if m < 0:
+            m = self.ndim + m
+
+        if n >= self.ndim or m >= self.ndim:
+            raise ValueError(f"Can't transpose around non-exsiting axes {n},{m}")
+
+        out_c_tensor_ptr = c_malloc_tensor_empty()
+        if not out_c_tensor_ptr:
+            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
+
+        c_transpose(self._c_tensor, out_c_tensor_ptr, n, m)
+
+        return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
+
+    def relu(self):
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        c_relu(self._c_tensor, out_tensor._c_tensor)
+        return out_tensor
+
+    def log(self):
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        c_log(self._c_tensor, out_tensor._c_tensor)
+        return out_tensor
+
+    def exp(self):
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        c_exp(self._c_tensor, out_tensor._c_tensor)
+        return out_tensor
+
+    def softmax(self):
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        c_softmax(self._c_tensor, out_tensor._c_tensor)
+        return out_tensor
+
+    def abs(self):
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        c_abs(self._c_tensor, out_tensor._c_tensor)
+        return out_tensor
+
+    def neg(self):
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        c_neg(self._c_tensor, out_tensor._c_tensor)
+        return out_tensor
+
 
 def safe_c_numel(shape_ptr, ndim):
     if ndim == 0:
@@ -199,12 +325,12 @@ def safe_c_numel(shape_ptr, ndim):
 
 
 if __name__ == "__main__":
-    n = Tensor([2, 3])
-    print(n.shape)
-    print(n.data)
-    print(n.grad)
     t = Tensor([2, 3], [[2, 3, 4], [3, 4, 5]])
+    print(t)
+    n = t.unsqueeze()
+    print(n)
+    m = n.squeeze()
+    print(m)
+    z = t.transpose()
+    print(z)
 
-    print(t.shape)
-    print(t.data)
-    print(t.grad)

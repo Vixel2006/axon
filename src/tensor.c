@@ -55,7 +55,7 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
     t->strides = NULL;
     t->data = malloc(sizeof(float));
     if (!t->data) {
-      free(t);
+      free_tensor(t);
       return NULL;
     }
     t->data[0] = 0.0f;
@@ -64,17 +64,14 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
       t->requires_grad = true;
       t->grad = malloc(sizeof(float));
       if (!t->grad) {
-        free(t->data);
-        free(t);
+        free_tensor(t);
         return NULL;
       }
       t->grad[0] = 0.0f;
 
       t->ctx = malloc(sizeof(Tape));
       if (!t->ctx) {
-        free(t->grad);
-        free(t->data);
-        free(t);
+        free_tensor(t);
         return NULL;
       }
       memset(t->ctx, 0, sizeof(Tape));
@@ -84,30 +81,26 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
 
   t->shape = malloc(ndim * sizeof(int));
   if (!t->shape) {
-    free(t);
+    free_tensor(t);
     return NULL;
   }
   memcpy(t->shape, shape, ndim * sizeof(int));
 
   int size = numel(shape, ndim);
   if (size <= 0) {
-    free(t->shape);
-    free(t);
+    free_tensor(t);
     return NULL;
   }
 
   t->strides = compute_strides(t->shape, ndim);
   if (!t->strides) {
-    free(t->shape);
-    free(t);
+    free_tensor(t);
     return NULL;
   }
 
   t->data = malloc(size * sizeof(float));
   if (!t->data) {
-    free(t->strides);
-    free(t->shape);
-    free(t);
+    free_tensor(t);
     return NULL;
   }
 
@@ -117,21 +110,14 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
     t->requires_grad = true;
     t->grad = malloc(size * sizeof(float));
     if (!t->grad) {
-      free(t->data);
-      free(t->strides);
-      free(t->shape);
-      free(t);
+      free_tensor(t);
       return NULL;
     }
     memset(t->grad, 0, size * sizeof(float));
 
     t->ctx = malloc(sizeof(Tape));
     if (!t->ctx) {
-      free(t->grad);
-      free(t->data);
-      free(t->strides);
-      free(t->shape);
-      free(t);
+      free_tensor(t);
       return NULL;
     }
     memset(t->ctx, 0, sizeof(Tape));
@@ -161,21 +147,20 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
   } else {
     size = numel(shape, ndim);
     if (size <= 0) {
-      free(t);
+      free_tensor(t);
       return NULL;
     }
 
     t->shape = malloc(ndim * sizeof(int));
     if (!t->shape) {
-      free(t);
+      free_tensor(t);
       return NULL;
     }
     memcpy(t->shape, shape, ndim * sizeof(int));
 
     t->strides = malloc(ndim * sizeof(int));
     if (!t->strides) {
-      free(t->shape);
-      free(t);
+      free_tensor(t);
       return NULL;
     }
     if (strides) {
@@ -183,9 +168,7 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
     } else {
       int *default_strides = compute_strides(shape, ndim);
       if (!default_strides) {
-        free(t->strides);
-        free(t->shape);
-        free(t);
+        free_tensor(t);
         return NULL;
       }
       memcpy(t->strides, default_strides, ndim * sizeof(int));
@@ -195,9 +178,7 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
 
   t->data = malloc(size * sizeof(float));
   if (!t->data) {
-    free(t->strides);
-    free(t->shape);
-    free(t);
+    free_tensor(t);
     return NULL;
   }
   memcpy(t->data, data, size * sizeof(float));
@@ -205,10 +186,7 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
   if (requires_grad) {
     t->grad = malloc(size * sizeof(float));
     if (!t->grad) {
-      free(t->data);
-      free(t->strides);
-      free(t->shape);
-      free(t);
+      free_tensor(t);
       return NULL;
     }
 
@@ -220,11 +198,7 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
 
     t->ctx = malloc(sizeof(Tape));
     if (!t->ctx) {
-      free(t->grad);
-      free(t->data);
-      free(t->strides);
-      free(t->shape);
-      free(t);
+      free_tensor(t);
       return NULL;
     }
     memset(t->ctx, 0, sizeof(Tape));
@@ -235,11 +209,21 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
 
 void free_tensor(Tensor *t) {
   if (t) {
-    free(t->data);
-    free(t->grad);
-    free(t->ctx);
-    free(t->shape);
-    free(t->strides);
+    if (t->data)
+      free(t->data);
+
+    if (t->grad)
+      free(t->grad);
+
+    if (t->ctx)
+      free(t->ctx);
+
+    if (t->shape)
+      free(t->shape);
+
+    if (t->strides)
+      free(t->strides);
+
     free(t);
   }
 }
