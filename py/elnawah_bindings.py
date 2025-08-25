@@ -23,6 +23,8 @@ class CTensor(ctypes.Structure):
         ("requires_grad", ctypes.c_bool),
         ("grad", ctypes.POINTER(ctypes.c_float)),
         ("ctx", ctypes.c_void_p),
+        ("owned_data", ctypes.c_bool),
+        ("owned_grad", ctypes.c_bool),
     ]
 
 
@@ -57,6 +59,56 @@ if tensor_lib:
     tensor_lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
     tensor_lib.free_tensor.restype = None
 
+    # Unary operations
+    tensor_lib.relu_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.relu_op.restype = None
+
+    tensor_lib.log_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.log_op.restype = None
+
+    tensor_lib.exp_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.exp_op.restype = None
+
+    tensor_lib.softmax_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.softmax_op.restype = None
+
+    tensor_lib.abs_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.abs_op.restype = None
+
+    tensor_lib.neg_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.neg_op.restype = None
+
+    # Movement operations
+    tensor_lib.view_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_int,
+    ]
+    tensor_lib.view_op.restype = None
+
+    tensor_lib.squeeze_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+    ]
+    tensor_lib.squeeze_op.restype = None
+
+    tensor_lib.unsqueeze_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+    ]
+    tensor_lib.unsqueeze_op.restype = None
+
+    tensor_lib.transpose_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
+    tensor_lib.transpose_op.restype = None
+
     # Python wrapper functions
     def c_numel(shape, ndim):
         if ndim == 0:
@@ -80,18 +132,6 @@ if tensor_lib:
         return tensor_lib.malloc_tensor_shape(c_shape, ndim, requires_grad)
 
     def c_malloc_tensor_full(shape, ndim, strides, data, requires_grad, grad=None):
-        """
-        Create a tensor with full initialization.
-
-        Args:
-            shape: Shape of the tensor (list/tuple of ints)
-            ndim: Number of dimensions
-            strides: Strides array (list/tuple of ints, or None for default)
-            data: Data array (list, numpy array, or array of floats)
-            requires_grad: Whether gradient computation is required
-            grad: Gradient array (optional, same format as data)
-        """
-        # Handle scalar case
         if ndim == 0:
             if isinstance(data, (list, tuple, np.ndarray)):
                 data_val = float(data[0]) if len(data) > 0 else 0.0
@@ -111,19 +151,15 @@ if tensor_lib:
                 None, 0, None, c_data, requires_grad, c_grad
             )
 
-        # Validate inputs
         if not shape or ndim <= 0:
             raise ValueError("Invalid shape or ndim")
 
-        # Convert shape to C array
         c_shape = (ctypes.c_int * ndim)(*shape)
 
-        # Handle strides
         c_strides = None
         if strides is not None:
             c_strides = strides
 
-        # Convert data to proper format
         if isinstance(data, np.ndarray):
             data = data.flatten().astype(np.float32).tolist()
         elif isinstance(data, (list, tuple)):
@@ -131,7 +167,6 @@ if tensor_lib:
         else:
             raise ValueError("Data must be a list, tuple, or numpy array")
 
-        # Calculate expected size
         expected_size = 1
         for dim in shape:
             expected_size *= dim
@@ -141,10 +176,8 @@ if tensor_lib:
                 f"Data size ({len(data)}) doesn't match expected size ({expected_size})"
             )
 
-        # Create C data array
         c_data = (ctypes.c_float * len(data))(*data)
 
-        # Handle gradient
         c_grad = None
         if grad is not None:
             if isinstance(grad, np.ndarray):
@@ -167,29 +200,56 @@ if tensor_lib:
         if tensor_ptr:
             tensor_lib.free_tensor(tensor_ptr)
 
+    # Unary operations wrappers
+    def c_relu(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.relu_op(in_tensor_ptr, out_tensor_ptr)
+
+    def c_log(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.log_op(in_tensor_ptr, out_tensor_ptr)
+
+    def c_exp(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.exp_op(in_tensor_ptr, out_tensor_ptr)
+
+    def c_softmax(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.softmax_op(in_tensor_ptr, out_tensor_ptr)
+
+    def c_abs(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.abs_op(in_tensor_ptr, out_tensor_ptr)
+
+    def c_neg(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.neg_op(in_tensor_ptr, out_tensor_ptr)
+
+    # Movement operations wrappers
+    def c_view(in_tensor_ptr, out_tensor_ptr, shape, ndim):
+        c_shape = (ctypes.c_int * ndim)(*shape)
+        tensor_lib.view_op(in_tensor_ptr, out_tensor_ptr, c_shape, ndim)
+
+    def c_unsqueeze(in_tensor_ptr, out_tensor_ptr, dim):
+        tensor_lib.unsqueeze_op(in_tensor_ptr, out_tensor_ptr, dim)
+
+    def c_squeeze(in_tensor_ptr, out_tensor_ptr, dim):
+        tensor_lib.squeeze_op(in_tensor_ptr, out_tensor_ptr, dim)
+
+    def c_transpose(in_tensor_ptr, out_tensor_ptr, n, m):
+        tensor_lib.transpose_op(in_tensor_ptr, out_tensor_ptr, n, m)
+
     def tensor_to_numpy(tensor_ptr):
-        """Convert a C tensor to a numpy array"""
         if not tensor_ptr:
             return None
 
         tensor = tensor_ptr.contents
 
-        # Handle scalar case
         if tensor.ndim == 0:
             return np.array(tensor.data[0])
 
-        # Get shape
         shape = [tensor.shape[i] for i in range(tensor.ndim)]
         size = np.prod(shape)
 
-        # Get data
         data = [tensor.data[i] for i in range(size)]
 
-        # Reshape and return
         return np.array(data, dtype=np.float32).reshape(shape)
 
     def print_tensor_info(tensor_ptr):
-        """Debug function to print tensor information"""
         if not tensor_ptr:
             print("NULL tensor")
             return
@@ -220,7 +280,7 @@ if tensor_lib:
                 print(f"  grad (first 5): {grad_sample}")
 
 else:
-    # Provide dummy functions if the library couldn't be loaded
+
     def c_numel(shape, ndim):
         print("C backend not available: numel()")
         return 0
@@ -243,6 +303,24 @@ else:
 
     def c_free_tensor(tensor_ptr):
         print("C backend not available: free_tensor()")
+
+    def c_relu(in_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: relu()")
+
+    def c_log(in_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: log()")
+
+    def c_exp(in_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: exp()")
+
+    def c_softmax(in_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: softmax()")
+
+    def c_abs(in_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: abs()")
+
+    def c_neg(in_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: neg()")
 
     def tensor_to_numpy(tensor_ptr):
         print("C backend not available: tensor_to_numpy()")
