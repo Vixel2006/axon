@@ -1,6 +1,4 @@
 pytest
 flake8
 black
-pybind11
-cpplint
 numpy
