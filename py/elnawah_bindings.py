@@ -78,6 +78,22 @@ if tensor_lib:
     tensor_lib.neg_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.neg_op.restype = None
 
+    # Binary operations
+    tensor_lib.add_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.add_op.restype = None
+
+    tensor_lib.sub_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.sub_op.restype = None
+
+    tensor_lib.mul_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.mul_op.restype = None
+
+    tensor_lib.div_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.div_op.restype = None
+
+    tensor_lib.matmul_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int, ctypes.c_int]
+    tensor_lib.matmul_op.restype = None
+
     # Movement operations
     tensor_lib.view_op.argtypes = [
         ctypes.POINTER(CTensor),
@@ -219,6 +235,22 @@ if tensor_lib:
     def c_neg(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.neg_op(in_tensor_ptr, out_tensor_ptr)
 
+    # Binary operations wrappers
+    def c_add(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        tensor_lib.add_op(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr)
+
+    def c_sub(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        tensor_lib.sub_op(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr)
+
+    def c_mul(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        tensor_lib.mul_op(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr)
+
+    def c_div(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        tensor_lib.div_op(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr)
+
+    def c_matmul(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, N, K, P):
+        tensor_lib.matmul_op(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, N, K, P)
+
     # Movement operations wrappers
     def c_view(in_tensor_ptr, out_tensor_ptr, shape, ndim):
         c_shape = (ctypes.c_int * ndim)(*shape)
@@ -321,6 +353,21 @@ else:
 
     def c_neg(in_tensor_ptr, out_tensor_ptr):
         print("C backend not available: neg()")
+
+    def c_add(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: add()")
+
+    def c_sub(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: sub()")
+
+    def c_mul(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: mul()")
+
+    def c_div(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        print("C backend not available: div()")
+
+    def c_matmul(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, N, K, M):
+        print("C backend not available: matmul()")
 
     def tensor_to_numpy(tensor_ptr):
         print("C backend not available: tensor_to_numpy()")

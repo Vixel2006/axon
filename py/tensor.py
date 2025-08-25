@@ -11,6 +11,11 @@ from .elnawah_bindings import (
     c_softmax,
     c_abs,
     c_neg,
+    c_add,
+    c_sub,
+    c_mul,
+    c_div,
+    c_matmul,
     c_view,
     c_unsqueeze,
     c_squeeze,
@@ -173,6 +178,71 @@ class Tensor:
     def __repr__(self) -> str:
         return self.__str__()
 
+    def __add__(self, other):
+        input_c_tensor = self._c_tensor.contents
+
+        if self.shape != other.shape:
+            raise RuntimeError(
+                f"Can't add tensors with shapes {self.shape} and {other.shape}"
+            )
+
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+
+        c_add(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+
+        return out_tensor
+
+    def __sub__(self, other):
+        input_c_tensor = self._c_tensor.contents
+
+        if self.shape != other.shape:
+            raise RuntimeError(
+                f"Can't add tensors with shapes {self.shape} and {other.shape}"
+            )
+
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+
+        c_sub(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+
+        return out_tensor
+
+    def __mul__(self, other):
+        input_c_tensor = self._c_tensor.contents
+
+        if self.shape != other.shape:
+            raise RuntimeError(
+                f"Can't add tensors with shapes {self.shape} and {other.shape}"
+            )
+
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+
+        c_mul(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+
+        return out_tensor
+
+    def __matmul__(self, other):
+        input_c_tensor = self._c_tensor.contents
+
+        N = self.shape[-2]
+        M = self.shape[-1]
+
+        if self.shape[-1] != other.shape[-2]:
+            raise RuntimeError(
+                f"Can't add tensors with shapes {self.shape} and {other.shape}"
+            )
+
+        K = self.shape[-1]
+        P = other.shape[-1]
+
+        out_c_tensor_ptr = c_malloc_tensor_empty()
+
+        c_matmul(self._c_tensor, other._c_tensor, out_c_tensor_ptr, N, K, P)
+
+        if not out_c_tensor_ptr:
+            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
+
+        return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
+
     def validate(self) -> bool:
         try:
             if not self._c_tensor or not self._c_tensor.contents:
@@ -325,12 +395,11 @@ def safe_c_numel(shape_ptr, ndim):
 
 
 if __name__ == "__main__":
-    t = Tensor([2, 3], [[2, 3, 4], [3, 4, 5]])
-    print(t)
-    n = t.unsqueeze()
-    print(n)
-    m = n.squeeze()
-    print(m)
-    z = t.transpose()
-    print(z)
+    t = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
 
+    n = Tensor([2, 3, 2], [[[2, 3], [3, 4], [5, 6]], [[2, 3], [3, 4], [5, 6]]])
+    print(t - t)
+
+    print("Tensor t data:", t.data)
+    print("Tensor n data:", n.data)
+    print(t @ n)
