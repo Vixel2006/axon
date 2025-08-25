@@ -1,7 +1,6 @@
 PYTHON = python3
 VENV = venv
 PIP = $(VENV)/bin/pip
-CUDA = /opt/cuda/bin/nvcc
 PYTEST = $(VENV)/bin/pytest
 FLAKE8 = $(VENV)/bin/flake8
 BLACK = $(VENV)/bin/black
@@ -10,43 +9,56 @@ CLANG_FORMAT = clang-format
 CMAKE = cmake
 BUILD_DIR = build
 SRC_DIR = src
+INCLUDE_DIR = include
 TEST_DIR = tests
-CMAKE_FLAGS = -D CMAKE_CUDA_COMPILER=$(CUDA)
-SOURCES = $(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(SRC_DIR)/*.cu)
-MODULE = cnawah.cpython-313-x86_64-linux-gnu.so
+
+C_SOURCES = $(wildcard $(SRC_DIR)/*.c)
+C_HEADERS = $(wildcard $(INCLUDE_DIR)/*.h)
+PYTHON_TEST_FILES = $(wildcard $(TEST_DIR)/*.py)
 
 all: prepare init build test lint style
 
 prepare:
-	rm -rf build
-	rm -rf build dist nawah.egg-info
+	@echo "--- Preparing build environment ---"
+	rm -rf $(BUILD_DIR)
+	rm -rf dist *.egg-info
+	@echo "--- Preparation complete ---"
 
 init:
+	@echo "--- Initializing Python virtual environment and installing dependencies ---"
 	$(PYTHON) -m venv $(VENV)
 	$(PIP) install --upgrade pip
-	$(PIP) install pytest flake8 black pybind11
+	$(PIP) install pytest flake8 black
+	@echo "--- Virtual environment setup complete ---"
 
-build: $(BUILD_DIR)/$(MODULE)
-
-$(BUILD_DIR)/$(MODULE):
+build: prepare $(BUILD_DIR)
+	@echo "--- Building C project with CMake ---"
 	mkdir -p $(BUILD_DIR)
-	$(CMAKE) -S . -B $(BUILD_DIR) $(CMAKE_FLAGS) && cd $(BUILD_DIR) && $(MAKE)
-	cd ..
-	pip install -e .  --break-system-packages
+	$(CMAKE) -S . -B $(BUILD_DIR)
+	$(CMAKE) --build $(BUILD_DIR)
+	$(PIP) install -e .
+	@echo "--- Build complete ---"
 
 test:
+	@echo "--- Running Python tests ---"
 	$(PYTEST) $(TEST_DIR) -v
+	@echo "--- Tests complete ---"
 
 lint:
-	$(CPPLINT) $(SRC_DIR)/*.cpp $(SRC_DIR)/*.h 2> cpplint_errors.txt || true
-	$(FLAKE8) $(SRC_DIR)/*.py $(TEST_DIR)/*.py
+	@echo "--- Running Cpplint and Flake8 ---"
+	$(CPPLINT) $(C_SOURCES) $(C_HEADERS) 2> cpplint_errors.txt || true
+	$(FLAKE8) $(PYTHON_TEST_FILES)
+	@echo "--- Linting complete ---"
 
 style:
-	$(CLANG_FORMAT) -i $(SRC_DIR)/*.cpp $(SRC_DIR)/*.h
-	$(BLACK) $(SRC_DIR)/*.py $(TEST_DIR)/*.py
+	@echo "--- Applying Clang-format and Black ---"
+	$(CLANG_FORMAT) -i $(C_SOURCES) $(C_HEADERS)
+	$(BLACK) $(PYTHON_TEST_FILES)
+	@echo "--- Styling complete ---"
 
 clean:
-	rm -rf $(BUILD_DIR) $(VENV) $(MODULE) cpplint_errors.txt
+	@echo "--- Cleaning build artifacts and virtual environment ---"
+	rm -rf $(BUILD_DIR) $(VENV) cpplint_errors.txt
+	@echo "--- Clean complete ---"
 
 .PHONY: all init build test lint style clean
-
