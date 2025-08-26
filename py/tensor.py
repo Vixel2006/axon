@@ -31,6 +31,7 @@ from .elnawah_bindings import (
     c_unsqueeze,
     c_squeeze,
     c_transpose,
+    c_expand,
     CTensor,
 )
 
@@ -439,6 +440,47 @@ class Tensor:
 
         return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
 
+    def expand(self, shape: list[int]) -> Tensor:
+        input_c_tensor = self._c_tensor.contents
+
+        if self.ndim != len(shape):
+            raise ValueError(f"expand() error: Dimensionality mismatch")
+
+        for i in range(self.ndim):
+            if self.shape[i] != shape[i] and self.shape[i] != 1:
+                raise RuntimeError(
+                    f"expand() error: Can't expand dim {i} from {self.shape[i]} to {shape[i]}, Only dims of 1 can be expanded."
+                )
+
+        out_c_tensor_ptr = c_malloc_tensor_empty()
+        if not out_c_tensor_ptr:
+            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
+
+        c_expand(self._c_tensor, out_c_tensor_ptr, shape)
+
+        return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
+
+    def broadcast(self, shape: list[int]) -> Tensor:
+        input_c_tensor = self._c_tensor.contents
+
+        if self.ndim > len(shape):
+            raise ValueError(
+                f"broadcast() error: source tensor has higher rank than target shape."
+            )
+
+        for i in range(len(shape) - self.ndim):
+            t = self.unsqueeze(0)
+
+        for i in range(len(shape)):
+            if shape[i] != t.shape[i] and t.shape[i] != 1:
+                raise RuntimeError(
+                    f"broadcast() error: can't broadcast {self.shape} to {shape}"
+                )
+
+        z = t.expand(shape)
+
+        return z
+
     def relu(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_relu(self._c_tensor, out_tensor._c_tensor)
@@ -487,5 +529,6 @@ def safe_c_numel(shape_ptr, ndim):
 if __name__ == "__main__":
     t = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
 
-    z = t.max(axis=1, keepdim=True)
+    z = t.broadcast([2, 2, 2, 3])
+
     print(z)
