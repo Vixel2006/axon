@@ -79,20 +79,86 @@ if tensor_lib:
     tensor_lib.neg_op.restype = None
 
     # Binary operations
-    tensor_lib.add_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.add_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.add_op.restype = None
 
-    tensor_lib.sub_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.sub_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.sub_op.restype = None
 
-    tensor_lib.mul_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.mul_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.mul_op.restype = None
 
-    tensor_lib.div_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.div_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.div_op.restype = None
 
-    tensor_lib.matmul_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int, ctypes.c_int]
+    tensor_lib.matmul_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
     tensor_lib.matmul_op.restype = None
+
+    # Binary operations with scalars
+    tensor_lib.add_scalar_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.add_scalar_op.restype = None
+
+    tensor_lib.sub_scalar_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.sub_scalar_op.restype = None
+
+    tensor_lib.rsub_scalar_op.argtypes = [
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.rsub_scalar_op.restype = None
+
+    tensor_lib.mul_scalar_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.mul_scalar_op.restype = None
+
+    tensor_lib.div_scalar_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.div_scalar_op.restype = None
+
+    tensor_lib.rdiv_scalar_op.argtypes = [
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.rdiv_scalar_op.restype = None
 
     # Movement operations
     tensor_lib.view_op.argtypes = [
@@ -250,6 +316,25 @@ if tensor_lib:
 
     def c_matmul(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, N, K, P):
         tensor_lib.matmul_op(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, N, K, P)
+
+    # Binary operations with scalars wrappers
+    def c_add_scalar(a_tensor_ptr, b, out_tensor_ptr):
+        tensor_lib.add_scalar_op(a_tensor_ptr, b, out_tensor_ptr)
+
+    def c_sub_scalar(a_tensor_ptr, b, out_tensor_ptr):
+        tensor_lib.sub_scalar_op(a_tensor_ptr, b, out_tensor_ptr)
+
+    def c_rsub_scalar(a, b_tensor_ptr, out_tensor_ptr):
+        tensor_lib.rsub_scalar_op(a, b_tensor_ptr, out_tensor_ptr)
+
+    def c_mul_scalar(a_tensor_ptr, b, out_tensor_ptr):
+        tensor_lib.mul_scalar_op(a_tensor_ptr, b, out_tensor_ptr)
+
+    def c_div_scalar(a_tensor_ptr, b, out_tensor_ptr):
+        tensor_lib.div_scalar_op(a_tensor_ptr, b, out_tensor_ptr)
+
+    def c_rdiv_scalar(a, b_tensor_ptr, out_tensor_ptr):
+        tensor_lib.rdiv_scalar_op(a, b_tensor_ptr, out_tensor_ptr)
 
     # Movement operations wrappers
     def c_view(in_tensor_ptr, out_tensor_ptr, shape, ndim):

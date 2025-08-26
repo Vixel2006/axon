@@ -36,6 +36,7 @@ typedef struct {
 typedef struct {
   ReductionOpFn sum;
   ReductionOpFn mean;
+  ReductionOpFn max;
 } ReductionOps;
 
 typedef struct {

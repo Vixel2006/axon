@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .elnawah_bindings import (
     c_malloc_tensor_empty,
     c_malloc_tensor_shape,
@@ -15,6 +17,12 @@ from .elnawah_bindings import (
     c_sub,
     c_mul,
     c_div,
+    c_add_scalar,
+    c_sub_scalar,
+    c_rsub_scalar,
+    c_mul_scalar,
+    c_div_scalar,
+    c_rdiv_scalar,
     c_matmul,
     c_view,
     c_unsqueeze,
@@ -25,6 +33,7 @@ from .elnawah_bindings import (
 
 import numpy as np
 import ctypes
+from typing import Union
 
 
 def _flatten_list(nested_list):
@@ -43,8 +52,6 @@ class Tensor:
     def __init__(self, shape=None, data=None, requires_grad=True, _c_tensor_ptr=None):
         if _c_tensor_ptr is not None:
             self._c_tensor = _c_tensor_ptr
-            # Assuming shape and ndim are already set in the C tensor
-            # We need to read them from the C tensor if we want to expose them as properties
             if self._c_tensor and self._c_tensor.contents:
                 self._shape = [
                     self._c_tensor.contents.shape[i]
@@ -178,49 +185,102 @@ class Tensor:
     def __repr__(self) -> str:
         return self.__str__()
 
-    def __add__(self, other):
+    def __add__(self, other: Union[Tensor, float]) -> Tensor:
         input_c_tensor = self._c_tensor.contents
 
-        if self.shape != other.shape:
-            raise RuntimeError(
-                f"Can't add tensors with shapes {self.shape} and {other.shape}"
-            )
-
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        if isinstance(other, Tensor):
+            if self.shape != other.shape:
+                raise RuntimeError(
+                    f"Can't add tensors with shapes {self.shape} and {other.shape}"
+                )
 
-        c_add(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+            c_add(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+        else:
+            c_add_scalar(self._c_tensor, other, out_tensor._c_tensor)
 
         return out_tensor
 
-    def __sub__(self, other):
-        input_c_tensor = self._c_tensor.contents
+    def __iadd__(self, other: Union[Tensor, float]) -> Tensor:
+        return self + other
 
-        if self.shape != other.shape:
-            raise RuntimeError(
-                f"Can't add tensors with shapes {self.shape} and {other.shape}"
-            )
+    def __radd__(self, other: float) -> Tensor:
+        return self + other
+
+    def __sub__(self, other: Union[Tensor, float]) -> Tensor:
+        input_c_tensor = self._c_tensor.contents
 
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
 
-        c_sub(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+        if isinstance(other, Tensor):
+            if self.shape != other.shape:
+                raise RuntimeError(
+                    f"Can't add tensors with shapes {self.shape} and {other.shape}"
+                )
+
+            c_sub(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+        else:
+            c_sub_scalar(self._c_tensor, other, out_tensor._c_tensor)
 
         return out_tensor
 
-    def __mul__(self, other):
-        input_c_tensor = self._c_tensor.contents
+    def __isub__(self, other: Union[Tensor, float]) -> Tensor:
+        return self - other
 
-        if self.shape != other.shape:
-            raise RuntimeError(
-                f"Can't add tensors with shapes {self.shape} and {other.shape}"
-            )
-
+    def __rsub__(self, other: float) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
 
-        c_mul(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+        c_rsub_scalar(other, self._c_tensor, out_tensor._c_tensor)
 
         return out_tensor
 
-    def __matmul__(self, other):
+    def __mul__(self, other: Union[Tensor, float]) -> Tensor:
+        input_c_tensor = self._c_tensor.contents
+
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        if isinstance(other, Tensor):
+            if self.shape != other.shape:
+                raise RuntimeError(
+                    f"Can't add tensors with shapes {self.shape} and {other.shape}"
+                )
+
+            c_mul(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+        else:
+            c_mul_scalar(self._c_tensor, other, out_tensor._c_tensor)
+
+        return out_tensor
+
+    def __imul__(self, other: Union[Tensor, float]) -> Tensor:
+        return self * other
+
+    def __rmul__(self, other: float) -> Tensor:
+        return self * other
+
+    def __truediv__(self, other: Union[Tensor, float]) -> Tensor:
+        input_c_tensor = self._c_tensor.contents
+
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        if isinstance(other, Tensor):
+            if self.shape != other.shape:
+                raise RuntimeError(
+                    f"Can't add tensors with shapes {self.shape} and {other.shape}"
+                )
+
+            c_div(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+        else:
+            c_div_scalar(self._c_tensor, other, out_tensor._c_tensor)
+
+        return out_tensor
+
+    def __itruediv__(self, other: Union[Tensor, float]) -> Tensor:
+        return self / other
+
+    def __rtruediv__(self, other: float) -> Tensor:
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        c_rdiv_scalar(other, self._c_tensor, out_tensor._c_tensor)
+        return out_tensor
+
+    def __matmul__(self, other: Tensor) -> Tensor:
         input_c_tensor = self._c_tensor.contents
 
         N = self.shape[-2]
@@ -271,7 +331,7 @@ class Tensor:
         except Exception:
             return False
 
-    def view(self, shape):
+    def view(self, shape: list) -> Tensor:
         input_c_tensor = self._c_tensor.contents
         if c_numel(shape, len(shape)) != c_numel(self.shape, self.ndim):
             raise RuntimeError(
@@ -286,7 +346,7 @@ class Tensor:
 
         return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
 
-    def unsqueeze(self, dim: int = 0):
+    def unsqueeze(self, dim: int = 0) -> Tensor:
         input_c_tensor = self._c_tensor.contents
 
         if dim < 0:
@@ -303,7 +363,7 @@ class Tensor:
 
         return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
 
-    def squeeze(self, dim: int = 0):
+    def squeeze(self, dim: int = 0) -> Tensor:
         input_c_tensor = self._c_tensor.contents
 
         if dim < 0:
@@ -325,7 +385,7 @@ class Tensor:
 
         return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
 
-    def transpose(self, n: int = -2, m: int = -1):
+    def transpose(self, n: int = -2, m: int = -1) -> Tensor:
         input_c_tensor = self._c_tensor.contents
 
         if n < 0:
@@ -344,32 +404,32 @@ class Tensor:
 
         return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
 
-    def relu(self):
+    def relu(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_relu(self._c_tensor, out_tensor._c_tensor)
         return out_tensor
 
-    def log(self):
+    def log(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_log(self._c_tensor, out_tensor._c_tensor)
         return out_tensor
 
-    def exp(self):
+    def exp(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_exp(self._c_tensor, out_tensor._c_tensor)
         return out_tensor
 
-    def softmax(self):
+    def softmax(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_softmax(self._c_tensor, out_tensor._c_tensor)
         return out_tensor
 
-    def abs(self):
+    def abs(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_abs(self._c_tensor, out_tensor._c_tensor)
         return out_tensor
 
-    def neg(self):
+    def neg(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_neg(self._c_tensor, out_tensor._c_tensor)
         return out_tensor
@@ -397,9 +457,9 @@ def safe_c_numel(shape_ptr, ndim):
 if __name__ == "__main__":
     t = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
 
+    t = 2 - t
+    print(t)
     n = Tensor([2, 3, 2], [[[2, 3], [3, 4], [5, 6]], [[2, 3], [3, 4], [5, 6]]])
     print(t - t)
 
-    print("Tensor t data:", t.data)
-    print("Tensor n data:", n.data)
     print(t @ n)
