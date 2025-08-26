@@ -1,3 +1,4 @@
+#include "autograd.h"
 #include "ops.h"
 #include <immintrin.h>
 #include <math.h>

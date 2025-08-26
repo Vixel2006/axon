@@ -33,7 +33,13 @@ from .elnawah_bindings import (
     c_transpose,
     c_expand,
     CTensor,
+    CNode,
+    c_malloc_node,
+    tensor_lib,
+    BackwardFnType,  # Import BackwardFnType
 )
+
+from .node import Node
 
 import numpy as np
 import ctypes
@@ -66,6 +72,7 @@ class Tensor:
             return
 
         self._c_tensor = None
+        self._node = None
 
         if shape is None and data is None:
             self._c_tensor = c_malloc_tensor_empty()
@@ -200,8 +207,22 @@ class Tensor:
                 )
 
             c_add(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+
+            if out_tensor.requires_grad:
+                out_tensor._node = Node(
+                    out_tensor, [self, other], BackwardFnType(tensor_lib.add_grad_op)
+                )
         else:
             c_add_scalar(self._c_tensor, other, out_tensor._c_tensor)
+
+            if out_tensor.requires_grad:
+                scalar_val = ctypes.c_float(other)
+                out_tensor._node = Node(
+                    out_tensor,
+                    [self],
+                    BackwardFnType(tensor_lib.add_grad_op),
+                    ctypes.byref(scalar_val),
+                )
 
         return out_tensor
 
@@ -529,6 +550,10 @@ def safe_c_numel(shape_ptr, ndim):
 if __name__ == "__main__":
     t = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
 
-    z = t.broadcast([2, 2, 2, 3])
+    n = t + t
 
-    print(z)
+    n._node.backward()
+
+    print(n.grad)
+    print("---------------------")
+    print(t.grad)

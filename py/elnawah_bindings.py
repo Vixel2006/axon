@@ -22,9 +22,24 @@ class CTensor(ctypes.Structure):
         ("strides", ctypes.POINTER(ctypes.c_int)),
         ("requires_grad", ctypes.c_bool),
         ("grad", ctypes.POINTER(ctypes.c_float)),
-        ("ctx", ctypes.c_void_p),
-        ("owned_data", ctypes.c_bool),
-        ("owned_grad", ctypes.c_bool),
+    ]
+
+
+BackwardFnType = ctypes.CFUNCTYPE(
+    None,
+    ctypes.POINTER(CTensor),
+    ctypes.POINTER(ctypes.POINTER(CTensor)),
+    ctypes.c_int,
+    ctypes.c_void_p,
+)
+
+class CNode(ctypes.Structure):
+    _fields_ = [
+        ("out", ctypes.POINTER(CTensor)),
+        ("prev", ctypes.POINTER(ctypes.POINTER(CTensor))),
+        ("n_prev", ctypes.c_int),
+        ("extras", ctypes.c_void_p),
+        ("backward_fn", BackwardFnType),
     ]
 
 
@@ -58,6 +73,27 @@ if tensor_lib:
 
     tensor_lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
     tensor_lib.free_tensor.restype = None
+
+    tensor_lib.malloc_node.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+        BackwardFnType,
+    ]
+
+    tensor_lib.malloc_node.restype = ctypes.POINTER(CNode)
+
+    tensor_lib.free_node.argtypes = [ctypes.POINTER(CNode)]
+    tensor_lib.free_node.restype = None
+
+    tensor_lib.add_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.add_grad_op.restype = None
 
     # Unary operations
     tensor_lib.relu_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
@@ -313,6 +349,19 @@ if tensor_lib:
     def c_free_tensor(tensor_ptr):
         if tensor_ptr:
             tensor_lib.free_tensor(tensor_ptr)
+
+    def c_malloc_node(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras, backward_fn):
+        c_prev_array = (ctypes.POINTER(CTensor) * n_prev)(*prev_tensor_ptrs)
+        return tensor_lib.malloc_node(
+            out_tensor_ptr, c_prev_array, n_prev, extras, backward_fn
+        )
+
+    def c_free_node(node_ptr):
+        if node_ptr:
+            tensor_lib.free_node(node_ptr)
+
+    def c_add_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.add_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
     # Unary operations wrappers
     def c_relu(in_tensor_ptr, out_tensor_ptr):
