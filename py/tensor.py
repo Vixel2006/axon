@@ -24,6 +24,9 @@ from .elnawah_bindings import (
     c_div_scalar,
     c_rdiv_scalar,
     c_matmul,
+    c_sum,
+    c_mean,
+    c_max,
     c_view,
     c_unsqueeze,
     c_squeeze,
@@ -303,6 +306,38 @@ class Tensor:
 
         return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
 
+    def __neg__(self) -> Tensor:
+        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
+        c_neg(self._c_tensor, out_tensor._c_tensor)
+        return out_tensor
+
+    def sum(self, axis: int = 0, keepdim: bool = True):
+        out_c_tensor_ptr = c_malloc_tensor_empty()
+        if not out_c_tensor_ptr:
+            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
+
+        c_sum(self._c_tensor, out_c_tensor_ptr, axis, keepdim)
+
+        return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
+
+    def mean(self, axis: int = 0, keepdim: bool = True):
+        out_c_tensor_ptr = c_malloc_tensor_empty()
+        if not out_c_tensor_ptr:
+            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
+
+        c_mean(self._c_tensor, out_c_tensor_ptr, axis, keepdim)
+
+        return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
+
+    def max(self, axis: int = 0, keepdim: bool = True):
+        out_c_tensor_ptr = c_malloc_tensor_empty()
+        if not out_c_tensor_ptr:
+            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
+
+        c_max(self._c_tensor, out_c_tensor_ptr, axis, keepdim)
+
+        return Tensor(_c_tensor_ptr=out_c_tensor_ptr)
+
     def validate(self) -> bool:
         try:
             if not self._c_tensor or not self._c_tensor.contents:
@@ -429,11 +464,6 @@ class Tensor:
         c_abs(self._c_tensor, out_tensor._c_tensor)
         return out_tensor
 
-    def neg(self) -> Tensor:
-        out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
-        c_neg(self._c_tensor, out_tensor._c_tensor)
-        return out_tensor
-
 
 def safe_c_numel(shape_ptr, ndim):
     if ndim == 0:
@@ -457,9 +487,5 @@ def safe_c_numel(shape_ptr, ndim):
 if __name__ == "__main__":
     t = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
 
-    t = 2 - t
-    print(t)
-    n = Tensor([2, 3, 2], [[[2, 3], [3, 4], [5, 6]], [[2, 3], [3, 4], [5, 6]]])
-    print(t - t)
-
-    print(t @ n)
+    z = t.max(axis=1, keepdim=True)
+    print(z)
