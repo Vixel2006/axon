@@ -1,5 +1,4 @@
 #include "tensor.h"
-#include "tape.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -68,13 +67,6 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
         return NULL;
       }
       t->grad[0] = 0.0f;
-
-      t->ctx = malloc(sizeof(Tape));
-      if (!t->ctx) {
-        free_tensor(t);
-        return NULL;
-      }
-      memset(t->ctx, 0, sizeof(Tape));
     }
     return t;
   }
@@ -114,13 +106,6 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
       return NULL;
     }
     memset(t->grad, 0, size * sizeof(float));
-
-    t->ctx = malloc(sizeof(Tape));
-    if (!t->ctx) {
-      free_tensor(t);
-      return NULL;
-    }
-    memset(t->ctx, 0, sizeof(Tape));
   }
 
   return t;
@@ -195,13 +180,6 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
     } else {
       memset(t->grad, 0, size * sizeof(float));
     }
-
-    t->ctx = malloc(sizeof(Tape));
-    if (!t->ctx) {
-      free_tensor(t);
-      return NULL;
-    }
-    memset(t->ctx, 0, sizeof(Tape));
   }
 
   return t;
@@ -214,9 +192,6 @@ void free_tensor(Tensor *t) {
 
     if (t->grad)
       free(t->grad);
-
-    if (t->ctx)
-      free(t->ctx);
 
     if (t->shape)
       free(t->shape);

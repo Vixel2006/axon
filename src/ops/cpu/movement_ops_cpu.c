@@ -23,7 +23,7 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
   out->data = in->data;
   out->grad = in->grad;
   out->requires_grad = in->requires_grad;
-  out->ctx = NULL;
+  out->grad_fn = NULL;
 }
 
 void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
@@ -53,7 +53,7 @@ void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
   out->data = in->data;
   out->grad = in->grad;
   out->requires_grad = in->requires_grad;
-  out->ctx = NULL;
+  out->grad_fn = NULL;
 }
 
 void squeeze_op(Tensor *in, Tensor *out, int dim) {
@@ -81,7 +81,7 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
   out->data = in->data;
   out->grad = in->grad;
   out->requires_grad = in->requires_grad;
-  out->ctx = NULL;
+  out->grad_fn = NULL;
 }
 
 void transpose_op(Tensor *in, Tensor *out, int N, int M) {
@@ -111,7 +111,7 @@ void transpose_op(Tensor *in, Tensor *out, int N, int M) {
   out->data = in->data;
   out->grad = in->grad;
   out->requires_grad = in->requires_grad;
-  out->ctx = NULL;
+  out->grad_fn = NULL;
 }
 
 void expand_op(Tensor *in, Tensor *out, const int *shape) {
@@ -134,5 +134,5 @@ void expand_op(Tensor *in, Tensor *out, const int *shape) {
   out->data = in->data;
   out->grad = in->grad;
   out->requires_grad = in->requires_grad;
-  out->ctx = NULL;
+  out->grad_fn = NULL;
 }
