@@ -17,7 +17,7 @@ else()
     message(FATAL_ERROR "Could not find SLEEF library or include directory.")
 endif()
 
-add_library(elnawah SHARED src/tensor.c src/ops/cpu/unary_ops_cpu.c src/ops/cpu/binary_ops_cpu.c src/ops/cpu/movement_ops_cpu.c)
+  add_library(elnawah SHARED src/tensor.c src/ops/cpu/unary_ops_cpu.c src/ops/cpu/binary_ops_cpu.c src/ops/cpu/binary_ops_scalar_cpu.c src/ops/cpu/movement_ops_cpu.c)
 
 target_include_directories(elnawah PUBLIC include ${SLEEF_INCLUDE_DIR})
 target_link_libraries(elnawah PRIVATE ${SLEEF_LIBRARY})
