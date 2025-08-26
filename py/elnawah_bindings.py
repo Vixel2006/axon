@@ -216,6 +216,13 @@ if tensor_lib:
     ]
     tensor_lib.transpose_op.restype = None
 
+    tensor_lib.expand_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.c_int),
+    ]
+    tensor_lib.expand_op.restype = None
+
     # Python wrapper functions
     def c_numel(shape, ndim):
         if ndim == 0:
@@ -384,6 +391,11 @@ if tensor_lib:
 
     def c_transpose(in_tensor_ptr, out_tensor_ptr, n, m):
         tensor_lib.transpose_op(in_tensor_ptr, out_tensor_ptr, n, m)
+
+    def c_expand(in_tensor_ptr, out_tensor_ptr, shape):
+        ndim = len(shape)
+        c_shape = (ctypes.c_int * ndim)(*shape)
+        tensor_lib.expand_op(in_tensor_ptr, out_tensor_ptr, c_shape)
 
     def tensor_to_numpy(tensor_ptr):
         if not tensor_ptr:
