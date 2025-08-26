@@ -3,8 +3,6 @@
 
 #include <stdlib.h>
 
-
-
 typedef struct {
   float *data;
   int ndim;
@@ -12,7 +10,7 @@ typedef struct {
   int *strides;
   bool requires_grad;
   float *grad;
-  void *ctx;
+  void *grad_fn;
 } Tensor;
 
 Tensor *malloc_tensor_empty();
