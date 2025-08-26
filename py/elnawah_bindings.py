@@ -78,6 +78,31 @@ if tensor_lib:
     tensor_lib.neg_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.neg_op.restype = None
 
+    # Reduction operations
+    tensor_lib.max_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
+    tensor_lib.max_op.restype = None
+
+    tensor_lib.mean_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
+    tensor_lib.mean_op.restype = None
+
+    tensor_lib.sum_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
+    tensor_lib.sum_op.restype = None
+
     # Binary operations
     tensor_lib.add_op.argtypes = [
         ctypes.POINTER(CTensor),
@@ -300,6 +325,16 @@ if tensor_lib:
 
     def c_neg(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.neg_op(in_tensor_ptr, out_tensor_ptr)
+
+    # Reduction operations wrappers
+    def c_sum(in_tensor_ptr, out_tensor_ptr, axis, keepdim):
+        tensor_lib.sum_op(in_tensor_ptr, out_tensor_ptr, axis, keepdim)
+
+    def c_mean(in_tensor_ptr, out_tensor_ptr, axis, keepdim):
+        tensor_lib.mean_op(in_tensor_ptr, out_tensor_ptr, axis, keepdim)
+
+    def c_max(in_tensor_ptr, out_tensor_ptr, axis, keepdim):
+        tensor_lib.max_op(in_tensor_ptr, out_tensor_ptr, axis, keepdim)
 
     # Binary operations wrappers
     def c_add(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):

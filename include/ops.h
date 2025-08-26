@@ -6,7 +6,7 @@
 typedef void (*UnaryOpFn)(Tensor *in, Tensor *out);
 typedef void (*BinaryOpFn)(Tensor *a, Tensor *b, Tensor *out);
 typedef void (*BinaryOpScalarFn)(Tensor *a, float b, Tensor *out);
-typedef void (*ReductionOpFn)(Tensor *in, Tensor *out);
+typedef void (*ReductionOpFn)(Tensor *in, Tensor *out, int axis);
 typedef void (*MovementOpFn)(Tensor *in, Tensor *out, void *args);
 
 typedef struct {
