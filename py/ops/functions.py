@@ -40,6 +40,7 @@ from ..elnawah_bindings.c_wrapper_functions import (
     c_exp_grad_op,
     c_abs_grad_op,
     c_neg_grad_op,
+    c_malloc_tensor_empty,  # Added missing import
 )
 from ..elnawah_bindings.ctypes_definitions import CTensor, BackwardFnType
 from ..elnawah_bindings.c_library_loader import tensor_lib
@@ -75,21 +76,28 @@ class Function:
     @classmethod
     def apply(cls, *args: Any, **kwargs: Any) -> "Tensor":
         ctx = cls()
-        output_tensor = ctx.forward(*args, **kwargs)
+        from py.core.tensor import Tensor
+
+        requires_grad = any(
+            isinstance(arg, (Tensor, CTensor)) and arg.requires_grad for arg in args
+        )
+
+        output_shape = None
+        for arg in args:
+            if isinstance(arg, (Tensor, CTensor)) and arg.shape is not None:
+                output_shape = arg.shape
+                break
+
+        if output_shape is not None:
+            output_tensor = Tensor(shape=output_shape, requires_grad=requires_grad)
+        else:
+            output_tensor = Tensor(requires_grad=requires_grad)
 
         if output_tensor.requires_grad:
-            from py.core import Node
-            from py.core import Tensor
-
-            # Add validation here
-            if not output_tensor.validate():
-                raise RuntimeError(
-                    "Output tensor is in an invalid state before Node creation."
-                )
+            from py.core.node import Node
 
             input_tensors = [arg for arg in args if isinstance(arg, (Tensor, CTensor))]
 
-            # Explicitly keep references
             ctx._output_tensor_ref = output_tensor
             ctx._input_tensors_ref = input_tensors
 
@@ -98,9 +106,17 @@ class Function:
             output_tensor._node = Node(
                 out_tensor=output_tensor,
                 input_tensors=input_tensors,
+                forward_fn=ctx._execute_forward,
+                forward_args=(output_tensor, *input_tensors),
+                forward_kwargs=kwargs,
                 backward_fn=backward_fn,
                 extras=ctx.extras,
             )
+        else:
+            # For non-grad tensors, execute immediately
+            result = ctx._execute_forward(output_tensor, *args, **kwargs)
+            output_tensor = result
+
         return output_tensor
 
 
@@ -111,12 +127,13 @@ class Add(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.add_grad_op)
 
-    def forward(self, a: "Tensor", b: "Tensor") -> "Tensor":
-        from py.core import Tensor
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", b: "Tensor"
+    ) -> "Tensor":
+        from py.core.tensor import Tensor
 
-        out_tensor = Tensor(
-            shape=a.shape, requires_grad=a.requires_grad or b.requires_grad
-        )
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
 
         if isinstance(b, (Tensor, CTensor)):
             if a.shape != b.shape:
@@ -144,19 +161,21 @@ class Sub(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.sub_grad_op)
 
-    def forward(self, a: "Tensor", b: "Tensor") -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", b: "Tensor"
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(
-            shape=a.shape, requires_grad=a.requires_grad or b.requires_grad
-        )
-        if isinstance(b, Tensor):
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
+        if isinstance(b, (Tensor, CTensor)):
             if a.shape != b.shape:
                 raise RuntimeError(
                     f"Can't subtract tensors with shapes {a.shape} and {b.shape}"
                 )
             c_sub(a._c_tensor, b._c_tensor, out_tensor._c_tensor)
-
         else:
             scalar_val = ctypes.c_float(b)
             self.extras = scalar_val
@@ -178,10 +197,13 @@ class RSub(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.rsub_grad_op)
 
-    def forward(self, a: "Tensor", b: float) -> "Tensor":
+    def _execute_forward(self, out_tensor: "Tensor", a: "Tensor", b: float) -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(shape=a.shape, requires_grad=a.requires_grad)
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
         scalar_val = ctypes.c_float(b)
         self.extras = scalar_val
         c_rsub_scalar(b, a._c_tensor, out_tensor._c_tensor)
@@ -202,19 +224,21 @@ class Mul(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.mul_grad_op)
 
-    def forward(self, a: "Tensor", b: "Tensor") -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", b: "Tensor"
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(
-            shape=a.shape, requires_grad=a.requires_grad or b.requires_grad
-        )
-        if isinstance(b, Tensor):
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
+        if isinstance(b, (Tensor, CTensor)):
             if a.shape != b.shape:
                 raise RuntimeError(
                     f"Can't multiply tensors with shapes {a.shape} and {b.shape}"
                 )
             c_mul(a._c_tensor, b._c_tensor, out_tensor._c_tensor)
-
         else:  # scalar
             scalar_val = ctypes.c_float(b)
             self.extras = scalar_val
@@ -236,19 +260,21 @@ class Div(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.div_grad_op)
 
-    def forward(self, a: "Tensor", b: "Tensor") -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", b: "Tensor"
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(
-            shape=a.shape, requires_grad=a.requires_grad or b.requires_grad
-        )
-        if isinstance(b, Tensor):
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
+        if isinstance(b, (Tensor, CTensor)):
             if a.shape != b.shape:
                 raise RuntimeError(
                     f"Can't divide tensors with shapes {a.shape} and {b.shape}"
                 )
             c_div(a._c_tensor, b._c_tensor, out_tensor._c_tensor)
-
         else:  # scalar
             scalar_val = ctypes.c_float(b)
             self.extras = scalar_val
@@ -270,10 +296,13 @@ class RDiv(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.rdiv_grad_op)
 
-    def forward(self, a: "Tensor", b: float) -> "Tensor":  # b is scalar, a is tensor
+    def _execute_forward(self, out_tensor: "Tensor", a: "Tensor", b: float) -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(shape=a.shape, requires_grad=a.requires_grad)
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
         scalar_val = ctypes.c_float(b)
         self.extras = scalar_val
         c_rdiv_scalar(b, a._c_tensor, out_tensor._c_tensor)
@@ -291,32 +320,27 @@ class RDiv(Function):
 
 
 class MatMul(Function):
-    def forward(self, a: "Tensor", b: "Tensor") -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", b: "Tensor"
+    ) -> "Tensor":
         from ..core.tensor import Tensor
-
-        N = a.shape[-2]
-        M = a.shape[-1]
 
         if a.shape[-1] != b.shape[-2]:
             raise RuntimeError(
                 f"Can't multiply tensors with shapes {a.shape} and {b.shape}"
             )
 
+        N = a.shape[-2]
         K = a.shape[-1]
         P = b.shape[-1]
 
-        out_c_tensor_ptr = c_malloc_tensor_empty()
-        if not out_c_tensor_ptr:
-            raise RuntimeError(
-                "Failed to allocate empty C tensor for matmul operation."
-            )
+        # Calculate output shape
+        output_shape = list(a.shape[:-1]) + [P]
 
-        c_matmul(a._c_tensor, b._c_tensor, out_c_tensor_ptr, N, K, P)
+        # Update output tensor shape
+        out_tensor._shape = tuple(output_shape)
 
-        out_tensor = Tensor(
-            _c_tensor_ptr=out_c_tensor_ptr,
-            requires_grad=a.requires_grad or b.requires_grad,
-        )
+        c_matmul(a._c_tensor, b._c_tensor, out_tensor._c_tensor, N, K, P)
 
         return out_tensor
 
@@ -339,10 +363,13 @@ class ReLU(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.relu_grad_op)
 
-    def forward(self, a: "Tensor") -> "Tensor":
+    def _execute_forward(self, out_tensor: "Tensor", a: "Tensor") -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(shape=a.shape, requires_grad=a.requires_grad)
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
         c_relu(a._c_tensor, out_tensor._c_tensor)
 
         return out_tensor
@@ -361,10 +388,13 @@ class Log(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.log_grad_op)
 
-    def forward(self, a: "Tensor") -> "Tensor":
-        from ..core.tensor import Tensor
+    def _execute_forward(self, out_tensor: "Tensor", a: "Tensor") -> "Tensor":
+        from py.core.tensor import Tensor
 
-        out_tensor = Tensor(shape=a.shape, requires_grad=a.requires_grad)
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
         c_log(a._c_tensor, out_tensor._c_tensor)
 
         return out_tensor
@@ -383,10 +413,13 @@ class Exp(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.exp_grad_op)
 
-    def forward(self, a: "Tensor") -> "Tensor":
+    def _execute_forward(self, out_tensor: "Tensor", a: "Tensor") -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(shape=a.shape, requires_grad=a.requires_grad)
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
         c_exp(a._c_tensor, out_tensor._c_tensor)
 
         return out_tensor
@@ -402,10 +435,13 @@ class Exp(Function):
 
 
 class Softmax(Function):
-    def forward(self, a: "Tensor") -> "Tensor":
+    def _execute_forward(self, out_tensor: "Tensor", a: "Tensor") -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(shape=a.shape, requires_grad=a.requires_grad)
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
         c_softmax(a._c_tensor, out_tensor._c_tensor)
 
         return out_tensor
@@ -425,10 +461,13 @@ class Abs(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.abs_grad_op)
 
-    def forward(self, a: "Tensor") -> "Tensor":
+    def _execute_forward(self, out_tensor: "Tensor", a: "Tensor") -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(shape=a.shape, requires_grad=a.requires_grad)
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
         c_abs(a._c_tensor, out_tensor._c_tensor)
 
         return out_tensor
@@ -447,10 +486,13 @@ class Neg(Function):
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.neg_grad_op)
 
-    def forward(self, a: "Tensor") -> "Tensor":
+    def _execute_forward(self, out_tensor: "Tensor", a: "Tensor") -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_tensor = Tensor(shape=a.shape, requires_grad=a.requires_grad)
+        # Ensure out_tensor has the correct shape
+        if not hasattr(out_tensor, "_shape") or out_tensor._shape is None:
+            out_tensor._shape = a.shape
+
         c_neg(a._c_tensor, out_tensor._c_tensor)
 
         return out_tensor
@@ -469,16 +511,12 @@ class Neg(Function):
 
 
 class Sum(Function):
-    def forward(self, a: "Tensor", axis: int = 0, keepdim: bool = True) -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", axis: int = 0, keepdim: bool = True
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_c_tensor_ptr = c_malloc_tensor_empty()
-        if not out_c_tensor_ptr:
-            raise RuntimeError("Failed to allocate empty C tensor for sum operation.")
-        c_sum(a._c_tensor, out_c_tensor_ptr, axis, keepdim)
-        out_tensor = Tensor(
-            _c_tensor_ptr=out_c_tensor_ptr, requires_grad=a.requires_grad
-        )
+        c_sum(a._c_tensor, out_tensor._c_tensor, axis, keepdim)
 
         return out_tensor
 
@@ -493,16 +531,12 @@ class Sum(Function):
 
 
 class Mean(Function):
-    def forward(self, a: "Tensor", axis: int = 0, keepdim: bool = True) -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", axis: int = 0, keepdim: bool = True
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_c_tensor_ptr = c_malloc_tensor_empty()
-        if not out_c_tensor_ptr:
-            raise RuntimeError("Failed to allocate empty C tensor for mean operation.")
-        c_mean(a._c_tensor, out_c_tensor_ptr, axis, keepdim)
-        out_tensor = Tensor(
-            _c_tensor_ptr=out_c_tensor_ptr, requires_grad=a.requires_grad
-        )
+        c_mean(a._c_tensor, out_tensor._c_tensor, axis, keepdim)
 
         return out_tensor
 
@@ -517,16 +551,12 @@ class Mean(Function):
 
 
 class Max(Function):
-    def forward(self, a: "Tensor", axis: int = 0, keepdim: bool = True) -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", axis: int = 0, keepdim: bool = True
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
-        out_c_tensor_ptr = c_malloc_tensor_empty()
-        if not out_c_tensor_ptr:
-            raise RuntimeError("Failed to allocate empty C tensor for max operation.")
-        c_max(a._c_tensor, out_c_tensor_ptr, axis, keepdim)
-        out_tensor = Tensor(
-            _c_tensor_ptr=out_c_tensor_ptr, requires_grad=a.requires_grad
-        )
+        c_max(a._c_tensor, out_tensor._c_tensor, axis, keepdim)
 
         return out_tensor
 
@@ -544,22 +574,20 @@ class Max(Function):
 
 
 class View(Function):
-    def forward(self, a: "Tensor", shape: list) -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", shape: list
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
-        if a.numel() != Tensor.safe_c_numel(
-            shape, len(shape)
-        ):  # Use Tensor's numel for comparison
+        if a.numel() != Tensor.safe_c_numel(shape, len(shape)):
             raise RuntimeError(
                 f"Unable to operate view as {a.numel()} != {Tensor.safe_c_numel(shape, len(shape))}"
             )
-        out_c_tensor_ptr = c_malloc_tensor_empty()
-        if not out_c_tensor_ptr:
-            raise RuntimeError("Failed to allocate empty C tensor for view operation.")
-        c_view(a._c_tensor, out_c_tensor_ptr, shape, len(shape))
-        out_tensor = Tensor(
-            _c_tensor_ptr=out_c_tensor_ptr, requires_grad=a.requires_grad
-        )
+
+        # Update output tensor shape
+        out_tensor._shape = tuple(shape)
+
+        c_view(a._c_tensor, out_tensor._c_tensor, shape, len(shape))
 
         return out_tensor
 
@@ -574,22 +602,22 @@ class View(Function):
 
 
 class Unsqueeze(Function):
-    def forward(self, a: "Tensor", dim: int = 0) -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", dim: int = 0
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
         if dim < 0:
             dim = a.ndim + dim + 1
         if dim > a.ndim:
             raise ValueError(f"Can't unsqueeze dim {dim}.")
-        out_c_tensor_ptr = c_malloc_tensor_empty()
-        if not out_c_tensor_ptr:
-            raise RuntimeError(
-                "Failed to allocate empty C tensor for unsqueeze operation."
-            )
-        c_unsqueeze(a._c_tensor, out_c_tensor_ptr, dim)
-        out_tensor = Tensor(
-            _c_tensor_ptr=out_c_tensor_ptr, requires_grad=a.requires_grad
-        )
+
+        # Calculate new shape
+        new_shape = list(a.shape)
+        new_shape.insert(dim, 1)
+        out_tensor._shape = tuple(new_shape)
+
+        c_unsqueeze(a._c_tensor, out_tensor._c_tensor, dim)
 
         return out_tensor
 
@@ -604,26 +632,26 @@ class Unsqueeze(Function):
 
 
 class Squeeze(Function):
-    def forward(self, a: "Tensor", dim: int = 0) -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", dim: int = 0
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
         if dim < 0:
             dim = a.ndim + dim
         if dim >= a.ndim:
-            raise ValueError(f"Can't squeeze dim {dim} as it doesn't exists.")
+            raise ValueError(f"Can't squeeze dim {dim} as it doesn't exist.")
         if a.shape[dim] != 1:
             raise RuntimeError(
                 f"Tensors can be squeezed only on shape[dim] = 1, dim = {a.shape[dim]}"
             )
-        out_c_tensor_ptr = c_malloc_tensor_empty()
-        if not out_c_tensor_ptr:
-            raise RuntimeError(
-                "Failed to allocate empty C tensor for squeeze operation."
-            )
-        c_squeeze(a._c_tensor, out_c_tensor_ptr, dim)
-        out_tensor = Tensor(
-            _c_tensor_ptr=out_c_tensor_ptr, requires_grad=a.requires_grad
-        )
+
+        # Calculate new shape
+        new_shape = list(a.shape)
+        new_shape.pop(dim)
+        out_tensor._shape = tuple(new_shape)
+
+        c_squeeze(a._c_tensor, out_tensor._c_tensor, dim)
 
         return out_tensor
 
@@ -638,7 +666,9 @@ class Squeeze(Function):
 
 
 class Transpose(Function):
-    def forward(self, a: "Tensor", n: int = -2, m: int = -1) -> "Tensor":
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", n: int = -2, m: int = -1
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
         if n < 0:
@@ -646,16 +676,14 @@ class Transpose(Function):
         if m < 0:
             m = a.ndim + m
         if n >= a.ndim or m >= a.ndim:
-            raise ValueError(f"Can't transpose around non-exsiting axes {n},{m}")
-        out_c_tensor_ptr = c_malloc_tensor_empty()
-        if not out_c_tensor_ptr:
-            raise RuntimeError(
-                "Failed to allocate empty C tensor for transpose operation."
-            )
-        c_transpose(a._c_tensor, out_c_tensor_ptr, n, m)
-        out_tensor = Tensor(
-            _c_tensor_ptr=out_c_tensor_ptr, requires_grad=a.requires_grad
-        )
+            raise ValueError(f"Can't transpose around non-existing axes {n},{m}")
+
+        # Calculate new shape after transpose
+        new_shape = list(a.shape)
+        new_shape[n], new_shape[m] = new_shape[m], new_shape[n]
+        out_tensor._shape = tuple(new_shape)
+
+        c_transpose(a._c_tensor, out_tensor._c_tensor, n, m)
 
         return out_tensor
 
@@ -670,7 +698,12 @@ class Transpose(Function):
 
 
 class Expand(Function):
-    def forward(self, a: "Tensor", shape: list[int]) -> "Tensor":
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
+        return None
+
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", shape: list[int]
+    ) -> "Tensor":
         from ..core.tensor import Tensor
 
         if a.ndim != len(shape):
@@ -680,15 +713,11 @@ class Expand(Function):
                 raise RuntimeError(
                     f"expand() error: Can't expand dim {i} from {a.shape[i]} to {shape[i]}, Only dims of 1 can be expanded."
                 )
-        out_c_tensor_ptr = c_malloc_tensor_empty()
-        if not out_c_tensor_ptr:
-            raise RuntimeError(
-                "Failed to allocate empty C tensor for expand operation."
-            )
-        c_expand(a._c_tensor, out_c_tensor_ptr, shape)
-        out_tensor = Tensor(
-            _c_tensor_ptr=out_c_tensor_ptr, requires_grad=a.requires_grad
-        )
+
+        # Update output tensor shape
+        out_tensor._shape = tuple(shape)
+
+        c_expand(a._c_tensor, out_tensor._c_tensor, shape)
 
         return out_tensor
 
