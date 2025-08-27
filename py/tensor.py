@@ -32,6 +32,17 @@ from .elnawah_bindings import (
     c_squeeze,
     c_transpose,
     c_expand,
+    c_add_grad_op,
+    c_sub_grad_op,
+    c_rsub_grad_op,
+    c_mul_grad_op,
+    c_div_grad_op,
+    c_rdiv_grad_op,
+    c_relu_grad_op,
+    c_log_grad_op,
+    c_exp_grad_op,
+    c_abs_grad_op,
+    c_neg_grad_op,
     CTensor,
     CNode,
     c_malloc_node,
@@ -244,8 +255,22 @@ class Tensor:
                 )
 
             c_sub(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+
+            if out_tensor.requires_grad:
+                out_tensor._node = Node(
+                    out_tensor, [self, other], BackwardFnType(tensor_lib.sub_grad_op)
+                )
         else:
             c_sub_scalar(self._c_tensor, other, out_tensor._c_tensor)
+
+            if out_tensor.requires_grad:
+                scalar_val = ctypes.c_float(other)
+                out_tensor._node = Node(
+                    out_tensor,
+                    [self],
+                    BackwardFnType(tensor_lib.sub_grad_op),
+                    ctypes.byref(scalar_val),
+                )
 
         return out_tensor
 
@@ -256,6 +281,15 @@ class Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
 
         c_rsub_scalar(other, self._c_tensor, out_tensor._c_tensor)
+
+        if out_tensor.requires_grad:
+            scalar_val = ctypes.c_float(other)
+            out_tensor._node = Node(
+                out_tensor,
+                [self],
+                BackwardFnType(tensor_lib.rsub_grad_op),
+                ctypes.byref(scalar_val),
+            )
 
         return out_tensor
 
@@ -270,8 +304,22 @@ class Tensor:
                 )
 
             c_mul(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+
+            if out_tensor.requires_grad:
+                out_tensor._node = Node(
+                    out_tensor, [self, other], BackwardFnType(tensor_lib.mul_grad_op)
+                )
         else:
             c_mul_scalar(self._c_tensor, other, out_tensor._c_tensor)
+
+            if out_tensor.requires_grad:
+                scalar_val = ctypes.c_float(other)
+                out_tensor._node = Node(
+                    out_tensor,
+                    [self],
+                    BackwardFnType(tensor_lib.mul_grad_op),
+                    ctypes.byref(scalar_val),
+                )
 
         return out_tensor
 
@@ -292,8 +340,22 @@ class Tensor:
                 )
 
             c_div(self._c_tensor, other._c_tensor, out_tensor._c_tensor)
+
+            if out_tensor.requires_grad:
+                out_tensor._node = Node(
+                    out_tensor, [self, other], BackwardFnType(tensor_lib.div_grad_op)
+                )
         else:
             c_div_scalar(self._c_tensor, other, out_tensor._c_tensor)
+
+            if out_tensor.requires_grad:
+                scalar_val = ctypes.c_float(other)
+                out_tensor._node = Node(
+                    out_tensor,
+                    [self],
+                    BackwardFnType(tensor_lib.div_grad_op),
+                    ctypes.byref(scalar_val),
+                )
 
         return out_tensor
 
@@ -303,6 +365,15 @@ class Tensor:
     def __rtruediv__(self, other: float) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_rdiv_scalar(other, self._c_tensor, out_tensor._c_tensor)
+
+        if out_tensor.requires_grad:
+            scalar_val = ctypes.c_float(other)
+            out_tensor._node = Node(
+                out_tensor,
+                [self],
+                BackwardFnType(tensor_lib.rdiv_grad_op),
+                ctypes.byref(scalar_val),
+            )
         return out_tensor
 
     def __matmul__(self, other: Tensor) -> Tensor:
@@ -331,6 +402,10 @@ class Tensor:
     def __neg__(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_neg(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.neg_grad_op)
+            )
         return out_tensor
 
     def sum(self, axis: int = 0, keepdim: bool = True):
@@ -505,26 +580,46 @@ class Tensor:
     def relu(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_relu(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.relu_grad_op)
+            )
         return out_tensor
 
     def log(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_log(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.log_grad_op)
+            )
         return out_tensor
 
     def exp(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_exp(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.exp_grad_op)
+            )
         return out_tensor
 
     def softmax(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_softmax(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.softmax_grad_op)
+            )
         return out_tensor
 
     def abs(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_abs(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.abs_grad_op)
+            )
         return out_tensor
 
 
@@ -550,7 +645,7 @@ def safe_c_numel(shape_ptr, ndim):
 if __name__ == "__main__":
     t = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
 
-    n = t + t
+    n = t.log()
 
     n._node.backward()
 
