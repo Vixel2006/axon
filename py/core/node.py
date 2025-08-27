@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Optional
+
 from ..elnawah_bindings.c_wrapper_functions import c_malloc_node, c_free_node
 from ..elnawah_bindings.ctypes_definitions import CTensor, CNode, BackwardFnType
 
@@ -11,7 +13,7 @@ class Node:
         self,
         out_tensor: "Tensor",
         input_tensors: list["Tensor"],
-        backward_fn,
+        backward_fn: Optional[BackwardFnType] = None,
         extras=None,
     ):
         self.out_tensor = out_tensor
@@ -42,7 +44,7 @@ class Node:
             c_prev_array,
             n_prev,
             c_extras,
-            BackwardFnType(backward_fn),
+            BackwardFnType(backward_fn) if backward_fn else BackwardFnType(0),
         )
 
         if (
@@ -51,6 +53,29 @@ class Node:
             and self.out_tensor._c_tensor.contents
         ):
             self.out_tensor._c_tensor.contents.ctx = self._c_node
+            self.out_tensor._node = self
+
+    def topo_sort(self):
+        topo = []
+        visited = set()
+
+        def visit(node):
+            if node in visited:
+                return
+            visited.add(node)
+
+            for input_tensor in node.input_tensors:
+                if input_tensor._node:
+                    visit(input_tensor._node)
+
+            topo.append(node)
+
+        visit(self)
+
+        return topo
+
+    def realize(self):
+        pass
 
     def backward(self):
         c_prev_array = (ctypes.POINTER(CTensor) * len(self.input_tensors))()
@@ -62,8 +87,9 @@ class Node:
         else:
             extras_to_pass = self._extras_obj
 
-        self.backward_fn(
-            self.out_tensor._c_tensor,
+        if self.backward_fn:
+            self.backward_fn(
+                self.out_tensor._c_tensor,
             c_prev_array,
             len(self.input_tensors),
             extras_to_pass,
@@ -73,3 +99,31 @@ class Node:
         for input_tensor in self.input_tensors:
             if input_tensor.requires_grad and input_tensor._node:
                 input_tensor._node.backward()
+
+
+if __name__ == "__main__":
+    from .tensor import Tensor
+
+    def dummy_backward(*args):
+        pass
+
+    a = Tensor(shape=(1,), data=[1.0], requires_grad=True)
+    b = Tensor(shape=(1,), data=[2.0], requires_grad=True)
+    c = Tensor(shape=(1,), data=[3.0], requires_grad=True)
+    d = Tensor(shape=(1,), data=[4.0], requires_grad=True)
+
+    node_c = Node(out_tensor=c, input_tensors=[a, b], backward_fn=dummy_backward)
+    c._node = node_c
+
+    node_d = Node(out_tensor=d, input_tensors=[c], backward_fn=dummy_backward)
+    d._node = node_d
+
+    print("Performing topological sort starting from node_d:")
+    sorted_nodes = node_d.topo_sort()
+
+    print(
+        "Topologically sorted nodes (should be c, a, b, d or similar order of a,b before c, and c before d):"
+    )
+    for node in sorted_nodes:
+        print(f"Node producing tensor with data: {node.out_tensor.data}")
+
