@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .elnawah_bindings.c_wrapper_functions import c_malloc_node, c_free_node
-from .elnawah_bindings.ctypes_definitions import CTensor, CNode, BackwardFnType
+from ..elnawah_bindings.c_wrapper_functions import c_malloc_node, c_free_node
+from ..elnawah_bindings.ctypes_definitions import CTensor, CNode, BackwardFnType
 
 import ctypes
 
@@ -69,3 +69,7 @@ class Node:
             extras_to_pass,
         )
 
+        # Recursively call backward on input nodes
+        for input_tensor in self.input_tensors:
+            if input_tensor.requires_grad and input_tensor._node:
+                input_tensor._node.backward()
