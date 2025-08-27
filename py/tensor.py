@@ -38,6 +38,11 @@ from .elnawah_bindings import (
     c_mul_grad_op,
     c_div_grad_op,
     c_rdiv_grad_op,
+    c_relu_grad_op,
+    c_log_grad_op,
+    c_exp_grad_op,
+    c_abs_grad_op,
+    c_neg_grad_op,
     CTensor,
     CNode,
     c_malloc_node,
@@ -397,6 +402,10 @@ class Tensor:
     def __neg__(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_neg(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.neg_grad_op)
+            )
         return out_tensor
 
     def sum(self, axis: int = 0, keepdim: bool = True):
@@ -571,26 +580,46 @@ class Tensor:
     def relu(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_relu(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.relu_grad_op)
+            )
         return out_tensor
 
     def log(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_log(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.log_grad_op)
+            )
         return out_tensor
 
     def exp(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_exp(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.exp_grad_op)
+            )
         return out_tensor
 
     def softmax(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_softmax(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.softmax_grad_op)
+            )
         return out_tensor
 
     def abs(self) -> Tensor:
         out_tensor = Tensor(shape=self.shape, requires_grad=self.requires_grad)
         c_abs(self._c_tensor, out_tensor._c_tensor)
+        if out_tensor.requires_grad:
+            out_tensor._node = Node(
+                out_tensor, [self], BackwardFnType(tensor_lib.abs_grad_op)
+            )
         return out_tensor
 
 
@@ -616,9 +645,7 @@ def safe_c_numel(shape_ptr, ndim):
 if __name__ == "__main__":
     t = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
 
-    n = t
-
-    n /= n
+    n = t.log()
 
     n._node.backward()
 
