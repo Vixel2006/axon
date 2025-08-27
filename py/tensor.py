@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .elnawah_bindings import (
+from .elnawah_bindings.c_wrapper_functions import (
     c_malloc_tensor_empty,
     c_malloc_tensor_shape,
     c_malloc_tensor_full,
@@ -43,12 +43,10 @@ from .elnawah_bindings import (
     c_exp_grad_op,
     c_abs_grad_op,
     c_neg_grad_op,
-    CTensor,
-    CNode,
     c_malloc_node,
-    tensor_lib,
-    BackwardFnType,  # Import BackwardFnType
 )
+from .elnawah_bindings.ctypes_definitions import CTensor, CNode, BackwardFnType
+from .elnawah_bindings.c_library_loader import tensor_lib
 
 from .node import Node
 
