@@ -1,6 +1,6 @@
 from __future__ import annotations
 import ctypes
-from typing import Any, Tuple
+from typing import Any, Tuple, Optional, List
 import sys
 
 from ..elnawah_bindings.c_wrapper_functions import (
@@ -64,7 +64,7 @@ class Function:
     ):
         raise NotImplementedError
 
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         """
         Returns the appropriate BackwardFnType for this operation.
         Subclasses should override this if they use a C-level backward function
@@ -89,9 +89,6 @@ class Function:
 
             input_tensors = [arg for arg in args if isinstance(arg, (Tensor, CTensor))]
 
-            print(f"Input Tensor: {input_tensors}")
-            print("-----------------------------")
-
             # Explicitly keep references
             ctx._output_tensor_ref = output_tensor
             ctx._input_tensors_ref = input_tensors
@@ -111,7 +108,7 @@ class Function:
 
 
 class Add(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.add_grad_op)
 
     def forward(self, a: "Tensor", b: "Tensor") -> "Tensor":
@@ -144,7 +141,7 @@ class Add(Function):
 
 
 class Sub(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.sub_grad_op)
 
     def forward(self, a: "Tensor", b: "Tensor") -> "Tensor":
@@ -178,7 +175,7 @@ class Sub(Function):
 
 
 class RSub(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.rsub_grad_op)
 
     def forward(self, a: "Tensor", b: float) -> "Tensor":
@@ -202,7 +199,7 @@ class RSub(Function):
 
 
 class Mul(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.mul_grad_op)
 
     def forward(self, a: "Tensor", b: "Tensor") -> "Tensor":
@@ -236,7 +233,7 @@ class Mul(Function):
 
 
 class Div(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.div_grad_op)
 
     def forward(self, a: "Tensor", b: "Tensor") -> "Tensor":
@@ -270,7 +267,7 @@ class Div(Function):
 
 
 class RDiv(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.rdiv_grad_op)
 
     def forward(self, a: "Tensor", b: float) -> "Tensor":  # b is scalar, a is tensor
@@ -339,7 +336,7 @@ class MatMul(Function):
 
 
 class ReLU(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.relu_grad_op)
 
     def forward(self, a: "Tensor") -> "Tensor":
@@ -361,7 +358,7 @@ class ReLU(Function):
 
 
 class Log(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.log_grad_op)
 
     def forward(self, a: "Tensor") -> "Tensor":
@@ -383,7 +380,7 @@ class Log(Function):
 
 
 class Exp(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.exp_grad_op)
 
     def forward(self, a: "Tensor") -> "Tensor":
@@ -425,7 +422,7 @@ class Softmax(Function):
 
 
 class Abs(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.abs_grad_op)
 
     def forward(self, a: "Tensor") -> "Tensor":
@@ -447,7 +444,7 @@ class Abs(Function):
 
 
 class Neg(Function):
-    def _get_backward_fn_type(self) -> BackwardFnType:
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
         return BackwardFnType(tensor_lib.neg_grad_op)
 
     def forward(self, a: "Tensor") -> "Tensor":
