@@ -70,7 +70,7 @@ class Tensor(CTensor):
             return
 
         self._c_tensor = None
-        self._node = None
+        self._node = Node(out_tensor=self, input_tensors=[], backward_fn=None)
 
         if shape is None and data is None:
             self._c_tensor = c_malloc_tensor_empty()
@@ -354,8 +354,15 @@ class Tensor(CTensor):
 if __name__ == "__main__":
     t = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
 
-    n = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
+    n = t.log()
 
-    z = t + t
+    z = t + n
 
-    z._node.backward()
+    y = z + t
+
+    graph = y._node.topo_sort()
+
+    for i, node in enumerate(graph):
+        print(f"Node: {i}")
+        print(node.out_tensor.data)
+        print("-----------------------------------------------")
