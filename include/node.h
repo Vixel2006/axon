@@ -12,8 +12,8 @@ typedef struct {
   void (*backward_fn)(Tensor *out, Tensor **prev, int n_prev, void *extras);
 } Node;
 
-Node malloc_node(Tensor *out, Tensor **prev, int n_prev, void *extras,
-                 void *backward_fn);
+Node *malloc_node(Tensor *out, Tensor **prev, int n_prev, void *extras,
+                  void (*backward_fn)(Tensor *out, Tensor **prev, int n_prev, void *extras));
 
 void free_node(Node *p);
 
