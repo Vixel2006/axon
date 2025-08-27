@@ -2,7 +2,8 @@
 #include <stdlib.h>
 
 Node *malloc_node(Tensor *out, Tensor **prev, int n_prev, void *extras,
-                 void (*backward_fn)(Tensor *out, Tensor **prev, int n_prev, void *extras)) {
+                  void *forward_fn,
+                  void *backward_fn) {
   Node *node = malloc(sizeof(Node));
   if (!node) {
     // Handle allocation error
@@ -13,6 +14,7 @@ Node *malloc_node(Tensor *out, Tensor **prev, int n_prev, void *extras,
   node->out = out;
   node->prev = prev;
   node->extras = extras;
+  node->forward_fn = forward_fn;
   node->backward_fn = backward_fn;
 
   return node;

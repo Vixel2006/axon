@@ -1,6 +1,6 @@
 import ctypes
 from .c_library_loader import tensor_lib
-from .ctypes_definitions import CTensor, CNode, BackwardFnType
+from .ctypes_definitions import CTensor, CNode
 
 if tensor_lib:
     # Define the C function signatures
@@ -38,7 +38,8 @@ if tensor_lib:
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
-        BackwardFnType,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
     ]
 
     tensor_lib.malloc_node.restype = ctypes.POINTER(CNode)
