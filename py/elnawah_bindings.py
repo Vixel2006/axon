@@ -135,6 +135,54 @@ if tensor_lib:
     ]
     tensor_lib.rdiv_grad_op.restype = None
 
+    tensor_lib.relu_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.relu_grad_op.restype = None
+
+    tensor_lib.log_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.log_grad_op.restype = None
+
+    tensor_lib.exp_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.exp_grad_op.restype = None
+
+    tensor_lib.softmax_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.softmax_grad_op.restype = None
+
+    tensor_lib.abs_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.abs_grad_op.restype = None
+
+    tensor_lib.neg_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.neg_grad_op.restype = None
+
     # Unary operations
     tensor_lib.relu_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.relu_op.restype = None
@@ -417,6 +465,24 @@ if tensor_lib:
 
     def c_rdiv_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.rdiv_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_relu_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.relu_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_log_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.log_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_exp_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.exp_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_softmax_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.softmax_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_abs_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.abs_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_neg_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.neg_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
     # Unary operations wrappers
     def c_relu(in_tensor_ptr, out_tensor_ptr):
