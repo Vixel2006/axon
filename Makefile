@@ -31,7 +31,7 @@ init:
 	$(PIP) install pytest flake8 black
 	@echo "--- Virtual environment setup complete ---"
 
-build: prepare $(BUILD_DIR)
+build: prepare init $(BUILD_DIR)
 	@echo "--- Building C project with CMake ---"
 	mkdir -p $(BUILD_DIR)
 	$(CMAKE) -S . -B $(BUILD_DIR)

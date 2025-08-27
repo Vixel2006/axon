@@ -8,7 +8,7 @@ from ..elnawah_bindings.c_wrapper_functions import (
     c_numel,
     c_compute_strides,
 )
-from ..elnawah_bindings.ctypes_definitions import CTensor, CNode, BackwardFnType
+from ..elnawah_bindings.ctypes_definitions import CTensor
 from ..elnawah_bindings.c_library_loader import tensor_lib
 
 from .node import Node
@@ -70,7 +70,14 @@ class Tensor(CTensor):
             return
 
         self._c_tensor = None
-        self._node = Node(out_tensor=self, input_tensors=[], backward_fn=None)
+        self._node = Node(
+            out_tensor=self,
+            input_tensors=[],
+            forward_fn=None,
+            forward_args=[],
+            forward_kwargs={},
+            backward_fn=None,
+        )
 
         if shape is None and data is None:
             self._c_tensor = c_malloc_tensor_empty()
@@ -117,7 +124,13 @@ class Tensor(CTensor):
             raise ValueError("Invalid tensor: NULL data pointer")
 
         try:
-            n = int(np.prod(self._shape)) if self._shape else 0
+            shape = (
+                self._shape
+                if self._shape is not None
+                else [t.shape[i] for i in range(t.ndim)]
+            )
+
+            n = int(np.prod(shape)) if shape else 0
 
             if n <= 0:
                 raise ValueError(f"Invalid tensor size: {n}")
@@ -130,7 +143,7 @@ class Tensor(CTensor):
                     raise ValueError(f"Failed to access tensor data at index {i}: {e}")
 
             np_array = np.array(flat_data, dtype=np.float32)
-            return np_array.reshape(self._shape)
+            return np_array.reshape(shape)
 
         except Exception as e:
             raise ValueError(f"Failed to convert tensor data to numpy array: {e}")
@@ -288,17 +301,19 @@ class Tensor(CTensor):
     def expand(self, shape: list[int]) -> Tensor:
         return Expand.apply(self, shape)
 
-    def broadcast(self, shape: list[int]) -> Tensor:
-        input_c_tensor = self._c_tensor.contents
-
+    def broadcast(self, shape: list[int]) -> "Tensor":
         if self.ndim > len(shape):
             raise ValueError(
                 f"broadcast() error: source tensor has higher rank than target shape."
             )
 
-        for i in range(len(shape) - self.ndim):
-            t = self.unsqueeze(0)
+        t = self  # Start with self
 
+        # Add dimensions at the beginning
+        for i in range(len(shape) - self.ndim):
+            t = t.unsqueeze(0)
+
+        # Check if broadcasting is possible
         for i in range(len(shape)):
             if shape[i] != t.shape[i] and t.shape[i] != 1:
                 raise RuntimeError(
@@ -306,7 +321,6 @@ class Tensor(CTensor):
                 )
 
         z = t.expand(shape)
-
         return z
 
     def relu(self) -> Tensor:
@@ -352,17 +366,15 @@ class Tensor(CTensor):
 
 
 if __name__ == "__main__":
-    t = Tensor([2, 2, 3], [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
+    t = Tensor((2, 2, 3), [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
+    n = Tensor((2, 3, 2), [[[2, 3], [4, 5], [6, 7]], [[2, 3], [4, 5], [6, 7]]])
 
-    n = t.log()
+    z = t @ n
 
-    z = t + n
+    x = Tensor((2, 2, 2), [[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
 
-    y = z + t
+    y = z + x
 
-    graph = y._node.topo_sort()
+    y._node.realize()
 
-    for i, node in enumerate(graph):
-        print(f"Node: {i}")
-        print(node.out_tensor.data)
-        print("-----------------------------------------------")
+    print(y)
