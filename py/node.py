@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-from .elnawah_bindings import (
-    c_malloc_node,
-    c_free_node,
-    CTensor,
-    CNode,
-    BackwardFnType,
-)
+from .elnawah_bindings.c_wrapper_functions import c_malloc_node, c_free_node
+from .elnawah_bindings.ctypes_definitions import CTensor, CNode, BackwardFnType
 
 import ctypes
 
