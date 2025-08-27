@@ -1,7 +1,7 @@
 import ctypes
 import numpy as np
 from .c_library_loader import tensor_lib
-from .ctypes_definitions import CTensor, CNode, BackwardFnType
+from .ctypes_definitions import CTensor, CNode
 
 if tensor_lib:
     tensor_lib.malloc_node.argtypes = [
@@ -9,7 +9,8 @@ if tensor_lib:
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
-        BackwardFnType,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
     ]
     tensor_lib.malloc_node.restype = CNode
 
@@ -18,6 +19,7 @@ if tensor_lib:
 
     tensor_lib.malloc_tensor_empty.restype = ctypes.POINTER(CTensor)
     tensor_lib.malloc_tensor_shape.restype = ctypes.POINTER(CTensor)
+    tensor_lib.malloc_tensor_full.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_float), ctypes.c_bool, ctypes.POINTER(ctypes.c_float)]
     tensor_lib.malloc_tensor_full.restype = ctypes.POINTER(CTensor)
     tensor_lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
     tensor_lib.free_tensor.restype = None
@@ -207,10 +209,10 @@ if tensor_lib:
         if tensor_ptr:
             tensor_lib.free_tensor(tensor_ptr)
 
-    def c_malloc_node(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras, backward_fn):
+    def c_malloc_node(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras, forward_fn, backward_fn):
         c_prev_array = (ctypes.POINTER(CTensor) * n_prev)(*prev_tensor_ptrs)
         return tensor_lib.malloc_node(
-            out_tensor_ptr, c_prev_array, n_prev, extras, backward_fn
+            out_tensor_ptr, c_prev_array, n_prev, extras, forward_fn, backward_fn
         )
 
     def c_free_node(node_ptr):
