@@ -82,7 +82,6 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
   Tensor *t = malloc(sizeof(Tensor));
   if (!t) return NULL;
 
-  memset(t, 0, sizeof(Tensor));
   t->ndim = ndim;
 
   if (ndim == 0) {
@@ -93,6 +92,7 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
       free_tensor(t);
       return NULL;
     }
+
     t->data[0] = 0.0f;
 
     if (requires_grad) {
@@ -133,6 +133,8 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
   }
 
   memset(t->data, 0, size * sizeof(float));
+
+  t->owns_data = true;
 
   if (requires_grad) {
     t->requires_grad = true;
@@ -206,6 +208,8 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
     }
   }
 
+  t->owns_data = true;
+
   t->data = malloc(size * sizeof(float));
   if (!t->data) {
     free_tensor(t);
@@ -239,9 +243,9 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
  */
 void free_tensor(Tensor *t) {
   if (t) {
-    if (t->data) free(t->data);
+    if (t->data && t->owns_data) free(t->data);
 
-    if (t->grad) free(t->grad);
+    if (t->grad && t->owns_data) free(t->grad);
 
     if (t->shape) free(t->shape);
 

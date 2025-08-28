@@ -1,7 +1,8 @@
-#include "ops.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
+
+#include "ops.h"
 
 /**
  * @brief Applies the ReLU activation function element-wise.
@@ -34,10 +35,6 @@ void relu_op(Tensor *in, Tensor *out) {
   }
 
   out->requires_grad = in->requires_grad;
-
-  if (!out->requires_grad) {
-    free_tensor(in);
-  }
 }
 
 /**
@@ -68,10 +65,6 @@ void log_op(Tensor *in, Tensor *out) {
   }
 
   out->requires_grad = in->requires_grad;
-
-  if (!out->requires_grad) {
-    free_tensor(in);
-  }
 }
 
 /**
@@ -102,10 +95,6 @@ void exp_op(Tensor *in, Tensor *out) {
   }
 
   out->requires_grad = in->requires_grad;
-
-  if (!out->requires_grad) {
-    free_tensor(in);
-  }
 }
 
 void softmax_op(Tensor *in, Tensor *out) {}
@@ -163,7 +152,7 @@ void abs_op(Tensor *in, Tensor *out) {
   int i = 0;
   int size = numel(in->shape, in->ndim);
   __m256 mask = _mm256_castsi256_ps(
-      _mm256_set1_epi32(0x7FFFFFFF)); // mask to remove sign bit
+      _mm256_set1_epi32(0x7FFFFFFF));  // mask to remove sign bit
 
   for (; i + 7 < size; i += 8) {
     __m256 x = _mm256_loadu_ps(in->data + i);
@@ -176,8 +165,4 @@ void abs_op(Tensor *in, Tensor *out) {
   }
 
   out->requires_grad = in->requires_grad;
-
-  if (!out->requires_grad) {
-    free_tensor(in);
-  }
 }
