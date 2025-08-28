@@ -280,7 +280,7 @@ if tensor_lib:
         return tensor_lib.numel(c_shape, ndim)
 
     def c_set_ones_grad(tensor_ptr):
-        return tensorlib.set_ones_grad(tensor_ptr)
+        return tensor_lib.set_ones_grad(tensor_ptr)
 
     def c_compute_strides(shape, ndim):
         if ndim == 0:

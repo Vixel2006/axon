@@ -77,8 +77,8 @@ class Node:
             self.out_tensor._c_tensor.contents.ctx = self._c_node
             self.out_tensor._node = self
 
-    def topo_sort(self):
-        topo = []
+    def topo_sort(self) -> List[Node]:
+        graph = []
         visited = set()
 
         def visit(node):
@@ -90,14 +90,13 @@ class Node:
                 if hasattr(input_tensor, "_node") and input_tensor._node:
                     visit(input_tensor._node)
 
-            topo.append(node)
+            graph.append(node)
 
         visit(self)
 
-        return topo
+        return graph
 
-    def realize(self):
-        graph = self.topo_sort()
+    def realize(self, graph):
         for node in graph:
             if node.forward_fn:
                 result_tensor = node.forward_fn(
@@ -120,40 +119,39 @@ class Node:
                 if node._c_node and not node._c_node.out:
                     node._c_node.out = node.out_tensor._c_tensor
 
-    def backward(self):
-        self.realize()
+    def backward(self, graph):
+        for i, node in enumerate(graph):
+            c_prev_array = (ctypes.POINTER(CTensor) * len(node.input_tensors))()
+            for i, t in enumerate(node.input_tensors):
+                c_prev_array[i] = t._c_tensor
 
-        c_prev_array = (ctypes.POINTER(CTensor) * len(self.input_tensors))()
-        for i, t in enumerate(self.input_tensors):
-            c_prev_array[i] = t._c_tensor
+            if isinstance(node._extras_obj, ctypes._SimpleCData):
+                extras_to_pass = ctypes.byref(node._extras_obj)
+            else:
+                extras_to_pass = node._extras_obj
 
-        if isinstance(self._extras_obj, ctypes._SimpleCData):
-            extras_to_pass = ctypes.byref(self._extras_obj)
-        else:
-            extras_to_pass = self._extras_obj
+            if node._python_backward_fn:
+                node._python_backward_fn(
+                    node.out_tensor._c_tensor,
+                    c_prev_array,
+                    len(node.input_tensors),
+                    extras_to_pass,
+                )
+            elif node.backward_fn:
+                node.backward_fn(
+                    node.out_tensor._c_tensor,
+                    c_prev_array,
+                    len(node.input_tensors),
+                    extras_to_pass,
+                )
 
-        if self._python_backward_fn:
-            self._python_backward_fn(
-                self.out_tensor._c_tensor,
-                c_prev_array,
-                len(self.input_tensors),
-                extras_to_pass,
-            )
-        elif self.backward_fn:
-            self.backward_fn(
-                self.out_tensor._c_tensor,
-                c_prev_array,
-                len(self.input_tensors),
-                extras_to_pass,
-            )
-
-        for input_tensor in self.input_tensors:
-            if (
-                input_tensor.requires_grad
-                and hasattr(input_tensor, "_node")
-                and input_tensor._node
-            ):
-                input_tensor._node.backward()
+            for input_tensor in node.input_tensors:
+                if (
+                    input_tensor.requires_grad
+                    and hasattr(input_tensor, "_node")
+                    and input_tensor._node
+                ):
+                    input_tensor._node.backward(graph[i + 1 :])
 
 
 if __name__ == "__main__":
