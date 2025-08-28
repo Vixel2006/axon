@@ -3,6 +3,21 @@
 #include <math.h>
 #include <sleef.h>
 
+/**
+ * @brief Backward pass for addition operation.
+ *
+ * Accumulates gradients into the inputs of an addition operation.
+ * Handles both tensor + tensor and tensor + scalar cases.
+ *
+ * @param out      Output tensor whose gradient is being propagated.
+ * @param prev     Array of input tensors (1 or 2 depending on the case).
+ * @param n_prev   Number of input tensors (1 for scalar add, 2 for tensor add).
+ * @param extras   Pointer to scalar value if scalar addition was used,
+ * otherwise NULL.
+ *
+ * @effects Modifies `prev[i]->grad` in-place by adding contributions from
+ * `out->grad`.
+ */
 void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   if (n_prev == 2) {
     Tensor *a = prev[0];
@@ -58,6 +73,21 @@ void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
+/**
+ * @brief Backward pass for subtraction operation.
+ *
+ * Accumulates gradients into the inputs of a subtraction operation.
+ * Handles both tensor - tensor and tensor - scalar cases.
+ *
+ * @param out      Output tensor whose gradient is being propagated.
+ * @param prev     Array of input tensors (1 or 2 depending on the case).
+ * @param n_prev   Number of input tensors (1 for scalar sub, 2 for tensor sub).
+ * @param extras   Pointer to scalar value if scalar subtraction was used,
+ * otherwise NULL.
+ *
+ * @effects Modifies `prev[i]->grad` in-place by adding or subtracting
+ * contributions from `out->grad`.
+ */
 void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   if (n_prev == 2) {
     Tensor *a = prev[0];
@@ -113,6 +143,18 @@ void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
+/**
+ * @brief Backward pass for reverse subtraction (scalar - tensor).
+ *
+ * Computes gradients when the forward op was `b - a` (scalar minus tensor).
+ *
+ * @param out      Output tensor whose gradient is being propagated.
+ * @param prev     Array containing the single tensor input.
+ * @param n_prev   Should always be 1 for rsub.
+ * @param extras   Pointer to scalar value `b` used in forward pass.
+ *
+ * @effects Subtracts `out->grad` from `a->grad`.
+ */
 void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
   float b = *((float *)extras);
@@ -133,6 +175,20 @@ void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
+/**
+ * @brief Backward pass for multiplication operation.
+ *
+ * Accumulates gradients into the inputs of a multiplication operation.
+ * Handles both tensor * tensor and tensor * scalar cases.
+ *
+ * @param out      Output tensor whose gradient is being propagated.
+ * @param prev     Array of input tensors (1 or 2 depending on the case).
+ * @param n_prev   Number of input tensors (1 for scalar mul, 2 for tensor mul).
+ * @param extras   Pointer to scalar value if scalar multiplication was used,
+ * otherwise NULL.
+ *
+ * @effects Updates gradients of inputs using the product rule.
+ */
 void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   if (n_prev == 2) {
     Tensor *a = prev[0];
@@ -191,6 +247,20 @@ void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
+/**
+ * @brief Backward pass for division operation.
+ *
+ * Accumulates gradients into the inputs of a division operation.
+ * Handles both tensor / tensor and tensor / scalar cases.
+ *
+ * @param out      Output tensor whose gradient is being propagated.
+ * @param prev     Array of input tensors (1 or 2 depending on the case).
+ * @param n_prev   Number of input tensors (1 for scalar div, 2 for tensor div).
+ * @param extras   Pointer to scalar value if scalar division was used,
+ * otherwise NULL.
+ *
+ * @effects Updates gradients of inputs according to the quotient rule.
+ */
 void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   if (n_prev == 2) {
     Tensor *a = prev[0];
@@ -253,6 +323,19 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
+/**
+ * @brief Backward pass for reverse division (scalar / tensor).
+ *
+ * Computes gradients when the forward op was `b / a` (scalar divided by
+ * tensor).
+ *
+ * @param out      Output tensor whose gradient is being propagated.
+ * @param prev     Array containing the single tensor input.
+ * @param n_prev   Should always be 1 for rdiv.
+ * @param extras   Pointer to scalar value `b` used in forward pass.
+ *
+ * @effects Updates `a->grad` using `-b / (a^2)` multiplied by `out->grad`.
+ */
 void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
   float b = *((float *)extras);

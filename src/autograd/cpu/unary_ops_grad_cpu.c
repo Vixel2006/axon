@@ -3,6 +3,17 @@
 #include <math.h>
 #include <sleef.h>
 
+/**
+ * @brief Backward pass for ReLU activation.
+ *
+ * @param out The output tensor from the forward pass (contains gradient).
+ * @param prev Array of input tensors (only one for ReLU).
+ * @param n_prev Number of previous tensors (should be 1).
+ * @param extras Unused (set to NULL).
+ *
+ * @effect Accumulates gradient into `prev[0]->grad`, masking out non-positive
+ * values.
+ */
 void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
 
@@ -25,6 +36,17 @@ void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
+/**
+ * @brief Backward pass for natural logarithm (log).
+ *
+ * @param out The output tensor from the forward pass (contains gradient).
+ * @param prev Array of input tensors (only one for log).
+ * @param n_prev Number of previous tensors (should be 1).
+ * @param extras Unused (set to NULL).
+ *
+ * @effect Accumulates gradient into `prev[0]->grad` using derivative d/dx
+ * log(x) = 1/x.
+ */
 void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
 
@@ -47,6 +69,18 @@ void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
+/**
+ * @brief Backward pass for exponential function (exp).
+ *
+ * @param out The output tensor from the forward pass (contains gradient and
+ * data).
+ * @param prev Array of input tensors (only one for exp).
+ * @param n_prev Number of previous tensors (should be 1).
+ * @param extras Unused (set to NULL).
+ *
+ * @effect Accumulates gradient into `prev[0]->grad` using derivative d/dx
+ * exp(x) = exp(x).
+ */
 void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
 
@@ -70,6 +104,17 @@ void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
 void softmax_grad_op(Tensor *in, Tensor *out) {}
 
+/**
+ * @brief Backward pass for negation (-x).
+ *
+ * @param out The output tensor from the forward pass (contains gradient).
+ * @param prev Array of input tensors (only one for neg).
+ * @param n_prev Number of previous tensors (should be 1).
+ * @param extras Unused (set to NULL).
+ *
+ * @effect Accumulates gradient into `prev[0]->grad` using derivative d/dx (-x)
+ * = -1.
+ */
 void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
 
@@ -93,6 +138,18 @@ void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     a->grad[i] += -out->grad[i];
   }
 }
+
+/**
+ * @brief Backward pass for absolute value (abs).
+ *
+ * @param out The output tensor from the forward pass (contains gradient).
+ * @param prev Array of input tensors (only one for abs).
+ * @param n_prev Number of previous tensors (should be 1).
+ * @param extras Unused (set to NULL).
+ *
+ * @effect Accumulates gradient into `prev[0]->grad` using derivative d/dx
+ * abs(x) = sign(x).
+ */
 
 void abs_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];

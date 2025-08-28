@@ -7,9 +7,28 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * @brief Computes the sum of tensor elements along a given axis.
+ *
+ * Reduces tensor `a` by summing elements along the specified axis.
+ * Stores the result in `out`. Supports optional dimension retention
+ * via `keepdim`.
+ *
+ * @param a        Input tensor.
+ * @param out      Output tensor (allocated by caller).
+ * @param axis     Dimension along which to reduce.
+ * @param keepdim  If true, retains reduced dimension with size=1.
+ *
+ * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
+ * @effects Fills `out->data` with sums along `axis`.
+ * @effects Shares autograd flag (`requires_grad`) with input `a`.
+ * @note Uses AVX2 SIMD for inner-loop summation when stride == 1.
+ */
 void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
+  // 1. Adjust ndim for output (drop or keep reduction axis)
   out->ndim = keepdim ? a->ndim : a->ndim - 1;
 
+  // 2. Build output shape (drop axis unless keepdim=true)
   out->shape = (int *)malloc(out->ndim * sizeof(int));
   if (!out->shape) {
     fprintf(stderr, "Error: Failed to allocate memory for out->shape\n");
@@ -51,6 +70,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
   memset(out->data, 0, out_total_size * sizeof(float));
 
+  // 3. Decompose shape into batch × reduction × post parts
   int batch_num = 1;
   for (int i = 0; i < axis; ++i) {
     batch_num *= a->shape[i];
@@ -63,6 +83,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
     post_num *= a->shape[i];
   }
 
+  // Temp buffer for computing output coordinates
   int *out_coords = (int *)malloc(out->ndim * sizeof(int));
   if (!out_coords) {
     fprintf(stderr, "Error: Failed to allocate memory for out_coords\n");
@@ -73,12 +94,16 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   size_t reduction_stride_a = a->strides[axis];
   const int VEC_SIZE = 8;
 
+  // 4. Loop over "batches" × "post" slices (everything except reduced axis)
   for (int batch_idx_linear = 0; batch_idx_linear < batch_num;
        ++batch_idx_linear) {
     for (int post_idx_linear = 0; post_idx_linear < post_num;
          ++post_idx_linear) {
       float current_sum_val = 0.0f;
 
+      // ========================
+      // Compute output coords
+      // ========================
       int temp_idx = batch_idx_linear;
       int out_dim_curr = 0;
       for (int d = 0; d < axis; ++d) {
@@ -104,11 +129,15 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         temp_idx %= product_trailing_suffix;
       }
 
+      // Map output coords to flat index in out->data
       size_t out_offset = 0;
       for (int d = 0; d < out->ndim; ++d) {
         out_offset += (size_t)out_coords[d] * out->strides[d];
       }
 
+      // =========================
+      // Compute base input offset
+      // =========================
       size_t base_in_offset = 0;
       int current_a_dim_for_base = 0;
 
@@ -122,7 +151,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         base_in_offset += (size_t)coord * a->strides[current_a_dim_for_base++];
         temp_idx %= product_trailing_prefix;
       }
-      current_a_dim_for_base++;
+      current_a_dim_for_base++; // skip reduction axis
 
       temp_idx = post_idx_linear;
       for (int d = axis + 1; d < a->ndim; ++d) {
@@ -135,6 +164,9 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         temp_idx %= product_trailing_suffix;
       }
 
+      // =======================
+      // Reduction loop
+      // =======================
       int i = 0;
 
       if (reduction_stride_a == 1) {
@@ -167,6 +199,23 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->requires_grad = a->requires_grad;
 }
 
+/**
+ * @brief Computes the mean of tensor elements along a given axis.
+ *
+ * Reduces tensor `a` by averaging elements along the specified axis.
+ * Stores the result in `out`. Supports optional dimension retention
+ * via `keepdim`.
+ *
+ * @param a        Input tensor.
+ * @param out      Output tensor (allocated by caller).
+ * @param axis     Dimension along which to reduce.
+ * @param keepdim  If true, retains reduced dimension with size=1.
+ *
+ * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
+ * @effects Fills `out->data` with mean values along `axis`.
+ * @effects Shares autograd flag (`requires_grad`) with input `a`.
+ * @note Internally computes sum with AVX2 SIMD and divides by reduction size.
+ */
 void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->ndim = keepdim ? a->ndim : a->ndim - 1;
 
@@ -327,6 +376,23 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->requires_grad = a->requires_grad;
 }
 
+/**
+ * @brief Computes the maximum of tensor elements along a given axis.
+ *
+ * Reduces tensor `a` by taking the maximum along the specified axis.
+ * Stores the result in `out`. Supports optional dimension retention
+ * via `keepdim`.
+ *
+ * @param a        Input tensor.
+ * @param out      Output tensor (allocated by caller).
+ * @param axis     Dimension along which to reduce.
+ * @param keepdim  If true, retains reduced dimension with size=1.
+ *
+ * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
+ * @effects Fills `out->data` with maximum values along `axis`.
+ * @effects Shares autograd flag (`requires_grad`) with input `a`.
+ * @note Uses AVX2 SIMD vectorized max for stride==1, with scalar fallback.
+ */
 void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->ndim = keepdim ? a->ndim : a->ndim - 1;
 
