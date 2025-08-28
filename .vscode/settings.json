@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "/home/yushi/code/neura",
+    "cmake.sourceDirectory": "/home/yushi/code/elnawah/elnawah",
     "files.associations": {
         "deque": "cpp",
         "string": "cpp",
@@ -81,5 +81,13 @@
         "typeinfo": "cpp",
         "valarray": "cpp",
         "variant": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled",
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportGeneralTypeIssues": "none",
+        "reportAttributeAccessIssue": "none",
+        "reportInvalidTypeForm": "none",
+        "reportUndefinedVariable": "none",
+        "reportArgumentType": "none"
     }
 }

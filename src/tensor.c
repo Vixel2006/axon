@@ -1,4 +1,5 @@
 #include "tensor.h"
+
 #include <immintrin.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,12 +12,10 @@
  * @return int   Flattened size (product of all dims). Returns 0 if invalid.
  */
 int numel(const int *shape, int ndim) {
-  if (ndim <= 0 || !shape)
-    return 0;
+  if (ndim <= 0 || !shape) return 0;
   int size = 1;
   for (int i = 0; i < ndim; ++i) {
-    if (shape[i] <= 0)
-      return 0;
+    if (shape[i] <= 0) return 0;
     size *= shape[i];
   }
   return size;
@@ -30,12 +29,10 @@ int numel(const int *shape, int ndim) {
  * @return int*  Newly allocated array of strides (caller frees). NULL on error.
  */
 int *compute_strides(const int *shape, int ndim) {
-  if (ndim <= 0 || !shape)
-    return NULL;
+  if (ndim <= 0 || !shape) return NULL;
 
   int *strides = malloc(ndim * sizeof(int));
-  if (!strides)
-    return NULL;
+  if (!strides) return NULL;
 
   strides[ndim - 1] = 1;
   for (int i = ndim - 2; i >= 0; --i) {
@@ -65,8 +62,7 @@ void set_ones_grad(Tensor *t) {
  */
 Tensor *malloc_tensor_empty() {
   Tensor *t = malloc(sizeof(Tensor));
-  if (!t)
-    return NULL;
+  if (!t) return NULL;
 
   memset(t, 0, sizeof(Tensor));
   return t;
@@ -81,12 +77,10 @@ Tensor *malloc_tensor_empty() {
  * @return Tensor*       Newly allocated tensor with zeroed data/gradients.
  */
 Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
-  if (ndim < 0 || (ndim > 0 && !shape))
-    return NULL;
+  if (ndim < 0 || (ndim > 0 && !shape)) return NULL;
 
   Tensor *t = malloc(sizeof(Tensor));
-  if (!t)
-    return NULL;
+  if (!t) return NULL;
 
   memset(t, 0, sizeof(Tensor));
   t->ndim = ndim;
@@ -166,12 +160,10 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
  */
 Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
                            float *data, bool requires_grad, float *grad) {
-  if (ndim < 0 || (ndim > 0 && (!shape || !data)))
-    return NULL;
+  if (ndim < 0 || (ndim > 0 && (!shape || !data))) return NULL;
 
   Tensor *t = malloc(sizeof(Tensor));
-  if (!t)
-    return NULL;
+  if (!t) return NULL;
 
   memset(t, 0, sizeof(Tensor));
   t->ndim = ndim;
@@ -247,17 +239,13 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
  */
 void free_tensor(Tensor *t) {
   if (t) {
-    if (t->data)
-      free(t->data);
+    if (t->data) free(t->data);
 
-    if (t->grad)
-      free(t->grad);
+    if (t->grad) free(t->grad);
 
-    if (t->shape)
-      free(t->shape);
+    if (t->shape) free(t->shape);
 
-    if (t->strides)
-      free(t->strides);
+    if (t->strides) free(t->strides);
 
     free(t);
   }
