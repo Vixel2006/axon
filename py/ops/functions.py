@@ -70,6 +70,22 @@ from .lazy_ops import (
 
 
 class Function:
+    """
+    Base class for differentiable operations in the autograd engine.
+
+    Each subclass represents a single differentiable operation and is
+    responsible for:
+      - Defining the forward computation (`_execute_forward`)
+      - Registering a backward function (`_get_backward_fn_type`)
+      - Optionally saving tensors for use in backward
+
+    Attributes:
+        saved_tensors (Tuple[Tensor]): Tensors saved for backward.
+        extras (Any): Extra data passed to forward/backward (e.g., scalars).
+        _output_tensor_ref (Tensor): Reference to the output tensor.
+        _input_tensors_ref (List[Tensor]): References to input tensors.
+    """
+
     def __init__(self):
         self.saved_tensors: Tuple["Tensor", ...] = ()
         self.extras: Any = None
@@ -77,6 +93,16 @@ class Function:
         self._input_tensors_ref: List["Tensor"] = []
 
     def forward(self, *args: Any, **kwargs: Any) -> "Tensor":
+        """
+        Defines the forward computation.
+
+        Args:
+            *args: Input tensors or scalars.
+            **kwargs: Additional parameters.
+
+        Returns:
+            Tensor: The result of the operation.
+        """
         raise NotImplementedError
 
     def backward(
@@ -86,6 +112,17 @@ class Function:
         n_prev: int,
         extras: ctypes.c_void_p,
     ):
+        """
+        Defines the backward computation.
+
+        Args:
+            *out_tensor_ptr: The tensor outputed from the operation
+            **prev_tensor_ptr: Tensors we put into the operation.
+            n_prev: number of tensors that get into the operation
+
+        Returns:
+            Tensor: The result of the operation.
+        """
         raise NotImplementedError
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -105,6 +142,30 @@ class Function:
 
     @classmethod
     def apply(cls, *args: Any, **kwargs: Any) -> "Tensor":
+        """
+        apply:
+        Entry point for applying an operation within the autograd system.
+
+        Description:
+        - Creates a new output Tensor resulting from applying the operation.
+        - If any input tensor requires gradients, a new Node is created to
+          capture the computation graph for lazy execution and backpropagation.
+        - If no gradients are required, the forward computation is executed
+          immediately in eager mode.
+
+        Parameters:
+        - *args (Any): Input arguments to the operation (can include Tensors or raw values).
+        - **kwargs (Any): Keyword arguments to the operation.
+
+        Returns:
+        - Tensor: The output tensor produced by the operation.
+
+        Effects:
+        - When gradients are required, attaches a Node to the output tensor to record
+          dependencies and backward function.
+        - When gradients are not required, executes forward immediately and stores
+          the result directly in the output tensor.
+        """
         ctx = cls()
         from py.core.tensor import Tensor
 
@@ -148,6 +209,21 @@ class Function:
 
 
 class Add(Function):
+    """
+    Elementwise addition.
+
+    Forward:
+        out = a + b
+
+    Backward:
+        dL/da = dL/dout
+        dL/db = dL/dout
+
+    Notes:
+        - Supports tensor-tensor and tensor-scalar addition.
+        - Registers C-level backward function `c_add_grad_op`.
+    """
+
     lazy_op_class = LazyAdd
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -177,6 +253,21 @@ class Add(Function):
 
 
 class Sub(Function):
+    """
+    Elementwise substration.
+
+    Forward:
+        out = a - b
+
+    Backward:
+        dL/da = dL/dout
+        dL/db = -dL/dout
+
+    Notes:
+        - Supports tensor-tensor and tensor-scalar addition.
+        - Registers C-level backward function `c_sub_grad_op`.
+    """
+
     lazy_op_class = LazySub
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -207,6 +298,21 @@ class Sub(Function):
 
 
 class RSub(Function):
+    """
+    Reverse elementwise substraction (scalar - tensor).
+
+    Forward:
+        out = b - a
+
+    Backward:
+        dL/da = -dL/dout
+
+    Notes:
+        - Only supports scalar substracted by tensor.
+        - Uses C-level kernel `c_rsub_scalar`.
+        - Registers C-level backward function `c_rsub_grad_op`.
+    """
+
     lazy_op_class = LazyRSub
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -232,6 +338,22 @@ class RSub(Function):
 
 
 class Mul(Function):
+    """
+    Elementwise multiplication.
+
+    Forward:
+        out = a * b
+
+    Backward:
+        dL/da = b * dL/dout
+        dL/db = a * dL/dout
+
+    Notes:
+        - Supports tensor-tensor and tensor-scalar multiplication.
+        - Uses C-level kernels `c_mul` and `c_mul_scalar`.
+        - Registers C-level backward function `c_mul_grad_op`.
+    """
+
     lazy_op_class = LazyMul
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -262,6 +384,22 @@ class Mul(Function):
 
 
 class Div(Function):
+    """
+    Elementwise division.
+
+    Forward:
+        out = a / b
+
+    Backward:
+        dL/da = (1 / b) * dL/dout
+        dL/db = -(a / b^2) * dL/dout
+
+    Notes:
+        - Supports tensor-tensor and tensor-scalar division.
+        - Uses C-level kernels `c_div` and `c_div_scalar`.
+        - Registers C-level backward function `c_div_grad_op`.
+    """
+
     lazy_op_class = LazyDiv
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -292,6 +430,21 @@ class Div(Function):
 
 
 class RDiv(Function):
+    """
+    Reverse elementwise division (scalar / tensor).
+
+    Forward:
+        out = b / a
+
+    Backward:
+        dL/da = -(b / a^2) * dL/dout
+
+    Notes:
+        - Only supports scalar divided by tensor.
+        - Uses C-level kernel `c_rdiv_scalar`.
+        - Registers C-level backward function `c_rdiv_grad_op`.
+    """
+
     lazy_op_class = LazyRDiv
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -317,6 +470,22 @@ class RDiv(Function):
 
 
 class MatMul(Function):
+    """
+    Matrix multiplication.
+
+    Forward:
+        out = a @ b
+
+    Backward:
+        dL/da = dL/dout @ b^T
+        dL/db = a^T @ dL/dout
+
+    Notes:
+        - Requires that a.shape[-1] == b.shape[-2].
+        - Uses C-level kernel `c_matmul`.
+        - Backward not yet implemented (TODO: `c_matmul_grad_op`).
+    """
+
     lazy_op_class = LazyMatMul
 
     def _execute_forward(
@@ -353,6 +522,19 @@ class MatMul(Function):
 
 
 class ReLU(Function):
+    """
+    Rectified Linear Unit (ReLU).
+
+    Forward:
+        out = max(0, a)
+
+    Backward:
+        dL/da = dL/dout if a > 0 else 0
+
+    Notes:
+        Uses efficient C SIMD kernels for forward and backward.
+    """
+
     lazy_op_class = LazyReLU
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -376,6 +558,20 @@ class ReLU(Function):
 
 
 class Log(Function):
+    """
+    Natural logarithm.
+
+    Forward:
+        out = log(a)
+
+    Backward:
+        dL/da = (1 / a) * dL/dout
+
+    Notes:
+        - Uses C-level SIMD kernel `c_log`.
+        - Registers C-level backward function `c_log_grad_op`.
+    """
+
     lazy_op_class = LazyLog
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -399,6 +595,20 @@ class Log(Function):
 
 
 class Exp(Function):
+    """
+    Exponential function.
+
+    Forward:
+        out = exp(a)
+
+    Backward:
+        dL/da = exp(a) * dL/dout
+
+    Notes:
+        - Uses C-level SIMD kernel `c_exp`.
+        - Registers C-level backward function `c_exp_grad_op`.
+    """
+
     lazy_op_class = LazyExp
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -422,6 +632,20 @@ class Exp(Function):
 
 
 class Softmax(Function):
+    """
+    Softmax activation (over the last dimension).
+
+    Forward:
+        out[i] = exp(a[i]) / Σ_j exp(a[j])
+
+    Backward:
+        dL/da = out * (dL/dout - Σ_j(dL/dout_j * out_j))
+
+    Notes:
+        - Uses C-level kernel `c_softmax`.
+        - Backward not yet implemented (TODO: `c_softmax_grad_op`).
+    """
+
     lazy_op_class = LazySoftmax
 
     def _execute_forward(self, out_tensor: "Tensor", a: "Tensor") -> "Tensor":
@@ -443,6 +667,21 @@ class Softmax(Function):
 
 
 class Abs(Function):
+    """
+    Absolute value.
+
+    Forward:
+        out = |a|
+
+    Backward:
+        dL/da = sign(a) * dL/dout
+        where sign(a) = +1 if a > 0, -1 if a < 0, else 0
+
+    Notes:
+        - Uses C-level SIMD kernel `c_abs`.
+        - Registers C-level backward function `c_abs_grad_op`.
+    """
+
     lazy_op_class = LazyAbs
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -466,6 +705,20 @@ class Abs(Function):
 
 
 class Neg(Function):
+    """
+    Elementwise negation.
+
+    Forward:
+        out = -a
+
+    Backward:
+        dL/da = -dL/dout
+
+    Notes:
+        - Uses C-level SIMD kernel `c_neg`.
+        - Registers C-level backward function `c_neg_grad_op`.
+    """
+
     lazy_op_class = LazyNeg
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
@@ -492,6 +745,20 @@ class Neg(Function):
 
 
 class Sum(Function):
+    """
+    Reduction: sum over a given axis.
+
+    Forward:
+        out = Σ a along `axis`
+
+    Backward:
+        dL/da = broadcast(dL/dout, shape of a)
+
+    Notes:
+        - Uses C-level kernel `c_sum`.
+        - Backward not yet implemented (TODO: `sum_grad_op`).
+    """
+
     lazy_op_class = LazySum
 
     def _execute_forward(
@@ -514,6 +781,20 @@ class Sum(Function):
 
 
 class Mean(Function):
+    """
+    Reduction: mean over a given axis.
+
+    Forward:
+        out = mean(a, axis)
+
+    Backward:
+        dL/da = broadcast((1/N) * dL/dout, shape of a)
+
+    Notes:
+        - Uses C-level kernel `c_mean`.
+        - Backward not yet implemented (TODO: `mean_grad_op`).
+    """
+
     lazy_op_class = LazyMean
 
     def _execute_forward(
@@ -536,6 +817,20 @@ class Mean(Function):
 
 
 class Max(Function):
+    """
+    Reduction: maximum over a given axis.
+
+    Forward:
+        out = max(a, axis)
+
+    Backward:
+        dL/da = dL/dout if a is the max element, else 0
+
+    Notes:
+        - Uses C-level kernel `c_max`.
+        - Backward not yet implemented (TODO: `max_grad_op`).
+    """
+
     lazy_op_class = LazyMax
 
     def _execute_forward(
@@ -561,6 +856,20 @@ class Max(Function):
 
 
 class View(Function):
+    """
+    Reshape tensor without copying data.
+
+    Forward:
+        out = view(a, shape)
+
+    Backward:
+        dL/da = reshape(dL/dout, shape of a)
+
+    Notes:
+        - Uses C-level kernel `c_view`.
+        - Backward not yet implemented (TODO: `view_grad_op`).
+    """
+
     lazy_op_class = LazyView
 
     def _execute_forward(
@@ -583,6 +892,20 @@ class View(Function):
 
 
 class Unsqueeze(Function):
+    """
+    Insert a dimension of size 1 at the given axis.
+
+    Forward:
+        out = unsqueeze(a, dim)
+
+    Backward:
+        dL/da = squeeze(dL/dout, dim)
+
+    Notes:
+        - Uses C-level kernel `c_unsqueeze`.
+        - Backward not yet implemented (TODO: `unsqueeze_grad_op`).
+    """
+
     lazy_op_class = LazyUnsqueeze
 
     def _execute_forward(
@@ -605,6 +928,20 @@ class Unsqueeze(Function):
 
 
 class Squeeze(Function):
+    """
+    Remove a dimension of size 1 at the given axis.
+
+    Forward:
+        out = squeeze(a, dim)
+
+    Backward:
+        dL/da = unsqueeze(dL/dout, dim)
+
+    Notes:
+        - Uses C-level kernel `c_squeeze`.
+        - Backward not yet implemented (TODO: `squeeze_grad_op`).
+    """
+
     lazy_op_class = LazySqueeze
 
     def _execute_forward(
@@ -627,6 +964,20 @@ class Squeeze(Function):
 
 
 class Transpose(Function):
+    """
+    Swap two tensor dimensions.
+
+    Forward:
+        out = transpose(a, n, m)
+
+    Backward:
+        dL/da = transpose(dL/dout, n, m)
+
+    Notes:
+        - Uses C-level kernel `c_transpose`.
+        - Backward not yet implemented (TODO: `transpose_grad_op`).
+    """
+
     lazy_op_class = LazyTranspose
 
     def _execute_forward(
@@ -649,6 +1000,20 @@ class Transpose(Function):
 
 
 class Expand(Function):
+    """
+    Broadcast tensor to a larger shape.
+
+    Forward:
+        out = expand(a, shape)
+
+    Backward:
+        dL/da = reduce(dL/dout, original shape of a)
+
+    Notes:
+        - Uses C-level kernel `c_expand`.
+        - Backward not yet implemented (TODO: `expand_grad_op`).
+    """
+
     lazy_op_class = LazyExpand
 
     def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
