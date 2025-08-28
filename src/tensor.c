@@ -1,4 +1,5 @@
 #include "tensor.h"
+#include <immintrin.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,6 +28,11 @@ int *compute_strides(const int *shape, int ndim) {
     strides[i] = strides[i + 1] * shape[i + 1];
   }
   return strides;
+}
+
+void set_ones_grad(Tensor *a) {
+  int size = numel(a->shape, a->ndim);
+  memset(t->grad, 1, size * sizeof(float));
 }
 
 Tensor *malloc_tensor_empty() {

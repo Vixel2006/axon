@@ -12,7 +12,7 @@ from ..elnawah_bindings.ctypes_definitions import CTensor
 from ..elnawah_bindings.c_library_loader import tensor_lib
 
 from .node import Node
-from ..ops.functions import (
+from py.ops.functions import (
     Add,
     Sub,
     RSub,

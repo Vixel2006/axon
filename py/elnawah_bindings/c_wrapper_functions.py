@@ -19,13 +19,23 @@ if tensor_lib:
 
     tensor_lib.malloc_tensor_empty.restype = ctypes.POINTER(CTensor)
     tensor_lib.malloc_tensor_shape.restype = ctypes.POINTER(CTensor)
-    tensor_lib.malloc_tensor_full.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_float), ctypes.c_bool, ctypes.POINTER(ctypes.c_float)]
+    tensor_lib.malloc_tensor_full.argtypes = [
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_float),
+        ctypes.c_bool,
+        ctypes.POINTER(ctypes.c_float),
+    ]
     tensor_lib.malloc_tensor_full.restype = ctypes.POINTER(CTensor)
     tensor_lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
     tensor_lib.free_tensor.restype = None
 
     tensor_lib.numel.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.numel.restype = ctypes.c_int
+
+    tensor_lib.set_ones_grad.argtypes = [ctypes.POINTER(CTensor)]
+    tensor_lib.set_ones_grad.restype = None
 
     tensor_lib.compute_strides.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.compute_strides.restype = ctypes.POINTER(ctypes.c_int)
@@ -46,75 +56,219 @@ if tensor_lib:
     tensor_lib.neg_op.restype = None
 
     # Reduction ops
-    tensor_lib.sum_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_bool]
+    tensor_lib.sum_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
     tensor_lib.sum_op.restype = None
-    tensor_lib.mean_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_bool]
+    tensor_lib.mean_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
     tensor_lib.mean_op.restype = None
-    tensor_lib.max_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_bool]
+    tensor_lib.max_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
     tensor_lib.max_op.restype = None
 
     # Binary ops
-    tensor_lib.add_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.add_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.add_op.restype = None
-    tensor_lib.sub_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.sub_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.sub_op.restype = None
-    tensor_lib.mul_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.mul_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.mul_op.restype = None
-    tensor_lib.div_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.div_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.div_op.restype = None
-    tensor_lib.matmul_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int, ctypes.c_int]
+    tensor_lib.matmul_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
     tensor_lib.matmul_op.restype = None
 
     # Binary ops with scalars
-    tensor_lib.add_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
+    tensor_lib.add_scalar_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.add_scalar_op.restype = None
-    tensor_lib.sub_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
+    tensor_lib.sub_scalar_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.sub_scalar_op.restype = None
-    tensor_lib.rsub_scalar_op.argtypes = [ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.rsub_scalar_op.argtypes = [
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.rsub_scalar_op.restype = None
-    tensor_lib.mul_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
+    tensor_lib.mul_scalar_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.mul_scalar_op.restype = None
-    tensor_lib.div_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
+    tensor_lib.div_scalar_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.div_scalar_op.restype = None
-    tensor_lib.rdiv_scalar_op.argtypes = [ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.rdiv_scalar_op.argtypes = [
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
     tensor_lib.rdiv_scalar_op.restype = None
 
     # Movement ops
-    tensor_lib.view_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int), ctypes.c_int]
+    tensor_lib.view_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_int,
+    ]
     tensor_lib.view_op.restype = None
-    tensor_lib.unsqueeze_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int]
+    tensor_lib.unsqueeze_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+    ]
     tensor_lib.unsqueeze_op.restype = None
-    tensor_lib.squeeze_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int]
+    tensor_lib.squeeze_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+    ]
     tensor_lib.squeeze_op.restype = None
-    tensor_lib.transpose_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int]
+    tensor_lib.transpose_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
     tensor_lib.transpose_op.restype = None
-    tensor_lib.expand_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int)]
+    tensor_lib.expand_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.c_int),
+    ]
     tensor_lib.expand_op.restype = None
 
     # Grad ops
-    tensor_lib.add_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.add_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.add_grad_op.restype = None
-    tensor_lib.sub_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.sub_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.sub_grad_op.restype = None
-    tensor_lib.rsub_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.rsub_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.rsub_grad_op.restype = None
-    tensor_lib.mul_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.mul_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.mul_grad_op.restype = None
-    tensor_lib.div_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.div_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.div_grad_op.restype = None
-    tensor_lib.rdiv_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.rdiv_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.rdiv_grad_op.restype = None
-    tensor_lib.relu_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.relu_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.relu_grad_op.restype = None
-    tensor_lib.log_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.log_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.log_grad_op.restype = None
-    tensor_lib.exp_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.exp_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.exp_grad_op.restype = None
-    tensor_lib.softmax_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.softmax_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.softmax_grad_op.restype = None
-    tensor_lib.abs_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.abs_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.abs_grad_op.restype = None
-    tensor_lib.neg_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.neg_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
     tensor_lib.neg_grad_op.restype = None
 
     # Python wrapper functions
@@ -124,6 +278,9 @@ if tensor_lib:
             return 1
         c_shape = (ctypes.c_int * ndim)(*shape)
         return tensor_lib.numel(c_shape, ndim)
+
+    def c_set_ones_grad(tensor_ptr):
+        return tensorlib.set_ones_grad(tensor_ptr)
 
     def c_compute_strides(shape, ndim):
         if ndim == 0:
@@ -209,7 +366,9 @@ if tensor_lib:
         if tensor_ptr:
             tensor_lib.free_tensor(tensor_ptr)
 
-    def c_malloc_node(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras, forward_fn, backward_fn):
+    def c_malloc_node(
+        out_tensor_ptr, prev_tensor_ptrs, n_prev, extras, forward_fn, backward_fn
+    ):
         c_prev_array = (ctypes.POINTER(CTensor) * n_prev)(*prev_tensor_ptrs)
         return tensor_lib.malloc_node(
             out_tensor_ptr, c_prev_array, n_prev, extras, forward_fn, backward_fn

@@ -22,5 +22,6 @@ void free_tensor(Tensor *t);
 
 int numel(const int *shape, int ndim);
 int *compute_strides(const int *shape, int ndim);
+void set_ones_grad(Tensor *t);
 
 #endif
