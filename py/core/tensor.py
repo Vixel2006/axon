@@ -7,6 +7,7 @@ from ..elnawah_bindings.c_wrapper_functions import (
     c_free_tensor,
     c_numel,
     c_compute_strides,
+    c_set_ones_grad,
 )
 from ..elnawah_bindings.ctypes_definitions import CTensor
 from ..elnawah_bindings.c_library_loader import tensor_lib
@@ -338,6 +339,19 @@ class Tensor(CTensor):
     def abs(self) -> Tensor:
         return Abs.apply(self)
 
+    def realize(self):
+        if self._node.graph is None:
+            self._node.topo_sort()
+        self._node.realize(graph)
+
+    def backward(self):
+        c_set_ones_grad(self._c_tensor)
+        graph = self._node.topo_sort()
+
+        self._node.realize(graph)
+
+        self._node.backward(graph[::-1])
+
     @staticmethod
     def safe_c_numel(shape_ptr, ndim):
         if ndim == 0:
@@ -366,15 +380,14 @@ class Tensor(CTensor):
 
 
 if __name__ == "__main__":
-    t = Tensor((2, 2, 3), [[[2, 3, 4], [3, 4, 5]], [[2, 3, 4], [3, 4, 5]]])
-    n = Tensor((2, 3, 2), [[[2, 3], [4, 5], [6, 7]], [[2, 3], [4, 5], [6, 7]]])
+    x = Tensor((2, 2), [[1, 2], [3, 4]])
+    y = Tensor((2, 2), [[3, 4], [1, 2]])
+    z = x + y
 
-    z = t @ n
+    c_set_ones_grad(z._c_tensor)
 
-    x = Tensor((2, 2, 2), [[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+    z.backward()
 
-    y = z + x
-
-    y._node.realize()
-
-    print(y)
+    print(z.grad)
+    print(x.grad)
+    print(y.grad)
