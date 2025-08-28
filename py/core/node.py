@@ -213,7 +213,10 @@ class Node:
                     and input_tensor._node
                 ):
                     input_tensor._node.backward(graph[i + 1 :])
-
+    
+    def __del__(self):
+        if self._c_node:
+            c_free_node(self._c_node)
 
 if __name__ == "__main__":
     from .tensor import Tensor
