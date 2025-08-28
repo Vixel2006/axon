@@ -3,6 +3,20 @@
 #include <math.h>
 #include <sleef.h>
 
+/**
+ * @brief Applies the ReLU activation function element-wise.
+ *
+ * Computes max(0, x) for each element of the input tensor. Uses AVX2
+ * intrinsics for vectorized processing, with a scalar fallback for
+ * the remainder.
+ *
+ * @param in   Input tensor.
+ * @param out  Output tensor (allocated by caller, same shape as input).
+ *
+ * @effects Writes element-wise ReLU results into `out->data`.
+ * @effects Sets `out->requires_grad = in->requires_grad`.
+ * @effects If gradients are not required, frees the input tensor.
+ */
 void relu_op(Tensor *in, Tensor *out) {
   int i = 0;
   int size = numel(in->shape, in->ndim);
@@ -26,6 +40,19 @@ void relu_op(Tensor *in, Tensor *out) {
   }
 }
 
+/**
+ * @brief Computes the natural logarithm element-wise.
+ *
+ * Applies log(x) to each element of the input tensor. Uses Sleef AVX2
+ * vectorized math functions with a scalar fallback.
+ *
+ * @param in   Input tensor.
+ * @param out  Output tensor (allocated by caller, same shape as input).
+ *
+ * @effects Writes log results into `out->data`.
+ * @effects Sets `out->requires_grad = in->requires_grad`.
+ * @effects If gradients are not required, frees the input tensor.
+ */
 void log_op(Tensor *in, Tensor *out) {
   int i = 0;
   int size = numel(in->shape, in->ndim);
@@ -47,6 +74,19 @@ void log_op(Tensor *in, Tensor *out) {
   }
 }
 
+/**
+ * @brief Computes the exponential function element-wise.
+ *
+ * Applies exp(x) to each element of the input tensor. Uses Sleef AVX2
+ * intrinsics with a scalar fallback.
+ *
+ * @param in   Input tensor.
+ * @param out  Output tensor (allocated by caller, same shape as input).
+ *
+ * @effects Writes exponential results into `out->data`.
+ * @effects Sets `out->requires_grad = in->requires_grad`.
+ * @effects If gradients are not required, frees the input tensor.
+ */
 void exp_op(Tensor *in, Tensor *out) {
   int i = 0;
   int size = numel(in->shape, in->ndim);
@@ -70,6 +110,19 @@ void exp_op(Tensor *in, Tensor *out) {
 
 void softmax_op(Tensor *in, Tensor *out) {}
 
+/**
+ * @brief Negates all elements of the input tensor.
+ *
+ * Computes -x for each element of the input tensor. Uses AVX2 intrinsics
+ * for vectorized computation with scalar fallback.
+ *
+ * @param in   Input tensor.
+ * @param out  Output tensor (allocated by caller, same shape as input).
+ *
+ * @effects Writes negated results into `out->data`.
+ * @effects Sets `out->requires_grad = in->requires_grad`.
+ * @effects If gradients are not required, frees the input tensor.
+ */
 void neg_op(Tensor *in, Tensor *out) {
   int i = 0;
   int size = numel(in->shape, in->ndim);
@@ -93,6 +146,19 @@ void neg_op(Tensor *in, Tensor *out) {
   }
 }
 
+/**
+ * @brief Computes the absolute value element-wise.
+ *
+ * Applies |x| for each element of the input tensor. Uses AVX2 bitmask
+ * trick to clear the sign bit, with scalar fallback.
+ *
+ * @param in   Input tensor.
+ * @param out  Output tensor (allocated by caller, same shape as input).
+ *
+ * @effects Writes absolute values into `out->data`.
+ * @effects Sets `out->requires_grad = in->requires_grad`.
+ * @effects If gradients are not required, frees the input tensor.
+ */
 void abs_op(Tensor *in, Tensor *out) {
   int i = 0;
   int size = numel(in->shape, in->ndim);
