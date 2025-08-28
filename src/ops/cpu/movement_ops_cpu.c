@@ -1,5 +1,6 @@
-#include "ops.h"
 #include <stdio.h>
+
+#include "ops.h"
 
 /**
  * @brief Reshapes a tensor view without copying data.
@@ -18,8 +19,8 @@
  * @note No copy is performed. Caller must ensure the new shape is valid.
  */
 void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
+  out->owns_data = false;
   out->ndim = ndim;
-
   out->shape = malloc(out->ndim * sizeof(int));
   if (!out->shape) {
     return;
@@ -31,7 +32,7 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
 
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides) {
-    free(out->shape);
+    free_tensor(out);
     out->shape = NULL;
     return;
   }
@@ -57,6 +58,7 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
  * @note No data copy, only metadata change.
  */
 void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
+  out->owns_data = false;
   out->ndim = in->ndim + 1;
   out->shape = malloc(out->ndim * sizeof(int));
   if (!out->shape) {
@@ -75,7 +77,7 @@ void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
 
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides) {
-    free(out->shape);
+    free_tensor(out);
     out->shape = NULL;
     return;
   }
@@ -100,6 +102,7 @@ void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
  * @note Caller must ensure the removed dimension is actually size 1.
  */
 void squeeze_op(Tensor *in, Tensor *out, int dim) {
+  out->owns_data = false;
   out->ndim = in->ndim - 1;
   out->shape = malloc(out->ndim * sizeof(int));
   if (!out->shape) {
@@ -116,7 +119,7 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
 
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides) {
-    free(out->shape);
+    free_tensor(out);
     out->shape = NULL;
     return;
   }
@@ -142,6 +145,7 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
  * @note Only metadata is updated, no copy is performed.
  */
 void transpose_op(Tensor *in, Tensor *out, int N, int M) {
+  out->owns_data = false;
   out->ndim = in->ndim;
   out->shape = malloc(out->ndim * sizeof(int));
   if (!out->shape) {
@@ -160,7 +164,7 @@ void transpose_op(Tensor *in, Tensor *out, int N, int M) {
 
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides) {
-    free(out->shape);
+    free_tensor(out);
     out->shape = NULL;
     return;
   }
@@ -187,6 +191,7 @@ void transpose_op(Tensor *in, Tensor *out, int N, int M) {
  * @note Expansion uses stride=0 for broadcasted dims.
  */
 void expand_op(Tensor *in, Tensor *out, const int *shape) {
+  out->owns_data = false;
   out->ndim = in->ndim;
   out->shape = in->shape;
 

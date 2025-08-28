@@ -1,6 +1,7 @@
 #ifndef NAWAH_TENSOR_H
 #define NAWAH_TENSOR_H
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 typedef struct {
@@ -9,6 +10,7 @@ typedef struct {
   int *shape;
   int *strides;
   bool requires_grad;
+  bool owns_data;
   float *grad;
   void *grad_fn;
 } Tensor;

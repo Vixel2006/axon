@@ -349,13 +349,11 @@ class Tensor(CTensor):
                 f"broadcast() error: source tensor has higher rank than target shape."
             )
 
-        t = self  # Start with self
+        t = self
 
-        # Add dimensions at the beginning
         for i in range(len(shape) - self.ndim):
             t = t.unsqueeze(0)
 
-        # Check if broadcasting is possible
         for i in range(len(shape)):
             if shape[i] != t.shape[i] and t.shape[i] != 1:
                 raise RuntimeError(
