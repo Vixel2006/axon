@@ -3,6 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+ * @brief Get the total number of elements in a tensor.
+ *
+ * @param shape  Pointer to array of dimension sizes.
+ * @param ndim   Number of dimensions.
+ * @return int   Flattened size (product of all dims). Returns 0 if invalid.
+ */
 int numel(const int *shape, int ndim) {
   if (ndim <= 0 || !shape)
     return 0;
@@ -15,6 +22,13 @@ int numel(const int *shape, int ndim) {
   return size;
 }
 
+/**
+ * @brief Compute strides for a tensor from its shape.
+ *
+ * @param shape  Pointer to array of dimension sizes.
+ * @param ndim   Number of dimensions.
+ * @return int*  Newly allocated array of strides (caller frees). NULL on error.
+ */
 int *compute_strides(const int *shape, int ndim) {
   if (ndim <= 0 || !shape)
     return NULL;
@@ -30,6 +44,13 @@ int *compute_strides(const int *shape, int ndim) {
   return strides;
 }
 
+/**
+ * @brief Initialize all gradient values of a tensor to 1.0.
+ *
+ * @param t  Pointer to tensor whose gradients will be set.
+ *
+ * @note Used to seed backpropagation.
+ */
 void set_ones_grad(Tensor *t) {
   int size = numel(t->shape, t->ndim);
   for (int i = 0; i < size; ++i) {
@@ -37,6 +58,11 @@ void set_ones_grad(Tensor *t) {
   }
 }
 
+/**
+ * @brief Allocate an empty tensor object (metadata only).
+ *
+ * @return Tensor*  Newly allocated tensor with zero-initialized fields.
+ */
 Tensor *malloc_tensor_empty() {
   Tensor *t = malloc(sizeof(Tensor));
   if (!t)
@@ -46,6 +72,14 @@ Tensor *malloc_tensor_empty() {
   return t;
 }
 
+/**
+ * @brief Allocate a tensor with a given shape.
+ *
+ * @param shape          Pointer to array of dimension sizes.
+ * @param ndim           Number of dimensions.
+ * @param requires_grad  Whether to allocate gradient storage.
+ * @return Tensor*       Newly allocated tensor with zeroed data/gradients.
+ */
 Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
   if (ndim < 0 || (ndim > 0 && !shape))
     return NULL;
@@ -119,6 +153,17 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
   return t;
 }
 
+/**
+ * @brief Allocate a tensor with explicit shape, strides, and data.
+ *
+ * @param shape          Pointer to array of dimension sizes.
+ * @param ndim           Number of dimensions.
+ * @param strides        Pointer to array of strides (or NULL for default).
+ * @param data           Pointer to data array (copied into tensor).
+ * @param requires_grad  Whether to allocate gradient storage.
+ * @param grad           Pointer to gradient data (copied if provided).
+ * @return Tensor*       Newly allocated tensor with copied data.
+ */
 Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
                            float *data, bool requires_grad, float *grad) {
   if (ndim < 0 || (ndim > 0 && (!shape || !data)))
@@ -193,6 +238,13 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
   return t;
 }
 
+/**
+ * @brief Free a tensor and its associated memory.
+ *
+ * @param t  Pointer to tensor to free.
+ *
+ * @note Frees data, grad, shape, strides, and the tensor struct itself.
+ */
 void free_tensor(Tensor *t) {
   if (t) {
     if (t->data)
