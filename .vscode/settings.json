@@ -88,6 +88,9 @@
         "reportAttributeAccessIssue": "none",
         "reportInvalidTypeForm": "none",
         "reportUndefinedVariable": "none",
-        "reportArgumentType": "none"
+        "reportArgumentType": "none",
+        "reportOptionalMemberAccess": "none",
+        "reportOptionalSubscript": "none",
+        "reportReturnType": "none"
     }
 }

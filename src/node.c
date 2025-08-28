@@ -18,7 +18,6 @@ Node *malloc_node(Tensor *out, Tensor **prev, int n_prev, void *extras,
                   void *forward_fn, void *backward_fn) {
   Node *node = malloc(sizeof(Node));
   if (!node) {
-    // Handle allocation error
     return NULL;
   }
 
@@ -41,15 +40,9 @@ Node *malloc_node(Tensor *out, Tensor **prev, int n_prev, void *extras,
  */
 void free_node(Node *n) {
   if (n) {
-    if (n->prev) {
-      free(n->prev);
-      n->prev = NULL;
-    }
-
-    if (n->extras) {
-      free(n->extras);
-      n->extras = NULL;
-    }
+    if (n->extras) free(n->extras);
+    if (n->forward_fn) free(n->forward_fn);
+    if (n->backward_fn) free(n->backward_fn);
     free(n);
   }
 }

@@ -1,8 +1,9 @@
-#include "autograd.h"
-#include "ops.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
+
+#include "autograd.h"
+#include "ops.h"
 
 #define SIMD_WIDTH 8
 
@@ -52,7 +53,6 @@ void add_op(Tensor *a, Tensor *b, Tensor *out) {
  *
  * @effects Updates `out->data` with elementwise difference.
  * @effects Sets `out->requires_grad` if either `a` or `b` requires grad.
- * @effects Frees `a` and `b` if `out->requires_grad` is false.
  */
 void sub_op(Tensor *a, Tensor *b, Tensor *out) {
   // TODO: Implement a slow path for uncontiguous data with no SIMD.
@@ -84,7 +84,6 @@ void sub_op(Tensor *a, Tensor *b, Tensor *out) {
  *
  * @effects Updates `out->data` with elementwise product.
  * @effects Sets `out->requires_grad` if either `a` or `b` requires grad.
- * @effects Frees `a` and `b` if `out->requires_grad` is false.
  */
 void mul_op(Tensor *a, Tensor *b, Tensor *out) {
   // TODO: Implement a slow path for uncontiguous data with no SIMD.
@@ -116,7 +115,6 @@ void mul_op(Tensor *a, Tensor *b, Tensor *out) {
  *
  * @effects Updates `out->data` with elementwise quotient.
  * @effects Sets `out->requires_grad` if either `a` or `b` requires grad.
- * @effects Frees `a` and `b` if `out->requires_grad` is false.
  */
 void div_op(Tensor *a, Tensor *b, Tensor *out) {
   // TODO: Implement a slow path for uncontiguous data with no SIMD.
@@ -156,7 +154,6 @@ void div_op(Tensor *a, Tensor *b, Tensor *out) {
  * @effects Allocates memory for `out->shape`, `out->strides`, and `out->data`.
  * @effects Updates `out->data` with batched matmul results.
  * @effects Sets `out->requires_grad` if either `a` or `b` requires grad.
- * @effects Frees `a` and `b` if `out->requires_grad` is false.
  */
 void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
   // TODO: Implement a slow path for uncontiguous data with no SIMD.
@@ -182,8 +179,7 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
   int size = numel(out->shape, out->ndim);
   out->data = malloc(size * sizeof(float));
   if (!out->data) {
-    free(out->shape);
-    free(out->strides);
+    free_tensor(out);
     return;
   }
 
@@ -217,7 +213,7 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
           __m256 b_vec = _mm256_loadu_ps(
               &b->data[b_curr_stride + col + k * b->strides[b->ndim - 2]]);
           sum_vec =
-              _mm256_fmadd_ps(a_vec, b_vec, sum_vec); // a fused multiply-add
+              _mm256_fmadd_ps(a_vec, b_vec, sum_vec);  // a fused multiply-add
         }
 
         // Horizontal sum across the SIMD vector
