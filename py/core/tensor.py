@@ -340,8 +340,7 @@ class Tensor(CTensor):
         return Abs.apply(self)
 
     def realize(self):
-        if self._node.graph is None:
-            self._node.topo_sort()
+        graph = self._node.topo_sort()
         self._node.realize(graph)
 
     def backward(self):
@@ -381,13 +380,19 @@ class Tensor(CTensor):
 
 if __name__ == "__main__":
     x = Tensor((2, 2), [[1, 2], [3, 4]])
-    y = Tensor((2, 2), [[3, 4], [1, 2]])
-    z = x + y
+    m = Tensor((2, 2), [[1, 2], [3, 4]])
 
-    c_set_ones_grad(z._c_tensor)
+    j = x + m
 
-    z.backward()
+    j.backward()
 
-    print(z.grad)
-    print(x.grad)
-    print(y.grad)
+    print(j)
+    print(j.grad)
+
+    y = Tensor((1, 4), [[3], [4], [1], [2]])
+    n = x.view([1, 4])
+    z = n + y
+
+    z.realize()
+
+    print(z)
