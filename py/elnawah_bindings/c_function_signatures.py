@@ -7,6 +7,9 @@ if tensor_lib:
     tensor_lib.numel.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.numel.restype = ctypes.c_int
 
+    tensor_lib.set_ones_grad.argtypes = [ctypes.POINTER(CTensor)]
+    tensor_lib.set_ones_grad.restype = None
+
     tensor_lib.compute_strides.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.compute_strides.restype = ctypes.POINTER(ctypes.c_int)
 
