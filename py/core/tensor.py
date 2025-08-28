@@ -329,16 +329,16 @@ class Tensor(CTensor):
             return False
 
     def view(self, shape: list) -> Tensor:
-        return View.apply(self, shape)
+        return View.apply(self, shape=shape)
 
     def unsqueeze(self, dim: int = 0) -> Tensor:
-        return Unsqueeze.apply(self, dim)
+        return Unsqueeze.apply(self, dim=dim)
 
     def squeeze(self, dim: int = 0) -> Tensor:
-        return Squeeze.apply(self, dim)
+        return Squeeze.apply(self, dim=dim)
 
     def transpose(self, n: int = -2, m: int = -1) -> Tensor:
-        return Transpose.apply(self, n, m)
+        return Transpose.apply(self, n=n, m=m)
 
     def expand(self, shape: list[int]) -> Tensor:
         return Expand.apply(self, shape)
@@ -421,19 +421,15 @@ class Tensor(CTensor):
 
 if __name__ == "__main__":
     x = Tensor((2, 2), [[1, 2], [3, 4]])
-    m = Tensor((2, 2), [[1, 2], [3, 4]])
-
-    j = x + m
-
-    j.backward()
-
-    print(j)
-    print(j.grad)
-
-    y = Tensor((1, 4), [[3], [4], [1], [2]])
-    n = x.view([1, 4])
+    y = Tensor((4, 1), [[3], [4], [1], [2]])
+    n = x.view([4, 1])
     z = n + y
 
-    z.realize()
+    z.backward()
 
     print(z)
+    print("=============== Debug grad =====================")
+    print(f"Z Grad: {z.grad}")
+    print(f"N Grad: {n.grad}")
+    print(f"X Grad: {x.grad}")
+    print("=============== Finish grad =====================")
