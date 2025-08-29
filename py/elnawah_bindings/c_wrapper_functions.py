@@ -4,13 +4,6 @@ from .c_library_loader import tensor_lib
 from .ctypes_definitions import CTensor, CNode
 
 if tensor_lib:
-    
-
-    
-
-    
-
-    # Python wrapper functions
     # Python wrapper functions
     def c_numel(shape, ndim):
         if ndim == 0:
@@ -152,7 +145,16 @@ if tensor_lib:
 
     def c_neg_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.neg_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+    
+    def c_sum_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.sum_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
+    def c_mean_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.mean_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_max_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.max_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+    
     # Unary operations wrappers
     def c_relu(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.relu_op(in_tensor_ptr, out_tensor_ptr)
