@@ -177,8 +177,8 @@ class Node:
                             ]
                         )
 
-                if node._c_node and not node._c_node.out:
-                    node._c_node.out = node.out_tensor._c_tensor
+                if node._c_node and not node._c_node.contents.out:
+                    node._c_node.contents.out = node.out_tensor._c_tensor
 
     def backward(self, graph):
         for i, node in enumerate(graph):
@@ -217,50 +217,3 @@ class Node:
     def __del__(self):
         if self._c_node:
             c_free_node(self._c_node)
-
-if __name__ == "__main__":
-    from .tensor import Tensor
-
-    def dummy_backward(*args):
-        pass
-
-    a = Tensor(shape=(1,), data=[1.0], requires_grad=True)
-    b = Tensor(shape=(1,), data=[2.0], requires_grad=True)
-    c = Tensor(shape=(1,), data=[3.0], requires_grad=True)
-    d = Tensor(shape=(1,), data=[4.0], requires_grad=True)
-
-    def dummy_forward(*args, **kwargs):
-        # This dummy forward function will just return the out_tensor
-        # In a real scenario, this would perform the actual operation
-        return kwargs.get(
-            "out_tensor_val"
-        )  # Assuming out_tensor_val is passed in kwargs for simplicity
-
-    node_c = Node(
-        out_tensor=c,
-        input_tensors=[a, b],
-        forward_fn=dummy_forward,
-        forward_args=(),
-        forward_kwargs={"out_tensor_val": c},
-        backward_fn=dummy_backward,
-    )
-    c._node = node_c
-
-    node_d = Node(
-        out_tensor=d,
-        input_tensors=[c],
-        forward_fn=dummy_forward,
-        forward_args=(),
-        forward_kwargs={"out_tensor_val": d},
-        backward_fn=dummy_backward,
-    )
-    d._node = node_d
-
-    print("Performing topological sort starting from node_d:")
-    sorted_nodes = node_d.topo_sort()
-
-    print(
-        "Topologically sorted nodes (should be c, a, b, d or similar order of a,b before c, and c before d):"
-    )
-    for node in sorted_nodes:
-        print(f"Node producing tensor with data: {node.out_tensor.data}")
