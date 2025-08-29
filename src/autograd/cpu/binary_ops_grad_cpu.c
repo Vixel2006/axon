@@ -1,8 +1,9 @@
-#include "ops.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
 
+#include "autograd/autograd.h"
+#include "utils.h"
 /**
  * @brief Backward pass for addition operation.
  *
@@ -356,6 +357,62 @@ void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
     for (; i < size; ++i) {
       a->grad[i] += out->grad[i] * (-b) / (a->data[i] * a->data[i]);
+    }
+  }
+}
+
+void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  Tensor *a = prev[0];
+  Tensor *b = prev[1];
+
+  int N = a->shape[a->ndim - 2];
+  int K = a->shape[a->ndim - 1];
+  int M = b->shape[b->ndim - 1];
+
+  int a_strides = a->strides[a->ndim - 2];
+  int a_k_strides = a->strides[a->ndim - 1];
+  int b_strides = b->strides[b->ndim - 2];
+  int b_m_strides = b->strides[b->ndim - 1];
+  int out_strides = out->strides[out->ndim - 2];
+  int out_m_strides = out->strides[out->ndim - 1];
+
+  if (a->requires_grad) {
+    int batch_nums = get_num_batches(a->shape, a->ndim);
+
+    for (int batch_idx = 0; batch_idx < batch_nums; ++batch_idx) {
+      for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < K; ++j) {
+          float sum = 0.0f;
+          for (int m = 0; m < M; ++m) {
+            sum += out->grad[batch_idx * out_strides * M + i * out_strides +
+                             m * out_m_strides] *
+                   b->data[batch_idx * b_strides * M + j * b_strides +
+                           m * b_m_strides];
+          }
+          a->grad[batch_idx * a_strides * K + i * a_strides +
+                  j * a_k_strides] += sum;
+        }
+      }
+    }
+  }
+
+  if (b->requires_grad) {
+    int batch_nums = get_num_batches(b->shape, b->ndim);
+
+    for (int batch_idx = 0; batch_idx < batch_nums; ++batch_idx) {
+      for (int i = 0; i < K; ++i) {
+        for (int j = 0; j < M; ++j) {
+          float sum = 0.0f;
+          for (int n = 0; n < N; ++n) {
+            sum += a->data[batch_idx * a_strides * K + n * a_strides +
+                           i * a_k_strides] *
+                   out->grad[batch_idx * out_strides * M + n * out_strides +
+                             j * out_m_strides];
+          }
+          b->grad[batch_idx * b_strides * M + i * b_strides +
+                  j * b_m_strides] += sum;
+        }
+      }
     }
   }
 }

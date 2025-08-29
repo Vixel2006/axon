@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "ops.h"
+#include "ops/ops.h"
+#include "ops/ops_utils.h"
 
 /**
  * @brief Reshapes a tensor view without copying data.
@@ -20,28 +21,14 @@
  * @note No copy is performed. Caller must ensure the new shape is valid.
  */
 void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
-  out->owns_data = false;
-  out->ndim = ndim;
-  out->shape = malloc(out->ndim * sizeof(int));
-  if (!out->shape) {
-    return;
-  }
-
-  for (int i = 0; i < out->ndim; ++i) {
-    out->shape[i] = shape[i];
-  }
-
+  if (tensor_copy_layout(in, out, shape) != 0) return;
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides) {
-    free(out->shape);  // Fixed: Free allocated shape before returning
+    free(out->shape);
     out->shape = NULL;
     return;
   }
-
-  out->data = in->data;
-  out->grad = in->grad;
-  out->requires_grad = in->requires_grad;
-  out->grad_fn = NULL;
+  tensor_init_view(out, in);
 }
 
 /**
@@ -59,40 +46,34 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
  * @note No data copy, only metadata change.
  */
 void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
-  // Validate dimension index
-  if (dim < 0 || dim > in->ndim) {
-    return;
-  }
+  if (dim < 0 || dim > in->ndim) return;
 
-  out->owns_data = false;
   out->ndim = in->ndim + 1;
-  out->shape = malloc(out->ndim * sizeof(int));
-  if (!out->shape) {
-    return;
-  }
+  int *new_shape = malloc(out->ndim * sizeof(int));
+  if (!new_shape) return;
 
   for (int i = 0; i < out->ndim; ++i) {
-    if (i < dim) {
-      out->shape[i] = in->shape[i];
-    } else if (i == dim) {
-      out->shape[i] = 1;
-    } else {
-      out->shape[i] = in->shape[i - 1];
-    }
+    if (i < dim)
+      new_shape[i] = in->shape[i];
+    else if (i == dim)
+      new_shape[i] = 1;
+    else
+      new_shape[i] = in->shape[i - 1];
   }
+
+  if (tensor_alloc_shape(out->ndim, new_shape, &out->shape) != 0) {
+    free(new_shape);
+    return;
+  }
+  free(new_shape);
 
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides) {
-    free(out->shape);  // Fixed: Free allocated shape before calling free_tensor
-    out->shape = NULL;
-    free_tensor(out);
+    free(out->shape);
     return;
   }
 
-  out->data = in->data;
-  out->grad = in->grad;
-  out->requires_grad = in->requires_grad;
-  out->grad_fn = NULL;
+  tensor_init_view(out, in);
 }
 
 /**
@@ -109,46 +90,32 @@ void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
  * @note Caller must ensure the removed dimension is actually size 1.
  */
 void squeeze_op(Tensor *in, Tensor *out, int dim) {
-  // Validate dimension index and size
-  if (dim < 0 || dim >= in->ndim || in->shape[dim] != 1) {
-    return;
-  }
+  if (dim < 0 || dim >= in->ndim || in->shape[dim] != 1) return;
 
-  out->owns_data = false;
   out->ndim = in->ndim - 1;
-
-  // Handle edge case where we're removing the last dimension
   if (out->ndim == 0) {
     out->shape = NULL;
     out->strides = NULL;
   } else {
-    out->shape = malloc(out->ndim * sizeof(int));
-    if (!out->shape) {
+    int *new_shape = malloc(out->ndim * sizeof(int));
+    if (!new_shape) return;
+    for (int i = 0; i < out->ndim; ++i) {
+      new_shape[i] = (i < dim) ? in->shape[i] : in->shape[i + 1];
+    }
+    if (tensor_alloc_shape(out->ndim, new_shape, &out->shape) != 0) {
+      free(new_shape);
       return;
     }
-
-    for (int i = 0; i < out->ndim; ++i) {
-      if (i < dim) {
-        out->shape[i] = in->shape[i];
-      } else {
-        out->shape[i] = in->shape[i + 1];
-      }
-    }
+    free(new_shape);
 
     out->strides = compute_strides(out->shape, out->ndim);
     if (!out->strides) {
-      free(out->shape);  // Fixed: Free allocated shape before calling
-                         // free_tensor
-      out->shape = NULL;
-      free_tensor(out);
+      free(out->shape);
       return;
     }
   }
 
-  out->data = in->data;
-  out->grad = in->grad;
-  out->requires_grad = in->requires_grad;
-  out->grad_fn = NULL;
+  tensor_init_view(out, in);
 }
 
 /**
@@ -166,52 +133,33 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
  * @note Only metadata is updated, no copy is performed.
  */
 void transpose_op(Tensor *in, Tensor *out, int N, int M) {
-  // Validate dimension indices
-  if (N < 0 || N >= in->ndim || M < 0 || M >= in->ndim) {
-    return;
-  }
+  if (N < 0 || N >= in->ndim || M < 0 || M >= in->ndim) return;
 
-  out->owns_data = false;
   out->ndim = in->ndim;
-  out->shape = malloc(out->ndim * sizeof(int));
-  if (!out->shape) {
+  int *new_shape = malloc(out->ndim * sizeof(int));
+  int *new_strides = malloc(out->ndim * sizeof(int));
+  if (!new_shape || !new_strides) {
+    free(new_shape);
+    free(new_strides);
     return;
   }
 
-  // Copy shape with dimensions swapped
   for (int i = 0; i < out->ndim; ++i) {
     if (i == N) {
-      out->shape[i] = in->shape[M];
+      new_shape[i] = in->shape[M];
+      new_strides[i] = in->strides[M];
     } else if (i == M) {
-      out->shape[i] = in->shape[N];
+      new_shape[i] = in->shape[N];
+      new_strides[i] = in->strides[N];
     } else {
-      out->shape[i] = in->shape[i];
+      new_shape[i] = in->shape[i];
+      new_strides[i] = in->strides[i];
     }
   }
 
-  // For transpose, we need to manually compute strides to reflect the swap
-  out->strides = malloc(out->ndim * sizeof(int));
-  if (!out->strides) {
-    free(out->shape);
-    out->shape = NULL;
-    return;
-  }
-
-  // Copy strides with dimensions swapped
-  for (int i = 0; i < out->ndim; ++i) {
-    if (i == N) {
-      out->strides[i] = in->strides[M];
-    } else if (i == M) {
-      out->strides[i] = in->strides[N];
-    } else {
-      out->strides[i] = in->strides[i];
-    }
-  }
-
-  out->data = in->data;
-  out->grad = in->grad;
-  out->requires_grad = in->requires_grad;
-  out->grad_fn = NULL;
+  out->shape = new_shape;
+  out->strides = new_strides;
+  tensor_init_view(out, in);
 }
 
 /**
@@ -230,43 +178,24 @@ void transpose_op(Tensor *in, Tensor *out, int N, int M) {
  * @note Expansion uses stride=0 for broadcasted dims.
  */
 void expand_op(Tensor *in, Tensor *out, const int *shape) {
-  out->owns_data = false;
   out->ndim = in->ndim;
-
-  out->shape = malloc(out->ndim * sizeof(int));
-  if (!out->shape) {
-    return;
-  }
-
-  // Copy the target shape
-  for (int i = 0; i < out->ndim; ++i) {
-    out->shape[i] = shape[i];
-  }
+  if (tensor_alloc_shape(out->ndim, shape, &out->shape) != 0) return;
 
   out->strides = malloc(out->ndim * sizeof(int));
   if (!out->strides) {
     free(out->shape);
-    out->shape = NULL;
     return;
   }
 
-  // Set strides: 0 for broadcasted dimensions, original stride otherwise
   for (int i = 0; i < in->ndim; ++i) {
-    // Validate that non-unit dimensions match
     if (in->shape[i] != 1 && in->shape[i] != shape[i]) {
       free(out->shape);
       free(out->strides);
-      out->shape = NULL;
-      out->strides = NULL;
       return;
     }
     out->strides[i] = (in->shape[i] == 1) ? 0 : in->strides[i];
   }
-
-  out->data = in->data;
-  out->grad = in->grad;
-  out->requires_grad = in->requires_grad;
-  out->grad_fn = NULL;
+  tensor_init_view(out, in);
 }
 
 /**
@@ -284,52 +213,30 @@ void expand_op(Tensor *in, Tensor *out, const int *shape) {
  * @effects Shares `in->data` and `in->grad` with `out`.
  */
 void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
-  out->owns_data = false;
   out->ndim = ndim;
-
-  out->shape = malloc(out->ndim * sizeof(int));
-  if (!out->shape) {
-    return;  // Fixed: Don't call free_tensor here as it expects a valid tensor
-  }
-
-  for (int i = 0; i < out->ndim; ++i) {
-    out->shape[i] = shape[i];
-  }
-
-  out->strides = malloc(out->ndim * sizeof(int));
+  if (tensor_alloc_shape(ndim, shape, &out->shape) != 0) return;
+  out->strides = malloc(ndim * sizeof(int));
   if (!out->strides) {
     free(out->shape);
-    out->shape = NULL;
     return;
   }
 
-  // Implement broadcasting logic
   int in_dim = in->ndim - 1;
-  for (int i = out->ndim - 1; i >= 0; --i) {
+  for (int i = ndim - 1; i >= 0; --i) {
     if (in_dim >= 0) {
       if (in->shape[in_dim] == shape[i]) {
-        // Dimension sizes match, use original stride
         out->strides[i] = in->strides[in_dim];
       } else if (in->shape[in_dim] == 1) {
-        // Input dimension is 1, broadcast with stride 0
         out->strides[i] = 0;
       } else {
-        // Invalid broadcast: dimensions don't match and input isn't 1
         free(out->shape);
         free(out->strides);
-        out->shape = NULL;
-        out->strides = NULL;
         return;
       }
       in_dim--;
     } else {
-      // New dimension added on the left, stride is 0
       out->strides[i] = 0;
     }
   }
-
-  out->data = in->data;
-  out->grad = in->grad;
-  out->requires_grad = in->requires_grad;
-  out->grad_fn = NULL;
+  tensor_init_view(out, in);
 }
