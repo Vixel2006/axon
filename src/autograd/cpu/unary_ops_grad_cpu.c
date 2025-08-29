@@ -1,7 +1,8 @@
-#include "ops.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
+
+#include "ops.h"
 
 /**
  * @brief Backward pass for ReLU activation.

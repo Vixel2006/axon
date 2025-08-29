@@ -40,6 +40,7 @@ from ..elnawah_bindings.c_wrapper_functions import (
     c_exp_grad_op,
     c_abs_grad_op,
     c_neg_grad_op,
+    c_broadcast,
     c_malloc_tensor_empty,
 )
 from ..elnawah_bindings.ctypes_definitions import CTensor, BackwardFnType
@@ -66,6 +67,7 @@ from .lazy_ops import (
     LazySqueeze,
     LazyTranspose,
     LazyExpand,
+    LazyBroadcast
 )
 
 
@@ -1001,7 +1003,7 @@ class Transpose(Function):
 
 class Expand(Function):
     """
-    Broadcast tensor to a larger shape.
+    Expand tensor to a larger shape.
 
     Forward:
         out = expand(a, shape)
@@ -1036,3 +1038,41 @@ class Expand(Function):
         extras: ctypes.c_void_p,
     ):
         pass  # TODO: Implement expand_grad_op
+
+class Broadcast(Function):
+    """
+    Broadcast tensor to a larger shape.
+
+    Forward:
+        out = broadcast(a, shape)
+
+    Backward:
+        dL/da = reduce(dL/dout, original shape of a)
+
+    Notes:
+        - Uses C-level kernel `c_broadcast`.
+    """
+
+    lazy_op_class = LazyBroadcast
+
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
+        return None
+
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", shape: list[int], ndim: int
+    ) -> "Tensor":
+        from ..core.tensor import Tensor
+
+        c_broadcast(a._c_tensor, out_tensor._c_tensor, ndim, shape)
+
+        return out_tensor
+
+    def backward(
+        self,
+        out_tensor_ptr: ctypes.POINTER(CTensor),
+        prev_tensor_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)),
+        n_prev: int,
+        extras: ctypes.c_void_p,
+    ):
+        pass  # TODO: Implement expand_grad_op
+

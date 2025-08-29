@@ -457,3 +457,62 @@ class LazyExpand(LazyOp):
                     f"expand() error: Can't expand dim {i} from {a.shape[i]} to {shape[i]}, Only dims of 1 can be expanded."
                 )
         return tuple(shape)
+
+class LazyBroadcast(LazyOp):
+    """
+    Lazy broadcast shape inference.
+
+    Args:
+        shape (list[int]): Target shape.
+
+    Rules:
+        - Input must have same ndim as `shape`.
+        - Dimension can be expanded if it's 1.
+        - Expanding from !=1 to a new size is invalid.
+
+    Returns:
+        Tuple[int, ...]: broadcasted shape.
+
+    Raises:
+        RuntimeError: If expansion rule is violated.
+    """
+
+    def calculate_output_shape(self, a: "Tensor", shape: list[int], ndim: int) -> Tuple[int, ...]:
+        a_shape = list(a.shape)
+        target_shape = list(shape)
+
+        # The target shape determines the output dimensionality
+        output_ndim = len(target_shape)
+
+        # Pad a_shape with leading ones to match the target_shape's dimensionality
+        if len(a_shape) > output_ndim:
+            raise RuntimeError(
+                f"broadcast() error: Cannot broadcast tensor with shape {a.shape} to target shape {target_shape}. "
+                f"Tensor has more dimensions than the target shape."
+            )
+        
+        padded_a_shape = [1] * (output_ndim - len(a_shape)) + a_shape
+
+        # Check compatibility from right to left
+        for i in range(1, output_ndim + 1): # Iterate from last dimension to first
+            dim_a = padded_a_shape[-i]
+            dim_target = target_shape[-i]
+
+            if dim_a == dim_target:
+                continue # Compatible
+            elif dim_a == 1:
+                continue # Compatible, 1 can broadcast to any size
+            elif dim_target == 1:
+                # If target_dim is 1, then a_dim must also be 1 for compatibility in broadcast_to
+                if dim_a != 1:
+                    raise RuntimeError(
+                        f"broadcast() error: Cannot broadcast dimension {dim_a} to {dim_target} at dim {-i}. "
+                        f"Target dimension is 1, but input dimension is not 1."
+                    )
+            else:
+                raise RuntimeError(
+                    f"broadcast() error: Dimensions {dim_a} and {dim_target} are not compatible for broadcasting at dim {-i}."
+                )
+        
+        return tuple(target_shape)
+
