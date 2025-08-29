@@ -40,6 +40,9 @@ from ..elnawah_bindings.c_wrapper_functions import (
     c_exp_grad_op,
     c_abs_grad_op,
     c_neg_grad_op,
+    c_sum_grad_op,
+    c_mean_grad_op,
+    c_max_grad_op,
     c_broadcast,
     c_malloc_tensor_empty,
 )
@@ -779,7 +782,7 @@ class Sum(Function):
         n_prev: int,
         extras: ctypes.c_void_p,
     ):
-        pass  # TODO: Implement sum_grad_op
+        c_sum_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
 
 class Mean(Function):
@@ -794,7 +797,6 @@ class Mean(Function):
 
     Notes:
         - Uses C-level kernel `c_mean`.
-        - Backward not yet implemented (TODO: `mean_grad_op`).
     """
 
     lazy_op_class = LazyMean
@@ -815,7 +817,7 @@ class Mean(Function):
         n_prev: int,
         extras: ctypes.c_void_p,
     ):
-        pass  # TODO: Implement mean_grad_op
+        c_mean_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
 
 class Max(Function):
@@ -851,7 +853,7 @@ class Max(Function):
         n_prev: int,
         extras: ctypes.c_void_p,
     ):
-        pass  # TODO: Implement max_grad_op
+        c_max_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
 
 # --- Movement Operations ---
