@@ -146,6 +146,34 @@ if tensor_lib:
     ]
     tensor_lib.neg_grad_op.restype = None
 
+    # Reduction operatiosn grad
+    tensor_lib.sum_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+
+    tensor_lib.sum_grad_op.restype = None
+
+    tensor_lib.mean_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+
+    tensor_lib.mean_grad_op.restype = None
+
+    tensor_lib.max_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+
+    tensor_lib.max_grad_op.restype = None
+
     # Unary operations
     tensor_lib.relu_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.relu_op.restype = None

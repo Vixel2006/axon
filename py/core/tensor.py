@@ -312,13 +312,13 @@ class Tensor(CTensor):
         return Neg.apply(self)
 
     def sum(self, axis: int = 0, keepdim: bool = True):
-        return Sum.apply(self, axis, keepdim)
+        return Sum.apply(self, axis=axis, keepdim=keepdim)
 
     def mean(self, axis: int = 0, keepdim: bool = True):
-        return Mean.apply(self, axis, keepdim)
+        return Mean.apply(self, axis=axis, keepdim=keepdim)
 
     def max(self, axis: int = 0, keepdim: bool = True):
-        return Max.apply(self, axis, keepdim)
+        return Max.apply(self, axis=axis, keepdim=keepdim)
 
     def validate(self) -> bool:
         try:
@@ -422,11 +422,13 @@ class Tensor(CTensor):
 
 
 if __name__ == "__main__":
-    x = Tensor((1, 2, 2), [[1, 2], [3, 4]])
+    x = Tensor((2, 4), [[1, 2, 3, 4], [3, 4, 5, 6]])
 
-    y = x.broadcast((2,2,2,2))
+    z = x.max(1)
 
-    y.realize()
+    z.backward()
 
-    print(y)
+    print(z)
+    print(z.grad)
+    print(x.grad)
 
