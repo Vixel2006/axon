@@ -2,7 +2,7 @@
 #include <math.h>
 #include <sleef.h>
 
-#include "ops.h"
+#include "autograd/autograd.h"
 
 /**
  * @brief Backward pass for ReLU activation.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..elnawah_bindings.c_wrapper_functions import (
+from py.elnawah_bindings.c_wrapper_functions import (
     c_malloc_tensor_empty,
     c_malloc_tensor_shape,
     c_malloc_tensor_full,
@@ -9,34 +9,14 @@ from ..elnawah_bindings.c_wrapper_functions import (
     c_compute_strides,
     c_set_ones_grad,
 )
-from ..elnawah_bindings.ctypes_definitions import CTensor
-from ..elnawah_bindings.c_library_loader import tensor_lib
+from py.elnawah_bindings.ctypes_definitions import CTensor
+from py.elnawah_bindings.c_library_loader import tensor_lib
 
 from .node import Node
-from py.ops.functions import (
-    Add,
-    Sub,
-    RSub,
-    Mul,
-    Div,
-    RDiv,
-    MatMul,
-    ReLU,
-    Log,
-    Exp,
-    Softmax,
-    Abs,
-    Neg,
-    Sum,
-    Mean,
-    Max,
-    View,
-    Unsqueeze,
-    Squeeze,
-    Transpose,
-    Expand,
-    Broadcast
-)
+from py.ops.functions.binary_ops import Add, Sub, RSub, Mul, Div, RDiv, MatMul
+from py.ops.functions.unary_ops import ReLU, Log, Exp, Softmax, Abs, Neg
+from py.ops.functions.reduction_ops import Sum, Mean, Max
+from py.ops.functions.movement_ops import View, Unsqueeze, Squeeze, Transpose, Expand, Broadcast
 
 import numpy as np
 import ctypes
@@ -422,13 +402,22 @@ class Tensor(CTensor):
 
 
 if __name__ == "__main__":
-    x = Tensor((2, 4), [[1, 2, 3, 4], [3, 4, 5, 6]])
+    x = Tensor((2, 2), [[1, 2], [3, 4]])
+    y = Tensor((2, 1), [[1], [2]])
 
-    z = x.max(1)
+    z = x @ y
 
     z.backward()
 
     print(z)
-    print(z.grad)
+    print(y.grad)
     print(x.grad)
 
+    a = y.transpose(-1, -2)
+
+    a.backward()
+
+    print(a)
+    print(x.grad)
+    print(a.grad)
+    print(y.grad)

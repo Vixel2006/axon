@@ -1,28 +1,9 @@
 #include <immintrin.h>
 
-#include "autograd.h"
+#include "autograd/autograd.h"
+#include "autograd/autograd_utils.h"
 
 #define SIMD_WIDTH 8
-
-int get_reduced_dim(int *in_shape, int *out_shape, int in_ndim, int out_ndim) {
-  int reduced_dim = -1;
-  for (int i = 0; i < in_ndim; ++i) {
-    if (out_ndim <= i || in_shape[i] != out_shape[i]) {
-      reduced_dim = i;
-      break;
-    }
-  }
-
-  return reduced_dim;
-}
-
-int get_num_batches(int *in_shape, int in_ndim, int reduced_dim) {
-  int num_batches = 1;
-  for (int i = 0; i < in_ndim; ++i) {
-    if (i != reduced_dim) num_batches *= in_shape[i];
-  }
-  return num_batches;
-}
 
 void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *in = prev[0];
@@ -35,7 +16,7 @@ void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
   int reduce_size = in->shape[reduced_dim];
 
-  int num_batches = get_num_batches(in->shape, in->ndim, reduced_dim);
+  int num_batches = get_num_reduction_batches(in->shape, in->ndim, reduced_dim);
 
   for (int batch_idx = 0; batch_idx < num_batches; ++batch_idx) {
     float grad = out->grad[batch_idx];
@@ -68,7 +49,7 @@ void mean_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
   int reduce_size = in->shape[reduced_dim];
 
-  int num_batches = get_num_batches(in->shape, in->ndim, reduced_dim);
+  int num_batches = get_num_reduction_batches(in->shape, in->ndim, reduced_dim);
 
   for (int batch_idx = 0; batch_idx < num_batches; ++batch_idx) {
     float grad = out->grad[batch_idx];
@@ -101,7 +82,7 @@ void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
   int reduce_size = in->shape[reduced_dim];
 
-  int num_batches = get_num_batches(in->shape, in->ndim, reduced_dim);
+  int num_batches = get_num_reduction_batches(in->shape, in->ndim, reduced_dim);
 
   for (int batch_idx = 0; batch_idx < num_batches; ++batch_idx) {
     float grad = out->grad[batch_idx];
