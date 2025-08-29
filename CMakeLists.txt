@@ -21,6 +21,7 @@ add_library(elnawah SHARED
   src/tensor.c src/node.c src/ops/cpu/unary_ops_cpu.c src/ops/cpu/reduction_ops_cpu.c
   src/ops/cpu/binary_ops_cpu.c src/ops/cpu/binary_ops_scalar_cpu.c src/ops/cpu/movement_ops_cpu.c
   src/autograd/cpu/binary_ops_grad_cpu.c src/autograd/cpu/unary_ops_grad_cpu.c
+  src/autograd/cpu/reduction_ops_grad_cpu.c
 )
 
 target_include_directories(elnawah PUBLIC include ${SLEEF_INCLUDE_DIR})
