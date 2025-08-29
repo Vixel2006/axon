@@ -98,6 +98,14 @@ if tensor_lib:
     ]
     tensor_lib.rdiv_grad_op.restype = None
 
+    tensor_lib.matmul_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.matmul_grad_op.restype = None
+
     tensor_lib.relu_grad_op.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),

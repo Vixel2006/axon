@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Optional, Callable, Tuple, Dict, Any
 
-from ..elnawah_bindings.c_wrapper_functions import c_malloc_node, c_free_node
-from ..elnawah_bindings.ctypes_definitions import CTensor, CNode
+from py.elnawah_bindings.c_wrapper_functions import c_malloc_node, c_free_node
+from py.elnawah_bindings.ctypes_definitions import CTensor, CNode
 
 import ctypes
 
