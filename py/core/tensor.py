@@ -35,6 +35,7 @@ from py.ops.functions import (
     Squeeze,
     Transpose,
     Expand,
+    Broadcast
 )
 
 import numpy as np
@@ -142,6 +143,7 @@ class Tensor(CTensor):
     def shape(self):
         return self._shape
 
+        
     @property
     def data(self) -> np.ndarray:
         if not self._c_tensor or not self._c_tensor.contents:
@@ -166,30 +168,37 @@ class Tensor(CTensor):
             raise ValueError("Invalid tensor: NULL data pointer")
 
         try:
-            shape = (
+            current_shape = (
                 self._shape
                 if self._shape is not None
                 else [t.shape[i] for i in range(t.ndim)]
             )
 
-            n = int(np.prod(shape)) if shape else 0
-
-            if n <= 0:
-                raise ValueError(f"Invalid tensor size: {n}")
-
-            flat_data = []
-            for i in range(n):
-                try:
-                    flat_data.append(t.data[i])
-                except (IndexError, ValueError, ctypes.ArgumentError) as e:
-                    raise ValueError(f"Failed to access tensor data at index {i}: {e}")
-
-            np_array = np.array(flat_data, dtype=np.float32)
-            return np_array.reshape(shape)
+            return self._construct_data_with_strides(t, current_shape)
 
         except Exception as e:
             raise ValueError(f"Failed to convert tensor data to numpy array: {e}")
 
+    def _construct_data_with_strides(self, t, shape):
+        if not t.strides:
+            raise ValueError("Invalid tensor: NULL strides pointer")
+
+        result = np.zeros(shape, dtype=np.float32)
+        
+        indices = np.ndindex(tuple(shape))
+        
+        for idx in indices:
+            flat_index = 0
+            for i, coord in enumerate(idx):
+                flat_index += coord * t.strides[i]
+            
+            try:
+                result[idx] = t.data[flat_index]
+            except (IndexError, ValueError, ctypes.ArgumentError) as e:
+                raise ValueError(f"Failed to access tensor data at flat index {flat_index}: {e}")
+        
+        return result
+    
     @property
     def grad(self) -> np.ndarray:
         if not self._c_tensor or not self._c_tensor.contents:
@@ -204,25 +213,36 @@ class Tensor(CTensor):
             return np.array(t.grad[0], dtype=np.float32)
 
         try:
-            n = int(np.prod(self._shape)) if self._shape else 0
+            current_shape = (
+                self._shape
+                if self._shape is not None
+                else [t.shape[i] for i in range(t.ndim)]
+            )
 
-            if n <= 0:
-                raise ValueError(f"Invalid tensor size: {n}")
-
-            flat_grad = []
-            for i in range(n):
-                try:
-                    flat_grad.append(t.grad[i])
-                except (IndexError, ValueError, ctypes.ArgumentError) as e:
-                    raise ValueError(
-                        f"Failed to access tensor gradient at index {i}: {e}"
-                    )
-
-            np_array = np.array(flat_grad, dtype=np.float32)
-            return np_array.reshape(self._shape)
+            return self._construct_grad_with_strides(t, current_shape)
 
         except Exception as e:
             raise ValueError(f"Failed to convert tensor gradient to numpy array: {e}")
+
+    def _construct_grad_with_strides(self, t, shape):
+        if not t.strides:
+            raise ValueError("Invalid tensor: NULL strides pointer")
+
+        result = np.zeros(shape, dtype=np.float32)
+        
+        indices = np.ndindex(tuple(shape))
+        
+        for idx in indices:
+            flat_index = 0
+            for i, coord in enumerate(idx):
+                flat_index += coord * t.strides[i]
+            
+            try:
+                result[idx] = t.grad[flat_index]
+            except (IndexError, ValueError, ctypes.ArgumentError) as e:
+                raise ValueError(f"Failed to access tensor gradient at flat index {flat_index}: {e}")
+        
+        return result
 
     @property
     def requires_grad(self) -> bool:
@@ -341,27 +361,11 @@ class Tensor(CTensor):
         return Transpose.apply(self, n=n, m=m)
 
     def expand(self, shape: list[int]) -> Tensor:
-        return Expand.apply(self, shape)
+        return Expand.apply(self, shape=shape)
 
-    def broadcast(self, shape: list[int]) -> "Tensor":
-        if self.ndim > len(shape):
-            raise ValueError(
-                f"broadcast() error: source tensor has higher rank than target shape."
-            )
-
-        t = self
-
-        for i in range(len(shape) - self.ndim):
-            t = t.unsqueeze(0)
-
-        for i in range(len(shape)):
-            if shape[i] != t.shape[i] and t.shape[i] != 1:
-                raise RuntimeError(
-                    f"broadcast() error: can't broadcast {self.shape} to {shape}"
-                )
-
-        z = t.expand(shape)
-        return z
+    def broadcast(self, shape: list[int]) -> Tensor:
+        ndim = len(shape)
+        return Broadcast.apply(self, shape=shape, ndim=ndim)
 
     def relu(self) -> Tensor:
         return ReLU.apply(self)
@@ -418,16 +422,11 @@ class Tensor(CTensor):
 
 
 if __name__ == "__main__":
-    x = Tensor((2, 2), [[1, 2], [3, 4]])
-    y = Tensor((4, 1), [[3], [4], [1], [2]])
-    n = x.view([4, 1])
-    z = n + y
+    x = Tensor((1, 2, 2), [[1, 2], [3, 4]])
 
-    z.backward()
+    y = x.broadcast((2,2,2,2))
 
-    print(z)
-    print("=============== Debug grad =====================")
-    print(f"Z Grad: {z.grad}")
-    print(f"N Grad: {n.grad}")
-    print(f"X Grad: {x.grad}")
-    print("=============== Finish grad =====================")
+    y.realize()
+
+    print(y)
+
