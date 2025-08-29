@@ -309,3 +309,11 @@ if tensor_lib:
         ctypes.POINTER(ctypes.c_int),
     ]
     tensor_lib.expand_op.restype = None
+
+    tensor_lib.broadcast_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int),
+    ]
+    tensor_lib.broadcast_op.restype = None
