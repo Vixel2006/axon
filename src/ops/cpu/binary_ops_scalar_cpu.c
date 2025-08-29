@@ -1,7 +1,8 @@
-#include "ops.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
+
+#include "ops/ops.h"
 
 /**
  * @brief Elementwise addition of a tensor and a scalar (SIMD-optimized).

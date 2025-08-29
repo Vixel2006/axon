@@ -2,8 +2,7 @@
 #include <math.h>
 #include <sleef.h>
 
-#include "autograd.h"
-#include "ops.h"
+#include "ops/ops.h"
 
 #define SIMD_WIDTH 8
 

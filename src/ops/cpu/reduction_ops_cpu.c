@@ -1,4 +1,3 @@
-#include "ops.h"
 #include <float.h>
 #include <immintrin.h>
 #include <math.h>
@@ -6,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "ops/ops.h"
 
 /**
  * @brief Computes the sum of tensor elements along a given axis.
@@ -151,7 +152,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         base_in_offset += (size_t)coord * a->strides[current_a_dim_for_base++];
         temp_idx %= product_trailing_prefix;
       }
-      current_a_dim_for_base++; // skip reduction axis
+      current_a_dim_for_base++;  // skip reduction axis
 
       temp_idx = post_idx_linear;
       for (int d = axis + 1; d < a->ndim; ++d) {

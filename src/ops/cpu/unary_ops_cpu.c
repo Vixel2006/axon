@@ -2,7 +2,7 @@
 #include <math.h>
 #include <sleef.h>
 
-#include "ops.h"
+#include "ops/ops.h"
 
 /**
  * @brief Applies the ReLU activation function element-wise.

@@ -128,6 +128,9 @@ if tensor_lib:
     def c_rdiv_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.rdiv_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
+    def c_matmul_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.matmul_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
     def c_relu_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.relu_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
