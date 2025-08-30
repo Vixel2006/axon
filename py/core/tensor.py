@@ -402,22 +402,16 @@ class Tensor(CTensor):
 
 
 if __name__ == "__main__":
-    x = Tensor((2, 2), [[1, 2], [3, 4]])
-    y = Tensor((2, 1), [[1], [2]])
+    x = Tensor((2, 1), [[1], [2]])
+    y = Tensor((1,1), [[2]])
 
-    z = x @ y
+    print(x)
 
-    z.backward()
+    c = y.broadcast((1, 2))
 
+    z = x @ c
+
+
+    z.realize()
+    print(c)
     print(z)
-    print(y.grad)
-    print(x.grad)
-
-    a = y.transpose(-1, -2)
-
-    a.backward()
-
-    print(a)
-    print(x.grad)
-    print(a.grad)
-    print(y.grad)
