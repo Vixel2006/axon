@@ -27,4 +27,10 @@ int *compute_strides(const int *shape, int ndim);
 void set_ones_grad(Tensor *t);
 bool is_contiguous(Tensor *t);
 
+Tensor *zeros(const int *shape, int ndim, bool requires_grad);
+Tensor *ones(const int *shape, int ndim, bool requires_grad);
+Tensor *randn(const int *shape, int ndim, int seed, bool requires_grad);
+Tensor *uniform(const int *shape, int ndim, float low, float high,
+                bool requires_grad);
+
 #endif
