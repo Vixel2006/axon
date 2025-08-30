@@ -20,19 +20,36 @@
  * @note Assumes contiguous memory layout.
  */
 void add_scalar_op(Tensor *a, float b, Tensor *out) {
-  int i = 0;
   int size = numel(a->shape, a->ndim);
 
-  __m256 scalar = _mm256_set1_ps(b);
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_a = 0;
+      int offset_out = 0;
+      int tmp = idx;
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(a->data + i);
-    __m256 z = _mm256_add_ps(x, scalar);
-    _mm256_storeu_ps(out->data + i, z);
-  }
+      for (int d = a->ndim - 1; d >= 0; --d) {
+        int coord = tmp % a->shape[d];
+        tmp /= a->shape[d];
+        offset_a += coord * a->strides[d];
+        offset_out += coord * out->strides[d];
+      }
 
-  for (; i < size; ++i) {
-    out->data[i] = a->data[i] + b;
+      out->data[offset_out] = a->data[offset_a] + b;
+    }
+  } else {
+    int i = 0;
+    __m256 scalar = _mm256_set1_ps(b);
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 z = _mm256_add_ps(x, scalar);
+      _mm256_storeu_ps(out->data + i, z);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = a->data[i] + b;
+    }
   }
 
   out->requires_grad = a->requires_grad ? true : false;
@@ -53,19 +70,36 @@ void add_scalar_op(Tensor *a, float b, Tensor *out) {
  * @note Assumes contiguous memory layout.
  */
 void sub_scalar_op(Tensor *a, float b, Tensor *out) {
-  int i = 0;
   int size = numel(a->shape, a->ndim);
 
-  __m256 scalar = _mm256_set1_ps(b);
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_a = 0;
+      int offset_out = 0;
+      int tmp = idx;
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(a->data + i);
-    __m256 z = _mm256_sub_ps(x, scalar);
-    _mm256_storeu_ps(out->data + i, z);
-  }
+      for (int d = a->ndim - 1; d >= 0; --d) {
+        int coord = tmp % a->shape[d];
+        tmp /= a->shape[d];
+        offset_a += coord * a->strides[d];
+        offset_out += coord * out->strides[d];
+      }
 
-  for (; i < size; ++i) {
-    out->data[i] = a->data[i] - b;
+      out->data[offset_out] = a->data[offset_a] - b;
+    }
+  } else {
+    int i = 0;
+    __m256 scalar = _mm256_set1_ps(b);
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 z = _mm256_sub_ps(x, scalar);
+      _mm256_storeu_ps(out->data + i, z);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = a->data[i] - b;
+    }
   }
 
   out->requires_grad = a->requires_grad ? true : false;
@@ -87,19 +121,37 @@ void sub_scalar_op(Tensor *a, float b, Tensor *out) {
  * @note Assumes contiguous memory layout.
  */
 void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
-  int i = 0;
   int size = numel(b->shape, b->ndim);
 
-  __m256 scalar = _mm256_set1_ps(a);
+  if (!is_contiguous(b) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int b_offset = 0;
+      int out_offset = 0;
+      int tmp = idx;
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(b->data + i);
-    __m256 z = _mm256_sub_ps(x, scalar);
-    _mm256_storeu_ps(out->data + i, z);
-  }
+      for (int d = b->ndim - 1; d >= 0; --d) {
+        int coord = tmp % b->shape[d];
+        tmp /= b->shape[d];
 
-  for (; i < size; ++i) {
-    out->data[i] = a - b->data[i];
+        b_offset += coord * b->strides[d];
+        out_offset += coord * out->strides[d];
+      }
+
+      out->data[out_offset] = a - b->data[b_offset];
+    }
+  } else {
+    int i = 0;
+    __m256 scalar = _mm256_set1_ps(a);
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(b->data + i);
+      __m256 z = _mm256_sub_ps(scalar, x);
+      _mm256_storeu_ps(out->data + i, z);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = a - b->data[i];
+    }
   }
 
   out->requires_grad = b->requires_grad ? true : false;
@@ -120,19 +172,36 @@ void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
  * @note Assumes contiguous memory layout.
  */
 void mul_scalar_op(Tensor *a, float b, Tensor *out) {
-  int i = 0;
   int size = numel(a->shape, a->ndim);
 
-  __m256 scalar = _mm256_set1_ps(b);
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_a = 0;
+      int offset_out = 0;
+      int tmp = idx;
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(a->data + i);
-    __m256 z = _mm256_mul_ps(x, scalar);
-    _mm256_storeu_ps(out->data + i, z);
-  }
+      for (int d = a->ndim - 1; d >= 0; --d) {
+        int coord = tmp % a->shape[d];
+        tmp /= a->shape[d];
+        offset_a += coord * a->strides[d];
+        offset_out += coord * out->strides[d];
+      }
 
-  for (; i < size; ++i) {
-    out->data[i] = a->data[i] * b;
+      out->data[offset_out] = a->data[offset_a] * b;
+    }
+  } else {
+    int i = 0;
+    __m256 scalar = _mm256_set1_ps(b);
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 z = _mm256_mul_ps(x, scalar);
+      _mm256_storeu_ps(out->data + i, z);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = a->data[i] * b;
+    }
   }
 
   out->requires_grad = a->requires_grad ? true : false;
@@ -148,31 +217,48 @@ void mul_scalar_op(Tensor *a, float b, Tensor *out) {
  * @param b   Scalar value (divisor).
  * @param out Output tensor (must be allocated with same shape as `a`).
  *
- * @effects Updates `out->data` with elementwise division.
  * @effects Sets `out->requires_grad` = `a->requires_grad`.
  * @note Assumes contiguous memory layout.
  */
 void div_scalar_op(Tensor *a, float b, Tensor *out) {
-  int i = 0;
   int size = numel(a->shape, a->ndim);
 
-  __m256 scalar = _mm256_set1_ps(b);
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_a = 0;
+      int offset_out = 0;
+      int tmp = idx;
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(a->data + i);
-    __m256 z = _mm256_div_ps(x, scalar);
-    _mm256_storeu_ps(out->data + i, z);
-  }
+      for (int d = a->ndim - 1; d >= 0; --d) {
+        int coord = tmp % a->shape[d];
+        tmp /= a->shape[d];
+        offset_a += coord * a->strides[d];
+        offset_out += coord * out->strides[d];
+      }
 
-  for (; i < size; ++i) {
-    out->data[i] = a->data[i] / b;
+      out->data[offset_out] = a->data[offset_a] / b;
+    }
+  } else {
+    int i = 0;
+    __m256 scalar = _mm256_set1_ps(b);
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 z = _mm256_div_ps(x, scalar);
+      _mm256_storeu_ps(out->data + i, z);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = a->data[i] / b;
+    }
   }
 
   out->requires_grad = a->requires_grad ? true : false;
 }
 
 /**
- * @brief Elementwise reverse division of a scalar by a tensor (SIMD-optimized).
+ * @brief Elementwise reverse division of a scalar by a tensor
+ * (SIMD-optimized).
  *
  * Computes `a / b[i]` for each element of tensor `b` and stores the result in
  * `out`.
@@ -185,21 +271,39 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
  * @effects Sets `out->requires_grad` = `b->requires_grad`.
  * @note Assumes contiguous memory layout.
  */
-void rdiv_scalar_op(float a, Tensor *b, Tensor *out) {
-  int i = 0;
-  int size = numel(b->shape, b->ndim);
 
-  __m256 scalar = _mm256_set1_ps(a);
+void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
+  int size = numel(a->shape, a->ndim);
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(b->data + i);
-    __m256 z = _mm256_div_ps(scalar, x);
-    _mm256_storeu_ps(out->data + i, z);
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_a = 0;
+      int offset_out = 0;
+      int tmp = idx;
+
+      for (int d = a->ndim - 1; d >= 0; --d) {
+        int coord = tmp % a->shape[d];
+        tmp /= a->shape[d];
+        offset_a += coord * a->strides[d];
+        offset_out += coord * out->strides[d];
+      }
+
+      out->data[offset_out] = b / a->data[offset_a];
+    }
+  } else {
+    int i = 0;
+    __m256 scalar = _mm256_set1_ps(b);
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 z = _mm256_div_ps(scalar, x);
+      _mm256_storeu_ps(out->data + i, z);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = b / a->data[i];
+    }
   }
 
-  for (; i < size; ++i) {
-    out->data[i] = a / b->data[i];
-  }
-
-  out->requires_grad = b->requires_grad ? true : false;
+  out->requires_grad = a->requires_grad ? true : false;
 }
