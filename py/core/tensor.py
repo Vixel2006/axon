@@ -405,8 +405,12 @@ if __name__ == "__main__":
     x = Tensor((2, 1), [[1], [2]])
     z = Tensor((1, 1), [[2]])
 
-    y = x / z.broadcast((2,1))
 
-    y.realize()
+    y = x + z.broadcast((2,1))
+
+    y.backward()
+
 
     print(y)
+    print(x.grad)
+    print(z.grad)
