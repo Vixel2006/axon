@@ -23,10 +23,7 @@ class LazyAdd(LazyOp):
                 raise RuntimeError(
                     f"Can't add tensors with shapes {a.shape} and {b.shape}"
                 )
-            return a.shape
-        else:
-            return a.shape
-
+        return a.shape
 
 class LazySub(LazyOp):
     """
