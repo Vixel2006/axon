@@ -130,7 +130,7 @@ class Function:
                 out_tensor=output_tensor,
                 input_tensors=input_tensors,
                 forward_fn=ctx._execute_forward,
-                forward_args=(output_tensor, *input_tensors),
+                forward_args=(output_tensor, *args),
                 forward_kwargs=kwargs,
                 backward_fn=backward_fn,
                 extras=ctx.extras,
