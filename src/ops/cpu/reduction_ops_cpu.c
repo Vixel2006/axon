@@ -184,11 +184,17 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m128 hi_half = _mm256_extractf128_ps(sum_vec, 1);
         __m128 total_sum_m128 = _mm_add_ps(lo_half, hi_half);
         current_sum_val = _mm_cvtss_f32(total_sum_m128);
-      }
 
-      for (; i < reduction_size; ++i) {
-        current_sum_val +=
-            a->data[base_in_offset + (size_t)i * reduction_stride_a];
+        // Scalar fallback for remaining elements
+        for (; i < reduction_size; ++i) {
+          current_sum_val +=
+              a->data[base_in_offset + (size_t)i * reduction_stride_a];
+        }
+      } else { // Non-SIMD path for non-contiguous strides
+        for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
+          current_sum_val +=
+              a->data[base_in_offset + (size_t)i * reduction_stride_a];
+        }
       }
 
       out->data[out_offset] = current_sum_val;
@@ -361,11 +367,17 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m128 hi_half = _mm256_extractf128_ps(sum_vec, 1);
         __m128 total_sum_m128 = _mm_add_ps(lo_half, hi_half);
         current_sum_val = _mm_cvtss_f32(total_sum_m128);
-      }
 
-      for (; i < reduction_size; ++i) {
-        current_sum_val +=
-            a->data[base_in_offset + (size_t)i * reduction_stride_a];
+        // Scalar fallback for remaining elements
+        for (; i < reduction_size; ++i) {
+          current_sum_val +=
+              a->data[base_in_offset + (size_t)i * reduction_stride_a];
+        }
+      } else { // Non-SIMD path for non-contiguous strides
+        for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
+          current_sum_val +=
+              a->data[base_in_offset + (size_t)i * reduction_stride_a];
+        }
       }
 
       out->data[out_offset] = current_sum_val / reduction_size;
@@ -543,12 +555,19 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         vlow = _mm_max_ps(vlow,
                           _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(1, 0, 3, 2)));
         current_max_val = _mm_cvtss_f32(vlow);
-      }
 
-      for (; i < reduction_size; ++i) {
-        current_max_val =
-            fmaxf(current_max_val,
-                  a->data[base_in_offset + (size_t)i * reduction_stride_a]);
+        // Scalar fallback for remaining elements
+        for (; i < reduction_size; ++i) {
+          current_max_val =
+              fmaxf(current_max_val,
+                    a->data[base_in_offset + (size_t)i * reduction_stride_a]);
+        }
+      } else { // Non-SIMD path for non-contiguous strides
+        for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
+          current_max_val =
+              fmaxf(current_max_val,
+                    a->data[base_in_offset + (size_t)i * reduction_stride_a]);
+        }
       }
 
       out->data[out_offset] = current_max_val;
