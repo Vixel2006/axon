@@ -3,6 +3,7 @@
 #include <sleef.h>
 
 #include "autograd/autograd.h"
+#include "utils.h"
 
 /**
  * @brief Backward pass for ReLU activation.
@@ -18,21 +19,46 @@
 void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
 
-  int i = 0;
   int size = numel(a->shape, a->ndim);
-  for (; i + 7 < size; i += 8) {
-    __m256 va = _mm256_loadu_ps(a->data + i);
-    __m256 mask = _mm256_cmp_ps(va, _mm256_setzero_ps(), _CMP_GT_OQ);
-    __m256 dout = _mm256_loadu_ps(out->grad + i);
-    __m256 dmasked = _mm256_and_ps(dout, mask);
-    __m256 dprev = _mm256_loadu_ps(a->grad + i);
-    dprev = _mm256_add_ps(dprev, dmasked);
-    _mm256_storeu_ps(a->grad + i, dprev);
-  }
+  int ndim = out->ndim;
+  int *shape = out->shape;
 
-  for (; i < size; ++i) {
-    if (a->data[i] > 0) {
-      a->grad[i] += out->grad[i];
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    if (a->requires_grad) {
+      int *a_strides = a->strides;
+      int *out_strides = out->strides;
+      for (int linear = 0; linear < size; ++linear) {
+        int idx = linear;
+        int a_offset = 0, out_offset = 0;
+
+        for (int d = ndim - 1; d >= 0; --d) {
+          int coord = idx % shape[d];
+          idx /= shape[d];
+
+          a_offset += coord * a_strides[d];
+          out_offset += coord * out_strides[d];
+        }
+        if (a->data[a_offset] > 0) {
+          a->grad[a_offset] += out->grad[out_offset];
+        }
+      }
+    }
+  } else {
+    int i = 0;
+    for (; i + 7 < size; i += 8) {
+      __m256 va = _mm256_loadu_ps(a->data + i);
+      __m256 mask = _mm256_cmp_ps(va, _mm256_setzero_ps(), _CMP_GT_OQ);
+      __m256 dout = _mm256_loadu_ps(out->grad + i);
+      __m256 dmasked = _mm256_and_ps(dout, mask);
+      __m256 dprev = _mm256_loadu_ps(a->grad + i);
+      dprev = _mm256_add_ps(dprev, dmasked);
+      _mm256_storeu_ps(a->grad + i, dprev);
+    }
+
+    for (; i < size; ++i) {
+      if (a->data[i] > 0) {
+        a->grad[i] += out->grad[i];
+      }
     }
   }
 }
@@ -51,22 +77,45 @@ void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
 
-  int i = 0;
   int size = numel(a->shape, a->ndim);
-  for (; i + 7 < size; i += 8) {
-    __m256 va = _mm256_loadu_ps(a->data + i);
-    __m256 dout = _mm256_loadu_ps(out->grad + i);
-    __m256 da = _mm256_loadu_ps(a->grad + i);
+  int ndim = out->ndim;
+  int *shape = out->shape;
 
-    __m256 inv = _mm256_rcp_ps(va);
-    __m256 contrib = _mm256_mul_ps(dout, inv);
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    if (a->requires_grad) {
+      int *a_strides = a->strides;
+      int *out_strides = out->strides;
+      for (int linear = 0; linear < size; ++linear) {
+        int idx = linear;
+        int a_offset = 0, out_offset = 0;
 
-    da = _mm256_add_ps(da, contrib);
-    _mm256_storeu_ps(a->grad + i, da);
-  }
+        for (int d = ndim - 1; d >= 0; --d) {
+          int coord = idx % shape[d];
+          idx /= shape[d];
 
-  for (; i < size; ++i) {
-    a->grad[i] += out->grad[i] / a->data[i];
+          a_offset += coord * a_strides[d];
+          out_offset += coord * out_strides[d];
+        }
+        a->grad[a_offset] += out->grad[out_offset] / a->data[a_offset];
+      }
+    }
+  } else {
+    int i = 0;
+    for (; i + 7 < size; i += 8) {
+      __m256 va = _mm256_loadu_ps(a->data + i);
+      __m256 dout = _mm256_loadu_ps(out->grad + i);
+      __m256 da = _mm256_loadu_ps(a->grad + i);
+
+      __m256 inv = _mm256_rcp_ps(va);
+      __m256 contrib = _mm256_mul_ps(dout, inv);
+
+      da = _mm256_add_ps(da, contrib);
+      _mm256_storeu_ps(a->grad + i, da);
+    }
+
+    for (; i < size; ++i) {
+      a->grad[i] += out->grad[i] / a->data[i];
+    }
   }
 }
 
@@ -85,21 +134,44 @@ void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
 
-  int i = 0;
   int size = numel(a->shape, a->ndim);
-  for (; i + 7 < size; i += 8) {
-    __m256 vout = _mm256_loadu_ps(out->data + i);
-    __m256 dout = _mm256_loadu_ps(out->grad + i);
-    __m256 da = _mm256_loadu_ps(a->grad + i);
+  int ndim = out->ndim;
+  int *shape = out->shape;
 
-    __m256 contrib = _mm256_mul_ps(dout, vout);
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    if (a->requires_grad) {
+      int *a_strides = a->strides;
+      int *out_strides = out->strides;
+      for (int linear = 0; linear < size; ++linear) {
+        int idx = linear;
+        int a_offset = 0, out_offset = 0;
 
-    da = _mm256_add_ps(da, contrib);
-    _mm256_storeu_ps(a->grad + i, da);
-  }
+        for (int d = ndim - 1; d >= 0; --d) {
+          int coord = idx % shape[d];
+          idx /= shape[d];
 
-  for (; i < size; ++i) {
-    a->grad[i] += out->grad[i] * out->data[i];
+          a_offset += coord * a_strides[d];
+          out_offset += coord * out_strides[d];
+        }
+        a->grad[a_offset] += out->grad[out_offset] * out->data[out_offset];
+      }
+    }
+  } else {
+    int i = 0;
+    for (; i + 7 < size; i += 8) {
+      __m256 vout = _mm256_loadu_ps(out->data + i);
+      __m256 dout = _mm256_loadu_ps(out->grad + i);
+      __m256 da = _mm256_loadu_ps(a->grad + i);
+
+      __m256 contrib = _mm256_mul_ps(dout, vout);
+
+      da = _mm256_add_ps(da, contrib);
+      _mm256_storeu_ps(a->grad + i, da);
+    }
+
+    for (; i < size; ++i) {
+      a->grad[i] += out->grad[i] * out->data[i];
+    }
   }
 }
 
@@ -120,23 +192,46 @@ void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
 
   int size = numel(a->shape, a->ndim);
-  int i = 0;
+  int ndim = out->ndim;
+  int *shape = out->shape;
 
-  __m256 neg_one = _mm256_set1_ps(-1.0f);
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    if (a->requires_grad) {
+      int *a_strides = a->strides;
+      int *out_strides = out->strides;
+      for (int linear = 0; linear < size; ++linear) {
+        int idx = linear;
+        int a_offset = 0, out_offset = 0;
 
-  for (; i + 7 < size; i += 8) {
-    __m256 dout = _mm256_loadu_ps(out->grad + i);
-    __m256 da = _mm256_loadu_ps(a->grad + i);
+        for (int d = ndim - 1; d >= 0; --d) {
+          int coord = idx % shape[d];
+          idx /= shape[d];
 
-    __m256 contrib = _mm256_mul_ps(dout, neg_one);
+          a_offset += coord * a_strides[d];
+          out_offset += coord * out_strides[d];
+        }
+        a->grad[a_offset] += -out->grad[out_offset];
+      }
+    }
+  } else {
+    int i = 0;
 
-    da = _mm256_add_ps(da, contrib);
+    __m256 neg_one = _mm256_set1_ps(-1.0f);
 
-    _mm256_storeu_ps(a->grad + i, da);
-  }
+    for (; i + 7 < size; i += 8) {
+      __m256 dout = _mm256_loadu_ps(out->grad + i);
+      __m256 da = _mm256_loadu_ps(a->grad + i);
 
-  for (; i < size; ++i) {
-    a->grad[i] += -out->grad[i];
+      __m256 contrib = _mm256_mul_ps(dout, neg_one);
+
+      da = _mm256_add_ps(da, contrib);
+
+      _mm256_storeu_ps(a->grad + i, da);
+    }
+
+    for (; i < size; ++i) {
+      a->grad[i] += -out->grad[i];
+    }
   }
 }
 
@@ -155,33 +250,58 @@ void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 void abs_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
   int size = numel(a->shape, a->ndim);
-  int i = 0;
+  int ndim = out->ndim;
+  int *shape = out->shape;
 
-  __m256 zero = _mm256_setzero_ps();
-  __m256 one = _mm256_set1_ps(1.0f);
-  __m256 neg1 = _mm256_set1_ps(-1.0f);
+  if (!is_contiguous(a) || !is_contiguous(out)) {
+    if (a->requires_grad) {
+      int *a_strides = a->strides;
+      int *out_strides = out->strides;
+      for (int linear = 0; linear < size; ++linear) {
+        int idx = linear;
+        int a_offset = 0, out_offset = 0;
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(a->data + i);
-    __m256 dout = _mm256_loadu_ps(out->grad + i);
-    __m256 da = _mm256_loadu_ps(a->grad + i);
+        for (int d = ndim - 1; d >= 0; --d) {
+          int coord = idx % shape[d];
+          idx /= shape[d];
 
-    __m256 mask_pos = _mm256_cmp_ps(x, zero, _CMP_GT_OQ);
-    __m256 mask_neg = _mm256_cmp_ps(x, zero, _CMP_LT_OQ);
+          a_offset += coord * a_strides[d];
+          out_offset += coord * out_strides[d];
+        }
+        float x = a->data[a_offset];
+        float s = (x > 0) ? 1.0f : (x < 0 ? -1.0f : 0.0f);
+        a->grad[a_offset] += out->grad[out_offset] * s;
+      }
+    }
+  } else {
+    int i = 0;
 
-    __m256 sign = _mm256_blendv_ps(zero, one, mask_pos);
-    sign = _mm256_blendv_ps(sign, neg1, mask_neg);
+    __m256 zero = _mm256_setzero_ps();
+    __m256 one = _mm256_set1_ps(1.0f);
+    __m256 neg1 = _mm256_set1_ps(-1.0f);
 
-    __m256 contrib = _mm256_mul_ps(dout, sign);
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 dout = _mm256_loadu_ps(out->grad + i);
+      __m256 da = _mm256_loadu_ps(a->grad + i);
 
-    da = _mm256_add_ps(da, contrib);
+      __m256 mask_pos = _mm256_cmp_ps(x, zero, _CMP_GT_OQ);
+      __m256 mask_neg = _mm256_cmp_ps(x, zero, _CMP_LT_OQ);
 
-    _mm256_storeu_ps(a->grad + i, da);
-  }
+      __m256 sign = _mm256_blendv_ps(zero, one, mask_pos);
+      sign = _mm256_blendv_ps(sign, neg1, mask_neg);
 
-  for (; i < size; ++i) {
-    float x = a->data[i];
-    float s = (x > 0) ? 1.0f : (x < 0 ? -1.0f : 0.0f);
-    a->grad[i] += out->grad[i] * s;
+      __m256 contrib = _mm256_mul_ps(dout, sign);
+
+      da = _mm256_add_ps(da, contrib);
+
+      _mm256_storeu_ps(a->grad + i, da);
+    }
+
+    for (; i < size; ++i) {
+      float x = a->data[i];
+      float s = (x > 0) ? 1.0f : (x < 0 ? -1.0f : 0.0f);
+      a->grad[i] += out->grad[i] * s;
+    }
   }
 }

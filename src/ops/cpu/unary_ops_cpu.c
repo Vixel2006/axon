@@ -19,19 +19,37 @@
  * @effects If gradients are not required, frees the input tensor.
  */
 void relu_op(Tensor *in, Tensor *out) {
-  int i = 0;
   int size = numel(in->shape, in->ndim);
 
-  __m256 zeros = _mm256_setzero_ps();
+  if (!is_contiguous(in) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_in = 0;
+      int offset_out = 0;
+      int tmp = idx;
 
-  for (; i + 7 < size; i += 8) {
-    __m256 vin = _mm256_loadu_ps(in->data + i);
-    __m256 vout = _mm256_max_ps(vin, zeros);
-    _mm256_storeu_ps(out->data + i, vout);
-  }
+      for (int d = in->ndim - 1; d >= 0; --d) {
+        int coord = tmp % in->shape[d];
+        tmp /= in->shape[d];
+        offset_in += coord * in->strides[d];
+        offset_out += coord * out->strides[d];
+      }
 
-  for (; i < size; ++i) {
-    out->data[i] = in->data[i] > 0.0f ? in->data[i] : 0.0f;
+      out->data[offset_out] =
+          in->data[offset_in] > 0 ? in->data[offset_in] : 0.0f;
+    }
+  } else {
+    int i = 0;
+    __m256 zeros = _mm256_setzero_ps();
+
+    for (; i + 7 < size; i += 8) {
+      __m256 vin = _mm256_loadu_ps(in->data + i);
+      __m256 vout = _mm256_max_ps(vin, zeros);
+      _mm256_storeu_ps(out->data + i, vout);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = in->data[i] > 0.0f ? in->data[i] : 0.0f;
+    }
   }
 
   out->requires_grad = in->requires_grad;
@@ -51,20 +69,38 @@ void relu_op(Tensor *in, Tensor *out) {
  * @effects If gradients are not required, frees the input tensor.
  */
 void log_op(Tensor *in, Tensor *out) {
-  int i = 0;
   int size = numel(in->shape, in->ndim);
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(in->data + i);
-    __m256 y = Sleef_logf8_u10avx2(x);
-    _mm256_storeu_ps(out->data + i, y);
+  if (!is_contiguous(in) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_in = 0;
+      int offset_out = 0;
+      int tmp = idx;
+
+      for (int d = in->ndim - 1; d >= 0; --d) {
+        int coord = tmp % in->shape[d];
+        tmp /= in->shape[d];
+        offset_in += coord * in->strides[d];
+        offset_out += coord * out->strides[d];
+      }
+
+      out->data[offset_out] = logf(in->data[offset_in]);
+    }
+  } else {
+    int i = 0;
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(in->data + i);
+      __m256 z = Sleef_logf8_u10avx2(x);
+      _mm256_storeu_ps(out->data + i, z);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = logf(in->data[i]);
+    }
   }
 
-  for (; i < size; ++i) {
-    out->data[i] = logf(in->data[i]);
-  }
-
-  out->requires_grad = in->requires_grad;
+  out->requires_grad = in->requires_grad ? true : false;
 }
 
 /**
@@ -80,21 +116,40 @@ void log_op(Tensor *in, Tensor *out) {
  * @effects Sets `out->requires_grad = in->requires_grad`.
  * @effects If gradients are not required, frees the input tensor.
  */
+
 void exp_op(Tensor *in, Tensor *out) {
-  int i = 0;
   int size = numel(in->shape, in->ndim);
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(in->data + i);
-    __m256 y = Sleef_expf8_u10avx2(x);
-    _mm256_storeu_ps(out->data + i, y);
+  if (!is_contiguous(in) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_in = 0;
+      int offset_out = 0;
+      int tmp = idx;
+
+      for (int d = in->ndim - 1; d >= 0; --d) {
+        int coord = tmp % in->shape[d];
+        tmp /= in->shape[d];
+        offset_in += coord * in->strides[d];
+        offset_out += coord * out->strides[d];
+      }
+
+      out->data[offset_out] = expf(in->data[offset_in]);
+    }
+  } else {
+    int i = 0;
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(in->data + i);
+      __m256 z = Sleef_expf8_u10avx2(x);
+      _mm256_storeu_ps(out->data + i, z);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = expf(in->data[i]);
+    }
   }
 
-  for (; i < size; ++i) {
-    out->data[i] = expf(in->data[i]);
-  }
-
-  out->requires_grad = in->requires_grad;
+  out->requires_grad = in->requires_grad ? true : false;
 }
 
 void softmax_op(Tensor *in, Tensor *out) {}
@@ -113,26 +168,41 @@ void softmax_op(Tensor *in, Tensor *out) {}
  * @effects If gradients are not required, frees the input tensor.
  */
 void neg_op(Tensor *in, Tensor *out) {
-  int i = 0;
   int size = numel(in->shape, in->ndim);
 
-  __m256 zeros = _mm256_setzero_ps();
+  if (!is_contiguous(in) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_in = 0;
+      int offset_out = 0;
+      int tmp = idx;
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(in->data + i);
-    __m256 y = _mm256_sub_ps(zeros, x);
-    _mm256_storeu_ps(out->data + i, y);
-  }
+      for (int d = in->ndim - 1; d >= 0; --d) {
+        int coord = tmp % in->shape[d];
+        tmp /= in->shape[d];
+        offset_in += coord * in->strides[d];
+        offset_out += coord * out->strides[d];
+      }
 
-  for (; i < size; ++i) {
-    out->data[i] = 0.0f - in->data[i];
+      out->data[offset_out] = 0.0f - in->data[offset_in];
+    }
+
+  } else {
+    int i = 0;
+
+    __m256 zeros = _mm256_setzero_ps();
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(in->data + i);
+      __m256 y = _mm256_sub_ps(zeros, x);
+      _mm256_storeu_ps(out->data + i, y);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = 0.0f - in->data[i];
+    }
   }
 
   out->requires_grad = in->requires_grad;
-
-  if (!out->requires_grad) {
-    free_tensor(in);
-  }
 }
 
 /**
@@ -149,19 +219,39 @@ void neg_op(Tensor *in, Tensor *out) {
  * @effects If gradients are not required, frees the input tensor.
  */
 void abs_op(Tensor *in, Tensor *out) {
-  int i = 0;
   int size = numel(in->shape, in->ndim);
-  __m256 mask = _mm256_castsi256_ps(
-      _mm256_set1_epi32(0x7FFFFFFF));  // mask to remove sign bit
 
-  for (; i + 7 < size; i += 8) {
-    __m256 x = _mm256_loadu_ps(in->data + i);
-    __m256 y = _mm256_and_ps(x, mask);
-    _mm256_storeu_ps(out->data + i, y);
-  }
+  if (!is_contiguous(in) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_in = 0;
+      int offset_out = 0;
+      int tmp = idx;
 
-  for (; i < size; ++i) {
-    out->data[i] = in->data[i] >= 0 ? in->data[i] : 0.0f - in->data[i];
+      for (int d = in->ndim - 1; d >= 0; --d) {
+        int coord = tmp % in->shape[d];
+        tmp /= in->shape[d];
+        offset_in += coord * in->strides[d];
+        offset_out += coord * out->strides[d];
+      }
+
+      out->data[offset_out] = in->data[offset_in] >= 0.0f
+                                  ? in->data[offset_in]
+                                  : 0.0f - in->data[offset_in];
+    }
+  } else {
+    int i = 0;
+    __m256 mask = _mm256_castsi256_ps(
+        _mm256_set1_epi32(0x7FFFFFFF));  // mask to remove sign bit
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(in->data + i);
+      __m256 y = _mm256_and_ps(x, mask);
+      _mm256_storeu_ps(out->data + i, y);
+    }
+
+    for (; i < size; ++i) {
+      out->data[i] = in->data[i] >= 0 ? in->data[i] : 0.0f - in->data[i];
+    }
   }
 
   out->requires_grad = in->requires_grad;
