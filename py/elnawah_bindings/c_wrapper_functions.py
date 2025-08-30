@@ -98,6 +98,30 @@ if tensor_lib:
         if tensor_ptr:
             tensor_lib.free_tensor(tensor_ptr)
 
+    def c_zeros(shape, ndim, requires_grad):
+        if ndim == 0:
+            return tensor_lib.zeros(None, 0, requires_grad)
+        c_shape = (ctypes.c_int * ndim)(*shape)
+        return tensor_lib.zeros(c_shape, ndim, requires_grad)
+
+    def c_ones(shape, ndim, requires_grad):
+        if ndim == 0:
+            return tensor_lib.ones(None, 0, requires_grad)
+        c_shape = (ctypes.c_int * ndim)(*shape)
+        return tensor_lib.ones(c_shape, ndim, requires_grad)
+
+    def c_randn(shape, ndim, seed, requires_grad):
+        if ndim == 0:
+            return tensor_lib.randn(None, 0, seed, requires_grad)
+        c_shape = (ctypes.c_int * ndim)(*shape)
+        return tensor_lib.randn(c_shape, ndim, seed, requires_grad)
+
+    def c_uniform(shape, ndim, low, high, requires_grad):
+        if ndim == 0:
+            return tensor_lib.uniform(None, 0, low, high, requires_grad)
+        c_shape = (ctypes.c_int * ndim)(*shape)
+        return tensor_lib.uniform(c_shape, ndim, low, high, requires_grad)
+
     def c_malloc_node(
         out_tensor_ptr, prev_tensor_ptrs, n_prev, extras, forward_fn, backward_fn
     ):
@@ -265,6 +289,22 @@ else:
 
     def c_malloc_tensor_full(shape, ndim, strides, data, requires_grad, grad=None):
         print("C backend not available: malloc_tensor_full()")
+        return None
+
+    def c_zeros(shape, ndim, requires_grad):
+        print("C backend not available: zeros()")
+        return None
+
+    def c_ones(shape, ndim, requires_grad):
+        print("C backend not available: ones()")
+        return None
+
+    def c_randn(shape, ndim, seed, requires_grad):
+        print("C backend not available: randn()")
+        return None
+
+    def c_uniform(shape, ndim, low, high, requires_grad):
+        print("C backend not available: uniform()")
         return None
 
     def c_free_tensor(tensor_ptr):
