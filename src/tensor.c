@@ -4,6 +4,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+bool is_contiguous(Tensor *t) {
+  int expected_stride = 1;
+
+  for (int i = t->ndim - 1; i >= 0; --i) {
+    if (t->shape[i] > 1) {
+      if (t->strides[i] != expected_stride) return false;
+
+      expected_stride *= t->shape[i];
+    }
+  }
+
+  return true;
+}
+
 /**
  * @brief Get the total number of elements in a tensor.
  *
