@@ -403,15 +403,10 @@ class Tensor(CTensor):
 
 if __name__ == "__main__":
     x = Tensor((2, 1), [[1], [2]])
-    y = Tensor((1,1), [[2]])
+    z = Tensor((1, 1), [[2]])
 
-    print(x)
+    y = x / z.broadcast((2,1))
 
-    c = y.broadcast((1, 2))
+    y.realize()
 
-    z = x @ c
-
-
-    z.realize()
-    print(c)
-    print(z)
+    print(y)
