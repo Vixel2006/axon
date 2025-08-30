@@ -36,6 +36,29 @@ if tensor_lib:
     tensor_lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
     tensor_lib.free_tensor.restype = None
 
+    tensor_lib.zeros.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_bool]
+    tensor_lib.zeros.restype = ctypes.POINTER(CTensor)
+
+    tensor_lib.ones.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_bool]
+    tensor_lib.ones.restype = ctypes.POINTER(CTensor)
+
+    tensor_lib.randn.argtypes = [
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
+    tensor_lib.randn.restype = ctypes.POINTER(CTensor)
+
+    tensor_lib.uniform.argtypes = [
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_int,
+        ctypes.c_float,
+        ctypes.c_float,
+        ctypes.c_bool,
+    ]
+    tensor_lib.uniform.restype = ctypes.POINTER(CTensor)
+
     tensor_lib.malloc_node.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),

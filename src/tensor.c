@@ -1,8 +1,14 @@
 #include "tensor.h"
 
 #include <immintrin.h>
+#include <math.h>  // For randn
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>  // For uniform (seeding rand)
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 bool is_contiguous(Tensor *t) {
   int expected_stride = 1;
@@ -267,4 +273,104 @@ void free_tensor(Tensor *t) {
 
     free(t);
   }
+}
+
+/**
+ * @brief Create a new tensor with all elements initialized to zero.
+ *
+ * @param shape  Pointer to array of dimension sizes.
+ * @param ndim   Number of dimensions.
+ * @param requires_grad  Whether to allocate gradient storage.
+ * @return Tensor* Newly allocated tensor with zeroed data.
+ */
+Tensor *zeros(const int *shape, int ndim, bool requires_grad) {
+  Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
+  if (!t) return NULL;
+
+  // malloc_tensor_shape already sets data to 0, so nothing more to do here.
+  return t;
+}
+
+/**
+ * @brief Create a new tensor with all elements initialized to one.
+ *
+ * @param shape  Pointer to array of dimension sizes.
+ * @param ndim   Number of dimensions.
+ * @param requires_grad  Whether to allocate gradient storage.
+ * @return Tensor* Newly allocated tensor with data set to one.
+ */
+Tensor *ones(const int *shape, int ndim, bool requires_grad) {
+  Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
+  if (!t) return NULL;
+
+  int size = numel(shape, ndim);
+  for (int i = 0; i < size; ++i) {
+    t->data[i] = 1.0f;
+  }
+  return t;
+}
+
+/**
+ * @brief Create a new tensor with elements initialized to random values from a
+ * uniform distribution.
+ *
+ * @param shape  Pointer to array of dimension sizes.
+ * @param ndim   Number of dimensions.
+ * @param low    Lower bound of the uniform distribution (inclusive).
+ * @param high   Upper bound of the uniform distribution (exclusive).
+ * @param requires_grad  Whether to allocate gradient storage.
+ * @return Tensor* Newly allocated tensor with uniformly distributed data.
+ */
+Tensor *uniform(const int *shape, int ndim, float low, float high,
+                bool requires_grad) {
+  Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
+  if (!t) return NULL;
+
+  // Seed the random number generator if not already seeded.
+  // This is a simple approach; in a real application, seeding should be done
+  // once.
+  static bool seeded = false;
+  if (!seeded) {
+    srand(time(NULL));
+    seeded = true;
+  }
+
+  int size = numel(shape, ndim);
+  for (int i = 0; i < size; ++i) {
+    t->data[i] = low + (float)rand() / (RAND_MAX / (high - low));
+  }
+  return t;
+}
+
+/**
+ * @brief Create a new tensor with elements initialized to random values from a
+ * standard normal distribution (mean 0, variance 1) using the Box-Muller
+ * transform.
+ *
+ * @param shape  Pointer to array of dimension sizes.
+ * @param ndim   Number of dimensions.
+ * @param seed   Seed for the random number generator.
+ * @param requires_grad  Whether to allocate gradient storage.
+ * @return Tensor* Newly allocated tensor with normally distributed data.
+ */
+Tensor *randn(const int *shape, int ndim, int seed, bool requires_grad) {
+  Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
+  if (!t) return NULL;
+
+  srand(seed);  // Seed for reproducibility
+
+  int size = numel(shape, ndim);
+  for (int i = 0; i < size; i += 2) {
+    float u1 = (float)rand() / RAND_MAX;
+    float u2 = (float)rand() / RAND_MAX;
+
+    float z1 = sqrtf(-2.0f * logf(u1)) * cosf(2.0f * M_PI * u2);
+    float z2 = sqrtf(-2.0f * logf(u1)) * sinf(2.0f * M_PI * u2);
+
+    t->data[i] = z1;
+    if (i + 1 < size) {
+      t->data[i + 1] = z2;
+    }
+  }
+  return t;
 }
