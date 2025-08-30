@@ -150,6 +150,11 @@ class Transpose(Function):
     ) -> "Tensor":
         from py.core.tensor import Tensor
 
+        if n < 0:
+            n += n - 1
+        if m < 0:
+            m += m - 1
+
         c_transpose(a._c_tensor, out_tensor._c_tensor, n, m)
 
         return out_tensor
