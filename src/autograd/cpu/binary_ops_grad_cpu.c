@@ -511,7 +511,7 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
             out_offset += coord * out_strides[d];
           }
           b->grad[b_offset] -= out->grad[out_offset] * a->data[a_offset] /
-                                (b->data[b_offset] * b->data[b_offset]);
+                               (b->data[b_offset] * b->data[b_offset]);
         }
       }
     } else {
@@ -627,7 +627,7 @@ void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           out_offset += coord * out_strides[d];
         }
         a->grad[a_offset] += out->grad[out_offset] * (-b) /
-                              (a->data[a_offset] * a->data[a_offset]);
+                             (a->data[a_offset] * a->data[a_offset]);
       }
     } else {
       int i = 0;

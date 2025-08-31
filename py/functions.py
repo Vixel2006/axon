@@ -1,9 +1,10 @@
 from py.core.tensor import Tensor
-from py.ops.functions.binary_ops import Add, Sub, RSub, Mul, Div, RDiv, MatMul
+from py.ops.functions.binary_ops import Add, Sub, RSub, Mul, Div, RDiv, MatMul, Conv2d
 from py.ops.functions.unary_ops import ReLU, Log, Exp, Softmax, Abs, Neg
 from py.ops.functions.reduction_ops import Sum, Mean, Max
 from py.ops.functions.movement_ops import View, Unsqueeze, Squeeze, Transpose, Expand, Broadcast
 from py.elnawah_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
+from typing import Union
 
 def add(a: Tensor, b: Tensor) -> Tensor:
     return Add.apply(a, b)
@@ -25,6 +26,10 @@ def rdiv(a: Tensor, b: float) -> Tensor:
 
 def matmul(a: Tensor, b: Tensor) -> Tensor:
     return MatMul.apply(a, b)
+
+def conv2d(a: Tensor, b: Tensor, kernel_size: tuple[int, ...], in_channels: int, out_channels: int, stride: Union[tuple[int, int], int] = (1, 1), padding: int = 0) -> Tensor:
+    kernel_size = (in_channels, out_channels, *kernel_size)
+    return Conv2d.apply(a, b, kernel_size=kernel_size, stride=stride, padding=padding)
 
 def relu(a: Tensor) -> Tensor:
     return ReLU.apply(a)
@@ -94,6 +99,11 @@ def uniform(shape: tuple, low: int, high: int, requires_grad: bool = True) -> Te
 
 
 if __name__ == "__main__":
-    n = uniform((2,4), 0, 1)
+    n = Tensor((1, 1, 2, 4), [[[1,2, 3, 4], [1, 2, 3,4]]])
+    kernel = Tensor((2, 2, 2), [[[1, 2], [3, 4]], [[1, 2], [3, 4]]])
 
-    print(n)
+    x = conv2d(n, kernel, (2,2), n.shape[1], kernel.shape[0])
+
+    x.backward()
+
+    print(kernel.grad)
