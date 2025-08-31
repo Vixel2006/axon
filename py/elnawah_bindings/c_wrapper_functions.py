@@ -155,6 +155,9 @@ if tensor_lib:
     def c_matmul_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.matmul_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
+    def c_conv_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.conv2d_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
     def c_relu_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.relu_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
@@ -172,7 +175,7 @@ if tensor_lib:
 
     def c_neg_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.neg_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
-    
+
     def c_sum_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.sum_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
@@ -181,7 +184,7 @@ if tensor_lib:
 
     def c_max_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.max_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
-    
+
     # Unary operations wrappers
     def c_relu(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.relu_op(in_tensor_ptr, out_tensor_ptr)
@@ -226,6 +229,18 @@ if tensor_lib:
 
     def c_matmul(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, N, K, P):
         tensor_lib.matmul_op(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, N, K, P)
+
+    def c_conv(
+        a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, kernel_size, stride, padding
+    ):
+        c_kernel_size = (ctypes.c_int * len(kernel_size))(*kernel_size)
+        c_stride = (ctypes.c_int * len(stride))(*stride)
+        im_buffer_ptr = ctypes.POINTER(ctypes.c_float)()
+        im_buffer_size = ctypes.c_int()
+        tensor_lib.conv2d_op(
+            a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, c_kernel_size, c_stride, padding, ctypes.byref(im_buffer_ptr), ctypes.byref(im_buffer_size)
+        )
+        return im_buffer_ptr, im_buffer_size.value
 
     # Binary operations with scalars wrappers
     def c_add_scalar(a_tensor_ptr, b, out_tensor_ptr):
@@ -342,6 +357,11 @@ else:
 
     def c_matmul(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, N, K, M):
         print("C backend not available: matmul()")
+
+    def c_conv(
+        a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, kernel_size, stride, padding
+    ):
+        print("C backend not available: conv2d()")
 
     def c_broadcast(in_tensor_ptr, out_tensor_ptr, shape, ndim):
         print("C backend not available: broadcast()")

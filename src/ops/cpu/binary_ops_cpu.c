@@ -3,6 +3,7 @@
 #include <sleef.h>
 
 #include "ops/ops.h"
+#include "utils.h"
 
 #define SIMD_WIDTH 8
 
@@ -363,4 +364,99 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
   }
 
   out->requires_grad = a->requires_grad || b->requires_grad;
+}
+
+void im2row(const float *im, float *row, int N, int C, int H, int W, int Kh,
+            int Kw, int Sh, int Sw, int Hout, int Wout, int padding) {
+  for (int n = 0; n < N; ++n) {
+    for (int oh = 0; oh < Hout; ++oh) {
+      for (int ow = 0; ow < Wout; ++ow) {
+        int row_start_idx =
+            n * Hout * Wout * C * Kh * Kw + (oh * Wout + ow) * C * Kh * Kw;
+
+        int col_offset = 0;
+        for (int c = 0; c < C; ++c) {
+          for (int kh = 0; kh < Kh; ++kh) {
+            for (int kw = 0; kw < Kw; ++kw) {
+              int im_h = oh * Sh + kh - padding;
+              int im_w = ow * Sw + kw - padding;
+
+              if (im_h >= 0 && im_h < H && im_w >= 0 && im_w < W) {
+                int im_index = n * C * H * W + c * H * W + im_h * W + im_w;
+                row[row_start_idx + col_offset] = im[im_index];
+              } else {
+                row[row_start_idx + col_offset] = 0.0f;
+              }
+              ++col_offset;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
+               const int *stride, const int padding, float **im_buffer_out,
+               int *im_buffer_size_out) {
+  int Cin = kernel_size[0];
+  int Cout = kernel_size[1];
+  int Kh = kernel_size[2];
+  int Kw = kernel_size[3];
+
+  int Sh = stride[0];
+  int Sw = stride[1];
+
+  int H = in->shape[in->ndim - 2];
+  int W = in->shape[in->ndim - 1];
+
+  int Hout = (H + 2 * padding - Kh) / Sh + 1;
+  int Wout = (W + 2 * padding - Kw) / Sw + 1;
+
+  int N = in->shape[0];
+
+  int im_buffer_size = N * Hout * Wout * Cin * Kh * Kw;
+  float *im_buffer = malloc(im_buffer_size * sizeof(float));
+  if (im_buffer == NULL) {
+    *im_buffer_out = NULL;
+    *im_buffer_size_out = 0;
+    return;
+  }
+  *im_buffer_out = im_buffer;
+  *im_buffer_size_out = im_buffer_size;
+
+  im2row(in->data, im_buffer, N, Cin, H, W, Kh, Kw, Sh, Sw, Hout, Wout,
+         padding);
+
+  float *out_matrix = malloc(N * Hout * Wout * Cout * sizeof(float));
+  if (out_matrix == NULL) {
+    return;
+  }
+
+  for (int n_mat = 0; n_mat < N * Hout * Wout; ++n_mat) {
+    for (int oc = 0; oc < Cout; ++oc) {
+      float sum = 0.0f;
+      for (int i = 0; i < Cin * Kh * Kw; ++i) {
+        sum += im_buffer[n_mat * Cin * Kh * Kw + i] *
+               kernel->data[oc * Cin * Kh * Kw + i];
+      }
+      out_matrix[n_mat * Cout + oc] = sum;
+    }
+  }
+
+  for (int n = 0; n < N; ++n) {
+    for (int oc = 0; oc < Cout; ++oc) {
+      for (int oh = 0; oh < Hout; ++oh) {
+        for (int ow = 0; ow < Wout; ++ow) {
+          int out_idx =
+              n * Cout * Hout * Wout + oc * Hout * Wout + oh * Wout + ow;
+          int mat_row_idx = n * Hout * Wout + oh * Wout + ow;
+          int mat_idx = mat_row_idx * Cout + oc;
+          out->data[out_idx] = out_matrix[mat_idx];
+        }
+      }
+    }
+  }
+
+  free(out_matrix);
 }
