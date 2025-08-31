@@ -104,6 +104,6 @@ if __name__ == "__main__":
 
     x = conv2d(n, kernel, (2,2), n.shape[1], kernel.shape[0])
 
-    x.backward()
+    x.realize()
 
-    print(kernel.grad)
+    print(x)
