@@ -112,7 +112,7 @@ class Tensor(CTensor):
             ndim = len(shape)
             self._shape = shape
             strides = c_compute_strides(shape, ndim)
-            c_data = _flatten_list(data)
+            c_data = _flatten_list(data.tolist() if isinstance(data, np.ndarray) else data)
             self._c_tensor = c_malloc_tensor_full(
                 shape, ndim, strides, c_data, requires_grad, None
             )
