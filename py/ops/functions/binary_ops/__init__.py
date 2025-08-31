@@ -1,6 +1,6 @@
 from __future__ import annotations
 import ctypes
-from typing import Any, Tuple, Optional, List
+from typing import Optional, Union
 import sys
 
 from py.elnawah_bindings.c_wrapper_functions import (
@@ -9,6 +9,7 @@ from py.elnawah_bindings.c_wrapper_functions import (
     c_mul,
     c_div,
     c_matmul,
+    c_conv,
     c_add_scalar,
     c_sub_scalar,
     c_rsub_scalar,
@@ -22,8 +23,9 @@ from py.elnawah_bindings.c_wrapper_functions import (
     c_mul_grad_op,
     c_div_grad_op,
     c_rdiv_grad_op,
+    c_conv_grad_op,
 )
-from py.elnawah_bindings.ctypes_definitions import CTensor, BackwardFnType
+from py.elnawah_bindings.ctypes_definitions import CTensor, BackwardFnType, Conv2DBackwardExtras
 from py.elnawah_bindings.c_library_loader import tensor_lib
 from py.ops.lazy_ops.binary_ops import (
     LazyAdd,
@@ -33,6 +35,7 @@ from py.ops.lazy_ops.binary_ops import (
     LazyDiv,
     LazyRDiv,
     LazyMatMul,
+    LazyConv2d,
 )
 from py.ops.base import Function
 
@@ -342,3 +345,64 @@ class MatMul(Function):
         extras: ctypes.c_void_p,
     ):
         c_matmul_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+class Conv2d(Function):
+    lazy_op_class = LazyConv2d
+
+    def _get_backward_fn_type(self) -> Optional[BackwardFnType]:
+        return BackwardFnType(tensor_lib.conv2d_grad_op)
+
+    def _execute_forward(
+        self, out_tensor: "Tensor", a: "Tensor", b: "Tensor", kernel_size: tuple[int, ...], stride: Union[tuple[int, int], int] = (1, 1), padding: int = 0
+    ) -> "Tensor":
+        from py.core.tensor import Tensor
+
+        if isinstance(stride, int):
+            stride_val = (stride, stride)
+        else:
+            stride_val = stride
+
+        # Calculate dimensions for Conv2DBackwardExtras
+        N_batch = a.shape[0]
+        Cin = a.shape[1]
+        H_in = a.shape[2]
+        W_in = a.shape[3]
+        Kh = kernel_size[2]
+        Kw = kernel_size[3]
+        Sh = stride_val[0]
+        Sw = stride_val[1]
+
+        Hout = (H_in + 2 * padding - Kh) // Sh + 1
+        Wout = (W_in + 2 * padding - Kw) // Sw + 1
+
+        im_buffer_ptr, im_buffer_size = c_conv(a._c_tensor, b._c_tensor, out_tensor._c_tensor, kernel_size, stride_val, padding)
+
+        # Populate Conv2DBackwardExtras
+        extras_obj = Conv2DBackwardExtras(
+            N_batch=N_batch,
+            Cin=Cin,
+            H_in=H_in,
+            W_in=W_in,
+            Kh=Kh,
+            Kw=Kw,
+            Sh=Sh,
+            Sw=Sw,
+            Hout=Hout,
+            Wout=Wout,
+            padding=padding,
+            im_buffer=im_buffer_ptr,
+            im_buffer_size=im_buffer_size,
+        )
+        self.extras = extras_obj
+
+        return out_tensor
+
+    def backward(
+        self,
+        out_tensor_ptr: ctypes.POINTER(CTensor),
+        prev_tensor_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)),
+        n_prev: int,
+        extras: ctypes.c_void_p,
+    ):
+        c_conv_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+

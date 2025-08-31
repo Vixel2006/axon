@@ -22,6 +22,23 @@ class CNode(ctypes.Structure):
         ("backward_fn", ctypes.c_void_p),
     ]
 
+class Conv2DBackwardExtras(ctypes.Structure):
+    _fields_ = [
+        ("N_batch", ctypes.c_int),
+        ("Cin", ctypes.c_int),
+        ("H_in", ctypes.c_int),
+        ("W_in", ctypes.c_int),
+        ("Kh", ctypes.c_int),
+        ("Kw", ctypes.c_int),
+        ("Sh", ctypes.c_int),
+        ("Sw", ctypes.c_int),
+        ("Hout", ctypes.c_int),
+        ("Wout", ctypes.c_int),
+        ("padding", ctypes.c_int),
+        ("im_buffer", ctypes.POINTER(ctypes.c_float)),
+        ("im_buffer_size", ctypes.c_int),
+    ]
+
 BackwardFnType = ctypes.CFUNCTYPE(
     None,
     ctypes.POINTER(CTensor),
