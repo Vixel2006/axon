@@ -368,7 +368,7 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
 
 void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
                const int *stride, const int padding) {
-  int Cin = kernel_size[0];
+  int Cin = in->shape[0];
   int Cout = kernel_size[1];
   int Kh = kernel_size[2];
   int Kw = kernel_size[3];
