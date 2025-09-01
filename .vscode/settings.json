@@ -91,6 +91,7 @@
         "reportArgumentType": "none",
         "reportOptionalMemberAccess": "none",
         "reportOptionalSubscript": "none",
-        "reportReturnType": "none"
+        "reportReturnType": "none",
+        "reportIncompatibleMethodOverride": "none"
     }
 }

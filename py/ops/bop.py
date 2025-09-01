@@ -1,0 +1,107 @@
+from __future__ import annotations
+from typing import Any
+import ctypes
+from .op import LazyOp
+from py.elnawah_bindings.ctypes_definitions import CTensor
+from py.elnawah_bindings.c_wrapper_functions import (
+    c_add,
+    c_sub,
+    c_mul,
+    c_matmul,
+    c_div,
+    c_div_scalar,
+    c_add_scalar,
+    c_sub_scalar,
+    c_rsub_scalar,
+    c_mul_scalar,
+    c_rdiv_scalar,
+    c_rdiv_scalar,
+    c_add_grad_op,
+    c_sub_grad_op,
+    c_mul_grad_op,
+    c_matmul_grad_op,
+    c_div_grad_op,
+    c_rdiv_grad_op,
+    c_rsub_grad_op
+)
+
+class BOp(LazyOp):
+    @staticmethod
+    def create_ctx_struct(a: "Tensor", b: "Tensor" | float) -> Any:
+        if not isinstance(b, CTensor):
+            return ctypes.c_float(b)
+    @staticmethod
+    def calc_out_shape(a: "Tensor", b: "Tensor"): return a.shape
+
+class Add(BOp):
+    @staticmethod
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+        if isinstance(b, CTensor):
+            c_add(a._c_tensor, b._c_tensor, out._c_tensor)
+        else:
+            scalar = ctypes.c_float(b)
+            c_add_scalar(a._c_tensor, scalar, out._c_tensor)
+        return out
+
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_add_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+
+class Sub(BOp):
+    @staticmethod
+    def forward(out: "Tensor", a: "Tensor" | float, b: "Tensor" | float) -> "Tensor": 
+        if isinstance(b, CTensor):
+            c_sub(a._c_tensor, b._c_tensor, out._c_tensor)
+        else:
+            scalar = ctypes.c_float(b)
+            c_sub_scalar(a._c_tensor, scalar, out._c_tensor)
+        return out
+
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_sub_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+
+class RSub(BOp):
+    @staticmethod
+    def forward(out: "Tensor", a: "Tensor", b: float) -> "Tensor": 
+        scalar = ctypes.c_float(b)
+        c_rsub_scalar(scalar, a._c_tensor, out._c_tensor)
+        return out
+
+    @staticmethod
+    def backward(out_ptr: ctypes.pointer(ctensor), prev_ptrs: ctypes.pointer(ctypes.pointer(ctensor)), n_prev: int, extras): c_rsub_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+
+class Mul(BOp):
+    @staticmethod
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+        if isinstance(b, CTensor):
+            c_mul(a._c_tensor, b._c_tensor, out._c_tensor)
+        else:
+            scalar = ctypes.c_float(b)
+            c_mul_scalar(a._c_tensor, scalar, out._c_tensor)
+        return out
+
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_mul_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+
+class Div(BOp):
+    @staticmethod
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+        if isinstance(b, CTensor):
+            c_div(a._c_tensor, b._c_tensor, out._c_tensor)
+        else:
+            scalar = ctypes.c_float(b)
+            c_div_scalar(a._c_tensor, scalar, out._c_tensor)
+        return out
+
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_div_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+
+class RDiv(BOp):
+    @staticmethod
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+        scalar = ctypes.c_float(b)
+        c_rdiv_scalar(scalar, a._c_tensor, out._c_tensor)
+        return out
+
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
+        c_rdiv_grad_op(out_ptr, prev_ptrs, n_prev, extras)
