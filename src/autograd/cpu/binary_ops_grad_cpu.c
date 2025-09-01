@@ -1,9 +1,11 @@
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
+#include <stdio.h>
 
 #include "autograd/autograd.h"
 #include "utils.h"
+
 /**
  * @brief Backward pass for addition operation.
  *
@@ -703,4 +705,45 @@ void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
       }
     }
   }
+}
+
+typedef struct {
+  int padding;
+  int H_in;
+  int W_in;
+  int Kh;
+  int Kw;
+  int Sh;
+  int Sw;
+  int Hout;
+  int Wout;
+} BackwardConvExtras;
+
+void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  Tensor *in = prev[0];
+  Tensor *kernel = prev[1];
+
+  BackwardConvExtras *conv_extras = (BackwardConvExtras *)extras;
+
+  // Accessing the new fields from extras
+  int H_in = conv_extras->H_in;
+  int W_in = conv_extras->W_in;
+  int Kh = conv_extras->Kh;
+  int Kw = conv_extras->Kw;
+  int Sh = conv_extras->Sh;
+  int Sw = conv_extras->Sw;
+  int Hout = conv_extras->Hout;
+  int Wout = conv_extras->Wout;
+  int padding = conv_extras->padding;
+
+  // TODO: Implement the actual conv2d backward pass using these dimensions
+  // For now, just to show they are accessible:
+  printf(
+      "Conv2d Backward: H_in=%d, W_in=%d, Kh=%d, Kw=%d, Sh=%d, Sw=%d, Hout=%d, "
+      "Wout=%d, padding=%d\n",
+      H_in, W_in, Kh, Kw, Sh, Sw, Hout, Wout, padding);
+
+  // The actual backward computation for conv2d is complex and involves
+  // im2col/col2im or similar techniques. This is a placeholder.
+  // You would typically compute gradients for 'in' and 'kernel' here.
 }
