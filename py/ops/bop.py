@@ -3,7 +3,7 @@ from typing import Any
 import ctypes
 import math
 from .op import LazyOp
-from py.elnawah_bindings.ctypes_definitions import CTensor
+from py.elnawah_bindings.ctypes_definitions import CTensor, Conv2DBackwardExtras
 from py.elnawah_bindings.c_wrapper_functions import (
     c_add,
     c_sub,
@@ -130,7 +130,33 @@ class MatMul(BOp):
 class Conv2D(BOp):
     @staticmethod
     def create_ctx_struct(a: "Tensor", b: "Tensor", kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int) -> Any:
-        pass
+        Hin = a.shape[2]
+        Win = a.shape[3]
+
+        Kh = b.shape[1]
+        Kw = b.shape[2]
+
+        Sh = stride[0]
+        Sw = stride[1]
+
+        Hout = math.floor((Hin - Kh + 2 * padding + 1) / Sh)
+        Wout = math.floor((Win - Kw + 2 * padding + 1) / Sw)
+
+        ctx = Conv2DBackwardExtras(
+            padding=padding,
+            H_in=Hin,
+            W_in=Win,
+            Kh=Kh,
+            Kw=Kw,
+            Sh=Sh,
+            Sw=Sw,
+            Hout=Hout,
+            Wout=Wout,
+        )
+
+        ctx = ctypes.pointer(ctx)
+
+        return ctx
 
     @staticmethod
     def calc_out_shape(

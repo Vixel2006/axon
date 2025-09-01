@@ -8,7 +8,7 @@ from py.elnawah_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_
 # =========== Initialization Operations ============
 def zeros(shape: tuple[int, ...] | list[int], requires_grad: bool = True) -> Tensor: return Tensor(_c_tensor_ptr=c_zeros(shape, len(shape), requires_grad))
 def ones(shape: tuple[int, ...] | list[int], requires_grad: bool = True) -> Tensor: return Tensor(_c_tensor_ptr=c_ones(shape, len(shape), requires_grad))
-def randn(shape: tuple[int, ...] | list[int], requires_grad: bool = True, seed: int = 42) -> Tensor: return Tensor(_c_tensor_ptr=c_randn(shape, len(shape), requires_grad))
+def randn(shape: tuple[int, ...] | list[int], requires_grad: bool = True, seed: int = 42) -> Tensor: return Tensor(_c_tensor_ptr=c_randn(shape, len(shape), seed, requires_grad))
 def uniform(shape: tuple[int, ...] | list[int], requires_grad: bool = True, low: int = 0, high: int = 1) -> Tensor:
     return Tensor(_c_tensor_ptr=c_uniform(shape, len(shape), low, high, requires_grad))
 
