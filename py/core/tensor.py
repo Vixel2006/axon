@@ -13,10 +13,10 @@ from py.elnawah_bindings.ctypes_definitions import CTensor
 from py.elnawah_bindings.c_library_loader import tensor_lib
 
 from .node import Node
-from py.ops.functions.binary_ops import Add, Sub, RSub, Mul, Div, RDiv, MatMul
-from py.ops.functions.unary_ops import ReLU, Log, Exp, Softmax, Abs, Neg
-from py.ops.functions.reduction_ops import Sum, Mean, Max
-from py.ops.functions.movement_ops import View, Unsqueeze, Squeeze, Transpose, Expand, Broadcast
+from py.ops.uop import *
+from py.ops.bop import *
+from py.ops.mop import *
+from py.ops.rop import *
 
 import numpy as np
 import ctypes
@@ -249,56 +249,34 @@ class Tensor(CTensor):
     def __repr__(self) -> str:
         return self.__str__()
 
-    def __add__(self, other: Union[Tensor, float]) -> Tensor:
-        return Add.apply(self, other)
+    # ============ Binary Operations =============
+    def __add__(self, other: Tensor | float) -> Tensor: return Add.create_node(self, other)
+    def __sub__(self, other: Tensor | float) -> Tensor: return Sub.create_node(self, other)
+    def __mul__(self, other: Tensor | float) -> Tensor: return Mul.create_node(self, other)
+    def __truediv__(self, other: Tensor | float) -> Tensor: return Div.create_node(self, other)
+    def __rsub__(self, other: float) -> Tensor: return RSub.create_node(self, other)
+    def __rtruediv__(self, other: float) -> Tensor: return RDiv.create_node(self, other)
 
-    def __iadd__(self, other: Union[Tensor, float]) -> Tensor:
-        return self + other
+    # ============ Unary Operations ==============
+    def __neg__(self) -> Tensor: return Neg.create_node(self)
+    def relu(self) -> Tensor: return ReLU.create_node(self)
+    def log(self) -> Tensor: return Log.create_node(self)
+    def exp(self) -> Tensor: return Exp.create_node(self)
+    def abs(self) -> Tensor: return Abs.create_node(self)
 
-    def __radd__(self, other: float) -> Tensor:
-        return self + other
+    # ============ Movement Operations ==============
+    def view(self, shape: tuple[int, ...]) -> Tensor: return View.create_node(self, shape=shape)
+    def unsqueeze(self, dim: int = 0) -> Tensor: return Unsqueeze.create_node(self, dim=dim)
+    def squeeze(self, dim: int = 0) -> Tensor: return Squeeze.create_node(self, dim=dim)
+    def expand(self, shape: tuple[int, ...]) -> Tensor: return Expand.create_node(self, shape=shape)
+    def broadcast(self, shape: tuple[int, ...]) -> Tensor: return Broadcast.create_node(self, shape=shape, ndim=len(shape))
+    def transpose(self, n: int, m: int) -> Tensor: return Transpose.create_node(self, n=n, m=m)
 
-    def __sub__(self, other: Union[Tensor, float]) -> Tensor:
-        return Sub.apply(self, other)
 
-    def __isub__(self, other: Union[Tensor, float]) -> Tensor:
-        return self - other
-
-    def __rsub__(self, other: float) -> Tensor:
-        return RSub.apply(self, other)
-
-    def __mul__(self, other: Union[Tensor, float]) -> Tensor:
-        return Mul.apply(self, other)
-
-    def __imul__(self, other: Union[Tensor, float]) -> Tensor:
-        return self * other
-
-    def __rmul__(self, other: float) -> Tensor:
-        return self * other
-
-    def __truediv__(self, other: Union[Tensor, float]) -> Tensor:
-        return Div.apply(self, other)
-
-    def __itruediv__(self, other: Union[Tensor, float]) -> Tensor:
-        return self / other
-
-    def __rtruediv__(self, other: float) -> Tensor:
-        return RDiv.apply(self, other)
-
-    def __matmul__(self, other: Tensor) -> Tensor:
-        return MatMul.apply(self, other)
-
-    def __neg__(self) -> Tensor:
-        return Neg.apply(self)
-
-    def sum(self, axis: int = 0, keepdim: bool = True):
-        return Sum.apply(self, axis=axis, keepdim=keepdim)
-
-    def mean(self, axis: int = 0, keepdim: bool = True):
-        return Mean.apply(self, axis=axis, keepdim=keepdim)
-
-    def max(self, axis: int = 0, keepdim: bool = True):
-        return Max.apply(self, axis=axis, keepdim=keepdim)
+    # ============ Reduction Operations ==============
+    def sum(self, dim: int | None = None, keepdim: bool = False) -> Tensor: return Sum.create_node(self, dim=dim, keepdim=keepdim)
+    def mean(self, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(self, dim=dim, keepdim=keepdim)
+    def max(self, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(self, dim=dim, keepdim=keepdim)
 
     def validate(self) -> bool:
         try:
@@ -327,40 +305,6 @@ class Tensor(CTensor):
 
         except Exception:
             return False
-
-    def view(self, shape: list) -> Tensor:
-        return View.apply(self, shape=shape)
-
-    def unsqueeze(self, dim: int = 0) -> Tensor:
-        return Unsqueeze.apply(self, dim=dim)
-
-    def squeeze(self, dim: int = 0) -> Tensor:
-        return Squeeze.apply(self, dim=dim)
-
-    def transpose(self, n: int = -2, m: int = -1) -> Tensor:
-        return Transpose.apply(self, n=n, m=m)
-
-    def expand(self, shape: list[int]) -> Tensor:
-        return Expand.apply(self, shape=shape)
-
-    def broadcast(self, shape: list[int]) -> Tensor:
-        ndim = len(shape)
-        return Broadcast.apply(self, shape=shape, ndim=ndim)
-
-    def relu(self) -> Tensor:
-        return ReLU.apply(self)
-
-    def log(self) -> Tensor:
-        return Log.apply(self)
-
-    def exp(self) -> Tensor:
-        return Exp.apply(self)
-
-    def softmax(self) -> Tensor:
-        return Softmax.apply(self)
-
-    def abs(self) -> Tensor:
-        return Abs.apply(self)
 
     def realize(self):
         graph = self._node.topo_sort()
@@ -399,18 +343,3 @@ class Tensor(CTensor):
     def __del__(self):
         if self._c_tensor:
             c_free_tensor(self._c_tensor)
-
-
-if __name__ == "__main__":
-    x = Tensor((2, 1), [[1], [2]])
-    z = Tensor((1, 1), [[2]])
-
-
-    y = x + z.broadcast((2,1))
-
-    y.backward()
-
-
-    print(y)
-    print(x.grad)
-    print(z.grad)
