@@ -1,3 +1,4 @@
+from os import wait
 from .module import Module
 from py.core.tensor import Tensor
 from py.functions import zeros, conv2d
@@ -38,6 +39,6 @@ if __name__ == "__main__":
 
     pred = layer(x)
 
-    pred.realize()
+    pred.backward()
 
-    print(pred)
+    print(layer.weights.grad)
