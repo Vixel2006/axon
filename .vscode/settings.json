@@ -92,6 +92,7 @@
         "reportOptionalMemberAccess": "none",
         "reportOptionalSubscript": "none",
         "reportReturnType": "none",
-        "reportIncompatibleMethodOverride": "none"
+        "reportIncompatibleMethodOverride": "none",
+        "reportCallIssue": "none"
     }
 }
