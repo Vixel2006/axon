@@ -24,7 +24,6 @@ class CNode(ctypes.Structure):
 
 class Conv2DBackwardExtras(ctypes.Structure):
     _fields_ = [
-        ("strides", ctypes.POINTER(ctypes.c_int)),
         ("padding", ctypes.c_int),
         ("H_in", ctypes.c_int),
         ("W_in", ctypes.c_int),

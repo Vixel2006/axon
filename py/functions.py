@@ -8,9 +8,17 @@ from py.elnawah_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_
 # =========== Initialization Operations ============
 def zeros(shape: tuple[int, ...] | list[int], requires_grad: bool = True) -> Tensor: return Tensor(_c_tensor_ptr=c_zeros(shape, len(shape), requires_grad))
 def ones(shape: tuple[int, ...] | list[int], requires_grad: bool = True) -> Tensor: return Tensor(_c_tensor_ptr=c_ones(shape, len(shape), requires_grad))
-def randn(shape: tuple[int, ...] | list[int], requires_grad: bool = True, seed: int = 42) -> Tensor: return Tensor(_c_tensor_ptr=c_randn(shape, len(shape), requires_grad))
-def uniform(shape: tuple[int, ...] | list[int], requires_grad: bool = True, low: int = 0, high: int = 1) -> Tensor:
-    return Tensor(_c_tensor_ptr=c_uniform(shape, len(shape), low, high, requires_grad))
+def randn(shape: tuple[int, ...] | list[int], requires_grad: bool = True, seed: int = 42) -> Tensor: return Tensor(_c_tensor_ptr=c_randn(shape, len(shape), seed, requires_grad))
+def uniform(shape: tuple[int, ...] | list[int], requires_grad: bool = True, low: int = 0, high: int = 1) -> Tensor: return Tensor(_c_tensor_ptr=c_uniform(shape, len(shape), low, high, requires_grad))
+
+
+# ========== Movment Operations ============
+def view(a: Tensor, shape: tuple[int, ...]) -> Tensor: return View.create_node(a, shape=shape)
+def unsqueeze(a: Tensor, dim: int = 0) -> Tensor: return Unsqueeze.create_node(a, dim=dim)
+def squeeze(a: Tensor, dim: int = 0) -> Tensor: return Squeeze.create_node(a, dim=dim)
+def expand(a: Tensor, shape: tuple[int, ...]) -> Tensor: return Expand.create_node(a, shape=shape)
+def broadcast(a: Tensor, shape: tuple[int, ...]) -> Tensor: return Broadcast.create_node(a, shape=shape, ndim=len(shape))
+def transpose(a: Tensor, n: int, m: int) -> Tensor: return Transpose.create_node(a, n=n, m=m)
 
 # =========== Unary Operations =============
 def relu(a: Tensor) -> Tensor: return ReLU.create_node(a)
@@ -38,13 +46,6 @@ def div(a: Tensor | float, b: Tensor | float) -> Tensor:
     return RDiv.create_node(b, a)
 
 
-# ========== Movment Operations ============
-def view(a: Tensor, shape: tuple[int, ...]) -> Tensor: return View.create_node(a, shape=shape)
-def unsqueeze(a: Tensor, dim: int = 0) -> Tensor: return Unsqueeze.create_node(a, dim=dim)
-def squeeze(a: Tensor, dim: int = 0) -> Tensor: return Squeeze.create_node(a, dim=dim)
-def expand(a: Tensor, shape: tuple[int, ...]) -> Tensor: return Expand.create_node(a, shape=shape)
-def broadcast(a: Tensor, shape: tuple[int, ...]) -> Tensor: return Broadcast.create_node(a, shape=shape, ndim=len(shape))
-def transpose(a: Tensor, n: int, m: int) -> Tensor: return Transpose.create_node(a, n=n, m=m)
 
 # ========= Reduction Operations ==========
 def sum(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Sum.create_node(a, dim=dim, keepdim=keepdim)
@@ -52,5 +53,13 @@ def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: re
 def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
 
 if __name__ == "__main__":
-    a = Tensor((1, 1, 2, 3), [[[[3,4,5], [2,3,4]]]])
-    b = Tensor((2, 2, 2), [[[1,2],[1,2]], [[1,2],[1,2]]])
+    a = Tensor((2,2), [[1,2], [1,2]])
+    b = Tensor((1,2), [[1,2]])
+
+    d = broadcast(b, a.shape)
+
+    c = add(a, d)
+
+    c.realize()
+
+    print(c)

@@ -2,8 +2,10 @@
 #include <math.h>
 #include <sleef.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "autograd/autograd.h"
+#include "ops/ops.h"
 #include "utils.h"
 
 /**
@@ -725,9 +727,11 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
   BackwardConvExtras *conv_extras = (BackwardConvExtras *)extras;
 
-  // Accessing the new fields from extras
-  int H_in = conv_extras->H_in;
-  int W_in = conv_extras->W_in;
+  int N = in->shape[0];
+  int Cin = in->shape[1];
+  int Hin = conv_extras->H_in;
+  int Win = conv_extras->W_in;
+  int Cout = out->shape[1];
   int Kh = conv_extras->Kh;
   int Kw = conv_extras->Kw;
   int Sh = conv_extras->Sh;
@@ -736,14 +740,90 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int Wout = conv_extras->Wout;
   int padding = conv_extras->padding;
 
-  // TODO: Implement the actual conv2d backward pass using these dimensions
-  // For now, just to show they are accessible:
-  printf(
-      "Conv2d Backward: H_in=%d, W_in=%d, Kh=%d, Kw=%d, Sh=%d, Sw=%d, Hout=%d, "
-      "Wout=%d, padding=%d\n",
-      H_in, W_in, Kh, Kw, Sh, Sw, Hout, Wout, padding);
+  const int TILE_H = 16;
+  const int TILE_W = 16;
 
-  // The actual backward computation for conv2d is complex and involves
-  // im2col/col2im or similar techniques. This is a placeholder.
-  // You would typically compute gradients for 'in' and 'kernel' here.
+  if (kernel->requires_grad) {
+    for (int n = 0; n < N; ++n) {
+      for (int oh_start = 0; oh_start < Hout; oh_start += TILE_H) {
+        int oh_end = (oh_start + TILE_H > Hout) ? Hout : oh_start + TILE_H;
+
+        for (int ow_start = 0; ow_start < Wout; ow_start += TILE_W) {
+          int ow_end = (ow_start + TILE_W > Wout) ? Wout : ow_start + TILE_W;
+
+          for (int kh = 0; kh < Kh; ++kh) {
+            for (int kw = 0; kw < Kw; ++kw) {
+              for (int oh = oh_start; oh < oh_end; ++oh) {
+                for (int ow = ow_start; ow < ow_end; ++ow) {
+                  int ih = oh * Sh - padding + kh;
+                  int iw = ow * Sw - padding + kw;
+
+                  if (ih >= 0 && ih < Hin && iw >= 0 && iw < Win) {
+                    for (int cout = 0; cout < Cout; ++cout) {
+                      float out_grad_val =
+                          out->grad[n * Cout * Hout * Wout +
+                                    cout * Hout * Wout + oh * Wout + ow];
+
+                      for (int cin = 0; cin < Cin; ++cin) {
+                        int in_idx = n * Cin * Hin * Win + cin * Hin * Win +
+                                     ih * Win + iw;
+                        int kernel_grad_idx =
+                            cout * Cin * Kh * Kw + cin * Kh * Kw + kh * Kw + kw;
+
+                        kernel->grad[kernel_grad_idx] +=
+                            in->data[in_idx] * out_grad_val;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (in->requires_grad) {
+    for (int n = 0; n < N; ++n) {
+      for (int cout = 0; cout < Cout; ++cout) {
+        for (int kh = 0; kh < Kh; ++kh) {
+          for (int kw = 0; kw < Kw; ++kw) {
+            for (int oh_start = 0; oh_start < Hout; oh_start += TILE_H) {
+              int oh_end =
+                  (oh_start + TILE_H > Hout) ? Hout : oh_start + TILE_H;
+
+              for (int ow_start = 0; ow_start < Wout; ow_start += TILE_W) {
+                int ow_end =
+                    (ow_start + TILE_W > Wout) ? Wout : ow_start + TILE_W;
+
+                for (int oh = oh_start; oh < oh_end; ++oh) {
+                  for (int ow = ow_start; ow < ow_end; ++ow) {
+                    int ih = oh * Sh - padding + kh;
+                    int iw = ow * Sw - padding + kw;
+
+                    if (ih >= 0 && ih < Hin && iw >= 0 && iw < Win) {
+                      float out_grad_val =
+                          out->grad[n * Cout * Hout * Wout +
+                                    cout * Hout * Wout + oh * Wout + ow];
+
+                      for (int cin = 0; cin < Cin; ++cin) {
+                        int kernel_idx =
+                            cout * Cin * Kh * Kw + cin * Kh * Kw + kh * Kw + kw;
+                        int in_grad_idx = n * Cin * Hin * Win +
+                                          cin * Hin * Win + ih * Win + iw;
+
+                        in->grad[in_grad_idx] +=
+                            kernel->data[kernel_idx] * out_grad_val;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
