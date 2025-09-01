@@ -253,6 +253,7 @@ class Tensor(CTensor):
     def __add__(self, other: Tensor | float) -> Tensor: return Add.create_node(self, other)
     def __sub__(self, other: Tensor | float) -> Tensor: return Sub.create_node(self, other)
     def __mul__(self, other: Tensor | float) -> Tensor: return Mul.create_node(self, other)
+    def __matmul__(self, other: Tensor) -> Tensor: return MatMul.create_node(self, other)
     def __truediv__(self, other: Tensor | float) -> Tensor: return Div.create_node(self, other)
     def __rsub__(self, other: float) -> Tensor: return RSub.create_node(self, other)
     def __rtruediv__(self, other: float) -> Tensor: return RDiv.create_node(self, other)
