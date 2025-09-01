@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any
 import ctypes
+import math
 from .op import LazyOp
 from py.elnawah_bindings.ctypes_definitions import CTensor
 from py.elnawah_bindings.c_wrapper_functions import (
@@ -14,6 +15,7 @@ from py.elnawah_bindings.c_wrapper_functions import (
     c_sub_scalar,
     c_rsub_scalar,
     c_mul_scalar,
+    c_conv,
     c_rdiv_scalar,
     c_rdiv_scalar,
     c_add_grad_op,
@@ -22,7 +24,8 @@ from py.elnawah_bindings.c_wrapper_functions import (
     c_matmul_grad_op,
     c_div_grad_op,
     c_rdiv_grad_op,
-    c_rsub_grad_op
+    c_rsub_grad_op,
+    c_conv_grad_op
 )
 
 class BOp(LazyOp):
@@ -105,3 +108,54 @@ class RDiv(BOp):
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
         c_rdiv_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+
+class MatMul(BOp):
+    @staticmethod
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+        N = a.shape[-2]
+        K = a.shape[-1]
+        M = b.shape[-1]
+
+        if K != b.shape[-2]:
+            raise RuntimeError("Can't do this shit")
+        c_matmul(a._c_tensor, b._c_tensor, out._c_tensor, N=N, K=K, P=M)
+
+        return out
+
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
+        c_matmul_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+
+
+class Conv2D(BOp):
+    @staticmethod
+    def create_ctx_struct(a: "Tensor", b: "Tensor", kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int) -> Any:
+        pass
+
+    @staticmethod
+    def calc_out_shape(
+        a: "Tensor", b: "Tensor", kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int
+    ):
+        Cout = b.shape[1]
+
+        Hin = a.shape[2]
+        Win = a.shape[3]
+
+        Kh = b.shape[1]
+        Kw = b.shape[2]
+
+        Hout = math.floor((Hin - Kh + 2 * padding + 1) / stride[0])
+        Wout = math.floor((Win - Kw + 2 * padding + 1) / stride[1])
+
+        return (a.shape[1], Cout, Hout, Wout)
+
+    @staticmethod
+    def forward(
+        out: "Tensor", a: "Tensor", b: "Tensor", kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int
+        ) -> "Tensor":
+        c_conv(a._c_tensor, b._c_tensor, out._c_tensor, kernel_size, stride, padding)
+        return out
+    
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
+        c_conv_grad_op(out_ptr, prev_ptrs, n_prev, extras)
