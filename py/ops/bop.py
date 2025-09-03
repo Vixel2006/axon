@@ -10,6 +10,7 @@ from py.elnawah_bindings.c_wrapper_functions import (
     c_mul,
     c_matmul,
     c_div,
+    c_pow_scalar,
     c_div_scalar,
     c_add_scalar,
     c_sub_scalar,
@@ -108,6 +109,16 @@ class RDiv(BOp):
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
         c_rdiv_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+
+class Pow(BOp):
+    @staticmethod
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+        if isinstance(b, CTensor):
+            print("Still in work")#c_mul(a._c_tensor, b._c_tensor, out._c_tensor)
+        else:
+            scalar = ctypes.c_float(b)
+            c_pow_scalar(a._c_tensor, scalar, out._c_tensor)
+        return out
 
 class MatMul(BOp):
     @staticmethod

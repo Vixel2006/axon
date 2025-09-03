@@ -241,7 +241,7 @@ void abs_op(Tensor *in, Tensor *out) {
   } else {
     int i = 0;
     __m256 mask = _mm256_castsi256_ps(
-        _mm256_set1_epi32(0x7FFFFFFF));  // mask to remove sign bit
+        _mm256_set1_epi32(0x7FFFFFFF)); // mask to remove sign bit
 
     for (; i + 7 < size; i += 8) {
       __m256 x = _mm256_loadu_ps(in->data + i);
