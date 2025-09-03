@@ -259,6 +259,9 @@ if tensor_lib:
     def c_rdiv_scalar(a, b_tensor_ptr, out_tensor_ptr):
         tensor_lib.rdiv_scalar_op(a, b_tensor_ptr, out_tensor_ptr)
 
+    def c_pow_scalar(a_tensor_ptr, b, out_tensor_ptr):
+        tensor_lib.pow_scalar_op(a_tensor_ptr, b, out_tensor_ptr)
+
     # Movement operations wrappers
     def c_view(in_tensor_ptr, out_tensor_ptr, shape, ndim):
         c_shape = (ctypes.c_int * ndim)(*shape)

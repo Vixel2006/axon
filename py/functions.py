@@ -33,6 +33,7 @@ def neg(a: Tensor) -> Tensor: return Neg.create_node(a)
 # =========== Binary Operations =============
 def add(a: Tensor | float, b: Tensor | float) -> Tensor: return Add.create_node(a, b)
 def mul(a: Tensor | float, b: Tensor | float) -> Tensor: return Mul.create_node(a, b)
+def pow(a: Tensor, b: Tensor | float) -> Tensor: return Pow.create_node(a, b)
 def matmul(a: Tensor, b: Tensor) -> Tensor: return MatMul.create_node(a, b)
 
 def conv2d(a: Tensor, b: Tensor, kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int) -> Tensor:
