@@ -753,8 +753,8 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
   BackwardConvExtras *conv_extras = (BackwardConvExtras *)extras;
 
-  int N = in->shape[0];    // Batch size
-  int Cin = in->shape[1];  // Input channels
+  int N = in->shape[0];
+  int Cin = in->shape[1];
   int Hin = conv_extras->H_in;
   int Win = conv_extras->W_in;
   int Cout = out->shape[1];
@@ -766,211 +766,90 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int Wout = conv_extras->Wout;
   int padding = conv_extras->padding;
 
-  // Calculate dimensions for im2row and matrix multiplications
-  int im_rows_M = N * Hout * Wout;
-  int im_rows_K = Cin * Kh * Kw;
-  int d_out_N = Cout;
+  const int TILE_H = 16;
+  const int TILE_W = 16;
 
-  // Temporary buffer for im2row output
-  float *im_rows = (float *)malloc(im_rows_M * im_rows_K * sizeof(float));
-  if (im_rows == NULL) {
-    fprintf(stderr, "Memory allocation failed for im_rows\n");
-    return;
-  }
-
-  // Reshape input 'in' to im_rows
-  im2row(in->data, im_rows, N, Cin, Hin, Win, Kh, Kw, Sh, Sw, Hout, Wout,
-         padding);
-
-  // Gradient with respect to kernel (d_kernel)
   if (kernel->requires_grad) {
-    // d_out_reshaped: (N * Hout * Wout) x Cout
-    float *d_out_reshaped =
-        (float *)malloc(im_rows_M * d_out_N * sizeof(float));
-    if (d_out_reshaped == NULL) {
-      fprintf(stderr, "Memory allocation failed for d_out_reshaped\n");
-      free(im_rows);
-      return;
-    }
-    // Copy out->grad to d_out_reshaped, effectively flattening the spatial
-    // dimensions out->grad shape: (N, Cout, Hout, Wout) d_out_reshaped shape:
-    // (N * Hout * Wout, Cout)
     for (int n = 0; n < N; ++n) {
-      for (int co = 0; co < Cout; ++co) {
-        for (int oh = 0; oh < Hout; ++oh) {
-          for (int ow = 0; ow < Wout; ++ow) {
-            int out_grad_idx =
-                n * Cout * Hout * Wout + co * Hout * Wout + oh * Wout + ow;
-            int d_out_reshaped_idx =
-                (n * Hout * Wout + oh * Wout + ow) * Cout + co;
-            d_out_reshaped[d_out_reshaped_idx] = out->grad[out_grad_idx];
+      for (int oh_start = 0; oh_start < Hout; oh_start += TILE_H) {
+        int oh_end = (oh_start + TILE_H > Hout) ? Hout : oh_start + TILE_H;
+
+        for (int ow_start = 0; ow_start < Wout; ow_start += TILE_W) {
+          int ow_end = (ow_start + TILE_W > Wout) ? Wout : ow_start + TILE_W;
+
+          for (int kh = 0; kh < Kh; ++kh) {
+            for (int kw = 0; kw < Kw; ++kw) {
+              for (int oh = oh_start; oh < oh_end; ++oh) {
+                for (int ow = ow_start; ow < ow_end; ++ow) {
+                  int ih = oh * Sh - padding + kh;
+                  int iw = ow * Sw - padding + kw;
+
+                  if (ih >= 0 && ih < Hin && iw >= 0 && iw < Win) {
+                    for (int cout = 0; cout < Cout; ++cout) {
+                      float out_grad_val =
+                          out->grad[n * Cout * Hout * Wout +
+                                    cout * Hout * Wout + oh * Wout + ow];
+
+                      for (int cin = 0; cin < Cin; ++cin) {
+                        int in_idx = n * Cin * Hin * Win + cin * Hin * Win +
+                                     ih * Win + iw;
+                        int kernel_grad_idx =
+                            cout * Cin * Kh * Kw + cin * Kh * Kw + kh * Kw + kw;
+
+                        kernel->grad[kernel_grad_idx] +=
+                            in->data[in_idx] * out_grad_val;
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     }
-
-    // Transpose im_rows for multiplication: (Cin * Kh * Kw) x (N * Hout * Wout)
-    float *im_rows_T = (float *)malloc(im_rows_K * im_rows_M * sizeof(float));
-    if (im_rows_T == NULL) {
-      fprintf(stderr, "Memory allocation failed for im_rows_T\n");
-      free(im_rows);
-      free(d_out_reshaped);
-      return;
-    }
-    for (int i = 0; i < im_rows_M; ++i) {
-      for (int j = 0; j < im_rows_K; ++j) {
-        im_rows_T[j * im_rows_M + i] = im_rows[i * im_rows_K + j];
-      }
-    }
-
-    // Result of multiplication: (Cin * Kh * Kw) x Cout
-    float *d_kernel_flat = (float *)malloc(im_rows_K * d_out_N * sizeof(float));
-    if (d_kernel_flat == NULL) {
-      fprintf(stderr, "Memory allocation failed for d_kernel_flat\n");
-      free(im_rows);
-      free(d_out_reshaped);
-      free(im_rows_T);
-      return;
-    }
-
-    _matmul_float_arrays(im_rows_T, d_out_reshaped, d_kernel_flat, im_rows_K,
-                         im_rows_M, d_out_N);
-
-    // Accumulate to kernel->grad
-    // kernel->grad shape: (Cout, Cin, Kh, Kw)
-    // d_kernel_flat shape: (Cin * Kh * Kw, Cout)
-    for (int co = 0; co < Cout; ++co) {
-      for (int cin_kh_kw = 0; cin_kh_kw < Cin * Kh * Kw; ++cin_kh_kw) {
-        int kernel_grad_idx = co * Cin * Kh * Kw + cin_kh_kw;
-        int d_kernel_flat_idx = cin_kh_kw * Cout + co;
-        kernel->grad[kernel_grad_idx] += d_kernel_flat[d_kernel_flat_idx];
-      }
-    }
-
-    free(d_out_reshaped);
-    free(im_rows_T);
-    free(d_kernel_flat);
   }
 
-  // Gradient with respect to input (d_in)
   if (in->requires_grad) {
-    // Reshape kernel for multiplication: (Cout) x (Cin * Kh * Kw)
-    // This is already the kernel's shape (Cout, Cin, Kh, Kw) flattened
-    // kernel->data shape: (Cout, Cin, Kh, Kw)
-    // d_out_reshaped: (N * Hout * Wout) x Cout (from above, or recompute if not
-    // done)
-    float *d_out_reshaped_for_in = NULL;
-    if (!kernel->requires_grad) {  // Only recompute if not already done for
-                                   // kernel grad
-      d_out_reshaped_for_in =
-          (float *)malloc(im_rows_M * d_out_N * sizeof(float));
-      if (d_out_reshaped_for_in == NULL) {
-        fprintf(stderr, "Memory allocation failed for d_out_reshaped_for_in\n");
-        free(im_rows);
-        return;
-      }
-      for (int n = 0; n < N; ++n) {
-        for (int co = 0; co < Cout; ++co) {
-          for (int oh = 0; oh < Hout; ++oh) {
-            for (int ow = 0; ow < Wout; ++ow) {
-              int out_grad_idx =
-                  n * Cout * Hout * Wout + co * Hout * Wout + oh * Wout + ow;
-              int d_out_reshaped_idx =
-                  (n * Hout * Wout + oh * Wout + ow) * Cout + co;
-              d_out_reshaped_for_in[d_out_reshaped_idx] =
-                  out->grad[out_grad_idx];
-            }
-          }
-        }
-      }
-    } else {
-      // If kernel->requires_grad was true, d_out_reshaped is already computed
-      // and valid We need to ensure it's not freed prematurely if we reuse it.
-      // For simplicity and to avoid complex ownership, recompute or pass it.
-      // For now, let's assume it's recomputed if needed.
-      // A more optimized solution would pass it around or use a shared pointer.
-      d_out_reshaped_for_in =
-          (float *)malloc(im_rows_M * d_out_N * sizeof(float));
-      if (d_out_reshaped_for_in == NULL) {
-        fprintf(stderr, "Memory allocation failed for d_out_reshaped_for_in\n");
-        free(im_rows);
-        return;
-      }
-      for (int n = 0; n < N; ++n) {
-        for (int co = 0; co < Cout; ++co) {
-          for (int oh = 0; oh < Hout; ++oh) {
-            for (int ow = 0; ow < Wout; ++ow) {
-              int out_grad_idx =
-                  n * Cout * Hout * Wout + co * Hout * Wout + oh * Wout + ow;
-              int d_out_reshaped_idx =
-                  (n * Hout * Wout + oh * Wout + ow) * Cout + co;
-              d_out_reshaped_for_in[d_out_reshaped_idx] =
-                  out->grad[out_grad_idx];
+    for (int n = 0; n < N; ++n) {
+      for (int cout = 0; cout < Cout; ++cout) {
+        for (int kh = 0; kh < Kh; ++kh) {
+          for (int kw = 0; kw < Kw; ++kw) {
+            for (int oh_start = 0; oh_start < Hout; oh_start += TILE_H) {
+              int oh_end =
+                  (oh_start + TILE_H > Hout) ? Hout : oh_start + TILE_H;
+
+              for (int ow_start = 0; ow_start < Wout; ow_start += TILE_W) {
+                int ow_end =
+                    (ow_start + TILE_W > Wout) ? Wout : ow_start + TILE_W;
+
+                for (int oh = oh_start; oh < oh_end; ++oh) {
+                  for (int ow = ow_start; ow < ow_end; ++ow) {
+                    int ih = oh * Sh - padding + kh;
+                    int iw = ow * Sw - padding + kw;
+
+                    if (ih >= 0 && ih < Hin && iw >= 0 && iw < Win) {
+                      float out_grad_val =
+                          out->grad[n * Cout * Hout * Wout +
+                                    cout * Hout * Wout + oh * Wout + ow];
+
+                      for (int cin = 0; cin < Cin; ++cin) {
+                        int kernel_idx =
+                            cout * Cin * Kh * Kw + cin * Kh * Kw + kh * Kw + kw;
+                        int in_grad_idx = n * Cin * Hin * Win +
+                                          cin * Hin * Win + ih * Win + iw;
+
+                        in->grad[in_grad_idx] +=
+                            kernel->data[kernel_idx] * out_grad_val;
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
     }
-
-    // Transpose kernel for multiplication: (Cin * Kh * Kw) x Cout
-    // This is the same shape as d_kernel_flat, but with kernel data
-    float *kernel_T = (float *)malloc(im_rows_K * Cout * sizeof(float));
-    if (kernel_T == NULL) {
-      fprintf(stderr, "Memory allocation failed for kernel_T\n");
-      free(im_rows);
-      if (!kernel->requires_grad) free(d_out_reshaped_for_in);
-      return;
-    }
-    // kernel->data shape: (Cout, Cin, Kh, Kw)
-    // kernel_T shape: (Cin * Kh * Kw, Cout)
-    for (int co = 0; co < Cout; ++co) {
-      for (int cin_kh_kw = 0; cin_kh_kw < Cin * Kh * Kw; ++cin_kh_kw) {
-        int kernel_data_idx = co * Cin * Kh * Kw + cin_kh_kw;
-        int kernel_T_idx = cin_kh_kw * Cout + co;
-        kernel_T[kernel_T_idx] = kernel->data[kernel_data_idx];
-      }
-    }
-
-    // Result of multiplication: (N * Hout * Wout) x (Cin * Kh * Kw)
-    float *d_in_im_rows =
-        (float *)malloc(im_rows_M * im_rows_K * sizeof(float));
-    if (d_in_im_rows == NULL) {
-      fprintf(stderr, "Memory allocation failed for d_in_im_rows\n");
-      free(im_rows);
-      if (!kernel->requires_grad) free(d_out_reshaped_for_in);
-      free(kernel_T);
-      return;
-    }
-
-    _matmul_float_arrays(d_out_reshaped_for_in, kernel_T, d_in_im_rows,
-                         im_rows_M, Cout, im_rows_K);
-
-    // Allocate temporary buffer for col2im output
-    int in_grad_size = N * Cin * Hin * Win;
-    float *d_in_temp = (float *)malloc(in_grad_size * sizeof(float));
-    if (d_in_temp == NULL) {
-      fprintf(stderr, "Memory allocation failed for d_in_temp\n");
-      free(im_rows);
-      if (!kernel->requires_grad) free(d_out_reshaped_for_in);
-      free(kernel_T);
-      free(d_in_im_rows);
-      return;
-    }
-
-    // Use col2im to transform d_in_im_rows to d_in_temp
-    col2im(d_in_im_rows, d_in_temp, N, Cin, Hin, Win, Kh, Kw, Sh, Sw, Hout,
-           Wout, padding);
-
-    // Accumulate d_in_temp to in->grad
-    for (int i = 0; i < in_grad_size; ++i) {
-      in->grad[i] += d_in_temp[i];
-    }
-
-    free(d_in_temp);
-    if (!kernel->requires_grad) free(d_out_reshaped_for_in);
-    free(kernel_T);
-    free(d_in_im_rows);
   }
-
-  free(im_rows);
 }
