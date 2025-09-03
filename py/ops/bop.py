@@ -22,6 +22,7 @@ from py.elnawah_bindings.c_wrapper_functions import (
     c_add_grad_op,
     c_sub_grad_op,
     c_mul_grad_op,
+    c_pow_grad_op,
     c_matmul_grad_op,
     c_div_grad_op,
     c_rdiv_grad_op,
@@ -114,11 +115,14 @@ class Pow(BOp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
         if isinstance(b, CTensor):
-            print("Still in work")#c_mul(a._c_tensor, b._c_tensor, out._c_tensor)
+            print("Still in work")
         else:
             scalar = ctypes.c_float(b)
             c_pow_scalar(a._c_tensor, scalar, out._c_tensor)
         return out
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
+        c_pow_grad_op(out_ptr, prev_ptrs, n_prev, extras)
 
 class MatMul(BOp):
     @staticmethod
