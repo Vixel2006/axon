@@ -337,6 +337,7 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
     return;
   }
 
+  // Calculate output shape
   for (int i = 0; i < out->ndim; ++i) {
     if (i < axis) {
       out->shape[i] = in[0]->shape[i];
@@ -348,9 +349,8 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
   }
 
   out->strides = compute_strides(out->shape, out->ndim);
-  int tensor_size = numel(in[0]->shape, in[0]->ndim);
-
   int total_size = numel(out->shape, out->ndim);
+
   out->data = malloc(total_size * sizeof(float));
   out->grad = malloc(total_size * sizeof(float));
   if (!out->data || !out->grad) {
@@ -363,16 +363,20 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
   for (int tensor_idx = 0; tensor_idx < num_tensors; ++tensor_idx) {
     out->requires_grad = out->requires_grad || in[tensor_idx]->requires_grad;
 
-    int base_offset = tensor_idx * out->strides[axis];
+    // Calculate total number of elements in input tensor
+    int input_numel = numel(in[tensor_idx]->shape, in[tensor_idx]->ndim);
 
-    for (int i = 0; i < tensor_size; ++i) {
-      int *coords = malloc(in[0]->ndim * sizeof(int));
-      int temp_i = i;
-      for (int d = in[0]->ndim - 1; d >= 0; --d) {
-        coords[d] = temp_i % in[0]->shape[d];
-        temp_i /= in[0]->shape[d];
+    // Iterate through all possible multi-dimensional indices
+    int *coords = calloc(in[tensor_idx]->ndim, sizeof(int));
+
+    for (int linear_idx = 0; linear_idx < input_numel; ++linear_idx) {
+      // Calculate input index using strides
+      int input_idx = 0;
+      for (int d = 0; d < in[tensor_idx]->ndim; ++d) {
+        input_idx += coords[d] * in[tensor_idx]->strides[d];
       }
 
+      // Create output coordinates by inserting the stack dimension
       int *out_coords = malloc(out->ndim * sizeof(int));
       for (int d = 0; d < out->ndim; ++d) {
         if (d < axis) {
@@ -384,21 +388,36 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
         }
       }
 
-      int out_idx = 0;
+      // Calculate output index using strides
+      int output_idx = 0;
       for (int d = 0; d < out->ndim; ++d) {
-        out_idx += out_coords[d] * out->strides[d];
+        output_idx += out_coords[d] * out->strides[d];
       }
 
-      out->data[out_idx] = in[tensor_idx]->data[i];
+      // Copy data and gradients
+      out->data[output_idx] = in[tensor_idx]->data[input_idx];
       if (in[tensor_idx]->grad) {
-        out->grad[out_idx] = in[tensor_idx]->grad[i];
+        out->grad[output_idx] = in[tensor_idx]->grad[input_idx];
       } else {
-        out->grad[out_idx] = 0.0f;
+        out->grad[output_idx] = 0.0f;
       }
 
-      free(coords);
       free(out_coords);
+
+      // Increment coordinates (like an odometer)
+      int carry = 1;
+      for (int d = in[tensor_idx]->ndim - 1; d >= 0 && carry; --d) {
+        coords[d] += carry;
+        if (coords[d] >= in[tensor_idx]->shape[d]) {
+          coords[d] = 0;
+          carry = 1;
+        } else {
+          carry = 0;
+        }
+      }
     }
+
+    free(coords);
   }
 
   out->owns_data = true;
