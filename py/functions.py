@@ -1,3 +1,4 @@
+from os import wait
 from py.core.tensor import Tensor
 from py.ops.uop import *
 from py.ops.bop import *
@@ -19,6 +20,8 @@ def squeeze(a: Tensor, dim: int = 0) -> Tensor: return Squeeze.create_node(a, di
 def expand(a: Tensor, shape: tuple[int, ...]) -> Tensor: return Expand.create_node(a, shape=shape)
 def broadcast(a: Tensor, shape: tuple[int, ...]) -> Tensor: return Broadcast.create_node(a, shape=shape, ndim=len(shape))
 def transpose(a: Tensor, n: int, m: int) -> Tensor: return Transpose.create_node(a, n=n, m=m)
+def concat(a: list[Tensor], axis: int = 0) -> Tensor: return Concat.create_node(a, axis=axis)
+
 
 # =========== Unary Operations =============
 def relu(a: Tensor) -> Tensor: return ReLU.create_node(a)
@@ -54,12 +57,11 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: ret
 
 if __name__ == "__main__":
     a = Tensor((2,2), [[1,2], [1,2]])
-    b = Tensor((1,2), [[1,2]])
+    b = Tensor((1,2), [[3,4]])
+    c = Tensor((1,2), [[5,6]])
 
-    d = broadcast(b, a.shape)
-
-    c = add(a, d)
+    c = concat([a, b, c], axis=0)
 
     c.realize()
-
     print(c)
+

@@ -311,8 +311,6 @@ if tensor_lib:
         ctypes.POINTER(ctypes.c_int),
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,
-        ctypes.POINTER(ctypes.POINTER(ctypes.c_float)),
-        ctypes.POINTER(ctypes.c_int),
     ]
     tensor_lib.conv2d_op.restype = None
 
@@ -404,3 +402,21 @@ if tensor_lib:
         ctypes.POINTER(ctypes.c_int),
     ]
     tensor_lib.broadcast_op.restype = None
+
+
+    tensor_lib.concat_op.argtypes = [
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
+    tensor_lib.concat_op.restype = None
+
+
+    tensor_lib.stack_op.argtypes = [
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
+    tensor_lib.stack_op.restype = None

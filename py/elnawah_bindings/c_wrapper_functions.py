@@ -1,4 +1,5 @@
 import ctypes
+from os import wait
 import numpy as np
 from .c_library_loader import tensor_lib
 from .ctypes_definitions import CTensor, CNode
@@ -235,12 +236,9 @@ if tensor_lib:
     ):
         c_kernel_size = (ctypes.c_int * len(kernel_size))(*kernel_size)
         c_stride = (ctypes.c_int * len(stride))(*stride)
-        im_buffer_ptr = ctypes.POINTER(ctypes.c_float)()
-        im_buffer_size = ctypes.c_int()
         tensor_lib.conv2d_op(
-            a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, c_kernel_size, c_stride, padding, ctypes.byref(im_buffer_ptr), ctypes.byref(im_buffer_size)
+            a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, c_kernel_size, c_stride, padding
         )
-        return im_buffer_ptr, im_buffer_size.value
 
     # Binary operations with scalars wrappers
     def c_add_scalar(a_tensor_ptr, b, out_tensor_ptr):
@@ -283,6 +281,18 @@ if tensor_lib:
     def c_broadcast(in_tensor_ptr, out_tensor_ptr, ndim, shape):
         c_shape = (ctypes.c_int * ndim)(*shape)
         tensor_lib.broadcast_op(in_tensor_ptr, out_tensor_ptr, ndim, c_shape)
+
+    def c_concat(in_tensors, out_tensor_ptr, num_tensors, axis):
+        # IMPORTANT: The C function `concat_op` should *not* free the `in_tensor_ptrs`.
+        # These pointers are owned by Python `Tensor` objects, and freeing them in C
+        # would lead to a double-free when Python's garbage collector runs.
+        in_tensor_ptrs = (ctypes.POINTER(CTensor) * num_tensors)(*in_tensors)
+        tensor_lib.concat_op(in_tensor_ptrs, out_tensor_ptr, num_tensors, axis)
+
+    def c_stack(in_tensors, out_tensor_ptr, axis):
+        num_tensors = len(in_tensors)
+        in_tensor_ptrs = (ctypes.POINTER(CTensor) * num_tensors)(*in_tensors)
+        tensor_lib.stack_op(in_tensor_ptrs, out_tensor_ptr, num_tensors, axis)
 
 else:
 
