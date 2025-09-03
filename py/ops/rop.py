@@ -29,6 +29,8 @@ class ROp(LazyOp):
 class Sum(ROp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", dim: int | None, keepdim: bool) -> "Tensor":
+        if dim < 0:
+            dim = a.ndim + dim
         c_sum(a._c_tensor, out._c_tensor, dim if dim is not None else 0, keepdim)
         return out
 
@@ -39,6 +41,8 @@ class Sum(ROp):
 class Mean(ROp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", dim: int | None, keepdim: bool) -> "Tensor":
+        if dim < 0:
+            dim = a.ndim + dim
         c_mean(a._c_tensor, out._c_tensor, dim if dim is not None else 0, keepdim)
         return out
 
@@ -49,6 +53,8 @@ class Mean(ROp):
 class Max(ROp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", dim: int | None, keepdim: bool) -> "Tensor":
+        if dim < 0:
+            dim = a.ndim + dim
         c_max(a._c_tensor, out._c_tensor, dim if dim is not None else 0, keepdim)
         return out
 

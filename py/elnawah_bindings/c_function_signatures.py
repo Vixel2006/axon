@@ -357,6 +357,13 @@ if tensor_lib:
     ]
     tensor_lib.rdiv_scalar_op.restype = None
 
+    tensor_lib.pow_scalar_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.pow_scalar_op.restype = None
+
     # Movement operations
     tensor_lib.view_op.argtypes = [
         ctypes.POINTER(CTensor),
