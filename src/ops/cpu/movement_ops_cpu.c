@@ -21,7 +21,8 @@
  * @note No copy is performed. Caller must ensure the new shape is valid.
  */
 void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
-  if (tensor_copy_layout(in, out, shape) != 0) return;
+  if (tensor_copy_layout(in, out, shape) != 0)
+    return;
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides) {
     free(out->shape);
@@ -46,11 +47,13 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
  * @note No data copy, only metadata change.
  */
 void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
-  if (dim < 0 || dim > in->ndim) return;
+  if (dim < 0 || dim > in->ndim)
+    return;
 
   out->ndim = in->ndim + 1;
   int *new_shape = malloc(out->ndim * sizeof(int));
-  if (!new_shape) return;
+  if (!new_shape)
+    return;
 
   for (int i = 0; i < out->ndim; ++i) {
     if (i < dim)
@@ -90,7 +93,8 @@ void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
  * @note Caller must ensure the removed dimension is actually size 1.
  */
 void squeeze_op(Tensor *in, Tensor *out, int dim) {
-  if (dim < 0 || dim >= in->ndim || in->shape[dim] != 1) return;
+  if (dim < 0 || dim >= in->ndim || in->shape[dim] != 1)
+    return;
 
   out->ndim = in->ndim - 1;
   if (out->ndim == 0) {
@@ -98,7 +102,8 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
     out->strides = NULL;
   } else {
     int *new_shape = malloc(out->ndim * sizeof(int));
-    if (!new_shape) return;
+    if (!new_shape)
+      return;
     for (int i = 0; i < out->ndim; ++i) {
       new_shape[i] = (i < dim) ? in->shape[i] : in->shape[i + 1];
     }
@@ -133,7 +138,8 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
  * @note Only metadata is updated, no copy is performed.
  */
 void transpose_op(Tensor *in, Tensor *out, int N, int M) {
-  if (N < 0 || N >= in->ndim || M < 0 || M >= in->ndim) return;
+  if (N < 0 || N >= in->ndim || M < 0 || M >= in->ndim)
+    return;
 
   out->ndim = in->ndim;
   int *new_shape = malloc(out->ndim * sizeof(int));
@@ -179,7 +185,8 @@ void transpose_op(Tensor *in, Tensor *out, int N, int M) {
  */
 void expand_op(Tensor *in, Tensor *out, const int *shape) {
   out->ndim = in->ndim;
-  if (tensor_alloc_shape(out->ndim, shape, &out->shape) != 0) return;
+  if (tensor_alloc_shape(out->ndim, shape, &out->shape) != 0)
+    return;
 
   out->strides = malloc(out->ndim * sizeof(int));
   if (!out->strides) {
@@ -214,7 +221,8 @@ void expand_op(Tensor *in, Tensor *out, const int *shape) {
  */
 void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
   out->ndim = ndim;
-  if (tensor_alloc_shape(ndim, shape, &out->shape) != 0) return;
+  if (tensor_alloc_shape(ndim, shape, &out->shape) != 0)
+    return;
   out->strides = malloc(ndim * sizeof(int));
   if (!out->strides) {
     free(out->shape);
@@ -239,4 +247,159 @@ void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
     }
   }
   tensor_init_view(out, in);
+}
+
+void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
+  int ndim = in[0]->ndim;
+
+  out->ndim = ndim;
+
+  out->shape = malloc(out->ndim * sizeof(int));
+  if (!out->shape) {
+    free_tensor(out);
+    return;
+  }
+
+  for (int dim = 0; dim < out->ndim; ++dim) {
+    if (dim == axis) {
+      out->shape[dim] = 0;
+      for (int i = 0; i < num_tensors; ++i) {
+        out->shape[dim] += in[i]->shape[dim];
+      }
+    } else {
+      out->shape[dim] = in[0]->shape[dim];
+    }
+  }
+
+  out->strides = compute_strides(out->shape, out->ndim);
+  int total_size = numel(out->shape, out->ndim);
+
+  out->data = malloc(total_size * sizeof(float));
+  out->grad = malloc(total_size * sizeof(float));
+
+  if (!out->data || !out->grad) {
+    free_tensor(out);
+    return;
+  }
+
+  out->requires_grad = false;
+
+  int axis_offset = 0;
+
+  for (int tensor_idx = 0; tensor_idx < num_tensors; ++tensor_idx) {
+    out->requires_grad = out->requires_grad || in[tensor_idx]->requires_grad;
+
+    int tensor_size = numel(in[tensor_idx]->shape, in[tensor_idx]->ndim);
+
+    for (int i = 0; i < tensor_size; ++i) {
+      int *in_coords = malloc(in[tensor_idx]->ndim * sizeof(int));
+      int temp_i = i;
+      for (int d = in[tensor_idx]->ndim - 1; d >= 0; --d) {
+        in_coords[d] = temp_i % in[tensor_idx]->shape[d];
+        temp_i /= in[tensor_idx]->shape[d];
+      }
+
+      int *out_coords = malloc(out->ndim * sizeof(int));
+      for (int d = 0; d < out->ndim; ++d) {
+        if (d == axis) {
+          out_coords[d] = in_coords[d] + axis_offset;
+        } else {
+          out_coords[d] = in_coords[d];
+        }
+      }
+
+      int out_idx = 0;
+      for (int d = 0; d < out->ndim; ++d) {
+        out_idx += out_coords[d] * out->strides[d];
+      }
+
+      out->data[out_idx] = in[tensor_idx]->data[i];
+      if (in[tensor_idx]->grad) {
+        out->grad[out_idx] = in[tensor_idx]->grad[i];
+      } else {
+        out->grad[out_idx] = 0.0f;
+      }
+
+      free(in_coords);
+      free(out_coords);
+    }
+    axis_offset += in[tensor_idx]->shape[axis];
+  }
+
+  out->owns_data = true;
+}
+
+void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
+  out->ndim = in[0]->ndim + 1;
+  out->shape = malloc(out->ndim * sizeof(int));
+  if (!out->shape) {
+    free_tensor(out);
+    return;
+  }
+
+  for (int i = 0; i < out->ndim; ++i) {
+    if (i < axis) {
+      out->shape[i] = in[0]->shape[i];
+    } else if (i == axis) {
+      out->shape[i] = num_tensors;
+    } else {
+      out->shape[i] = in[0]->shape[i - 1];
+    }
+  }
+
+  out->strides = compute_strides(out->shape, out->ndim);
+  int tensor_size = numel(in[0]->shape, in[0]->ndim);
+
+  int total_size = numel(out->shape, out->ndim);
+  out->data = malloc(total_size * sizeof(float));
+  out->grad = malloc(total_size * sizeof(float));
+  if (!out->data || !out->grad) {
+    free_tensor(out);
+    return;
+  }
+
+  out->requires_grad = false;
+
+  for (int tensor_idx = 0; tensor_idx < num_tensors; ++tensor_idx) {
+    out->requires_grad = out->requires_grad || in[tensor_idx]->requires_grad;
+
+    int base_offset = tensor_idx * out->strides[axis];
+
+    for (int i = 0; i < tensor_size; ++i) {
+      int *coords = malloc(in[0]->ndim * sizeof(int));
+      int temp_i = i;
+      for (int d = in[0]->ndim - 1; d >= 0; --d) {
+        coords[d] = temp_i % in[0]->shape[d];
+        temp_i /= in[0]->shape[d];
+      }
+
+      int *out_coords = malloc(out->ndim * sizeof(int));
+      for (int d = 0; d < out->ndim; ++d) {
+        if (d < axis) {
+          out_coords[d] = coords[d];
+        } else if (d == axis) {
+          out_coords[d] = tensor_idx;
+        } else {
+          out_coords[d] = coords[d - 1];
+        }
+      }
+
+      int out_idx = 0;
+      for (int d = 0; d < out->ndim; ++d) {
+        out_idx += out_coords[d] * out->strides[d];
+      }
+
+      out->data[out_idx] = in[tensor_idx]->data[i];
+      if (in[tensor_idx]->grad) {
+        out->grad[out_idx] = in[tensor_idx]->grad[i];
+      } else {
+        out->grad[out_idx] = 0.0f;
+      }
+
+      free(coords);
+      free(out_coords);
+    }
+  }
+
+  out->owns_data = true;
 }
