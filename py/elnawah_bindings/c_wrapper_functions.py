@@ -147,6 +147,9 @@ if tensor_lib:
     def c_mul_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.mul_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
+    def c_pow_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.pow_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
     def c_div_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.div_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
