@@ -8,4 +8,3 @@ int get_num_batches(const int *shape, int ndim) {
 
   return batch_nums;
 }
-
