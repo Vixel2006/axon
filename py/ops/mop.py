@@ -83,25 +83,46 @@ class Concat(LazyOp):
 
         shape = list(a[0].shape)
 
-
-
         for i in range(1, len(a)):
             shape[axis] += a[i].shape[axis]
             for j in range(len(a[0].shape)):
                 if j != axis and a[i].shape[j] != shape[j]:
                     raise ValueError("Can't concat")
             
-
-
         return tuple(shape)
 
     
     @staticmethod
     def forward(out: "Tensor", a: list["Tensor"], axis: int) -> "Tensor":
-        # Ensure that `t._c_tensor` are valid and managed correctly.
-        # The C function expects valid pointers to CTensor objects.
         inputs = []
         for t in a:
             inputs.append(t._c_tensor)
         c_concat(inputs, out._c_tensor, len(inputs), axis)
         return out
+
+class Stack(LazyOp):
+    @staticmethod
+    def calc_out_shape(a: list["Tensor"], axis: int) -> tuple[int, ...]:
+        from py.core.tensor import Tensor
+
+        shape = [0 for _ in range(len(a[0].shape) + 1)]
+
+        for i in range(len(shape)):
+            if i < axis:
+                shape[i] = a[0].shape[i]
+            elif i == axis:
+                shape[i] = len(a)
+            else:
+                shape[i] = a[0].shape[i - 1]
+        
+        return tuple(shape)
+
+    
+    @staticmethod
+    def forward(out: "Tensor", a: list["Tensor"], axis: int) -> "Tensor":
+        inputs = []
+        for t in a:
+            inputs.append(t._c_tensor)
+        c_stack(inputs, out._c_tensor, len(inputs), axis)
+        return out
+
