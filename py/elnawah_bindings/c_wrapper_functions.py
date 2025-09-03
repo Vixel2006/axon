@@ -283,14 +283,10 @@ if tensor_lib:
         tensor_lib.broadcast_op(in_tensor_ptr, out_tensor_ptr, ndim, c_shape)
 
     def c_concat(in_tensors, out_tensor_ptr, num_tensors, axis):
-        # IMPORTANT: The C function `concat_op` should *not* free the `in_tensor_ptrs`.
-        # These pointers are owned by Python `Tensor` objects, and freeing them in C
-        # would lead to a double-free when Python's garbage collector runs.
         in_tensor_ptrs = (ctypes.POINTER(CTensor) * num_tensors)(*in_tensors)
         tensor_lib.concat_op(in_tensor_ptrs, out_tensor_ptr, num_tensors, axis)
 
-    def c_stack(in_tensors, out_tensor_ptr, axis):
-        num_tensors = len(in_tensors)
+    def c_stack(in_tensors, out_tensor_ptr, num_tensors, axis):
         in_tensor_ptrs = (ctypes.POINTER(CTensor) * num_tensors)(*in_tensors)
         tensor_lib.stack_op(in_tensor_ptrs, out_tensor_ptr, num_tensors, axis)
 
