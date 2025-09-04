@@ -9,6 +9,32 @@
 #include "utils.h"
 
 /**
+ * @brief Helper function for matrix multiplication of raw float arrays.
+ *
+ * Computes C = A * B, where A is M x K, B is K x N, and C is M x N.
+ * Assumes row-major order.
+ *
+ * @param A Pointer to the data of matrix A.
+ * @param B Pointer to the data of matrix B.
+ * @param C Pointer to the data of matrix C (output).
+ * @param M Number of rows in A and C.
+ * @param K Number of columns in A and rows in B.
+ * @param N Number of columns in B and C.
+ */
+static void _matmul_float_arrays(const float *A, const float *B, float *C,
+                                 int M, int K, int N) {
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      float sum = 0.0f;
+      for (int l = 0; l < K; ++l) {
+        sum += A[i * K + l] * B[l * N + j];
+      }
+      C[i * N + j] = sum;
+    }
+  }
+}
+
+/**
  * @brief Backward pass for addition operation.
  *
  * Accumulates gradients into the inputs of an addition operation.
