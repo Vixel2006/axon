@@ -8,6 +8,19 @@
 #include "ops/ops.h"
 #include "utils.h"
 
+static void _matmul_float_arrays(const float *A, const float *B, float *C,
+                                 int M, int K, int N) {
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      float sum = 0.0f;
+      for (int l = 0; l < K; ++l) {
+        sum += A[i * K + l] * B[l * N + j];
+      }
+      C[i * N + j] = sum;
+    }
+  }
+}
+
 void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -236,18 +249,6 @@ void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-/**
- * @brief Backward pass for reverse subtraction (scalar - tensor).
- *
- * Computes gradients when the forward op was `b - a` (scalar minus tensor).
- *
- * @param out      Output tensor whose gradient is being propagated.
- * @param prev     Array containing the single tensor input.
- * @param n_prev   Should always be 1 for rsub.
- * @param extras   Pointer to scalar value `b` used in forward pass.
- *
- * @effects Subtracts `out->grad` from `a->grad`.
- */
 void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
   float b = *((float *)extras);
