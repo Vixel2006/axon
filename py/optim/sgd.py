@@ -1,5 +1,5 @@
 from .optimizer import Optimizer
-from py.elnawah_bindings.c_wrapper_functions import c_sgd, c_zero_grad
+from py.idrak_bindings.c_wrapper_functions import c_sgd, c_zero_grad
 from py.core.tensor import Tensor
 
 class SGD(Optimizer):

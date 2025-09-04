@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 from abc import ABC, abstractmethod
-from py.elnawah_bindings.ctypes_definitions import CTensor
+from py.idrak_bindings.ctypes_definitions import CTensor
 
 class LazyOp(ABC):
     @abstractmethod

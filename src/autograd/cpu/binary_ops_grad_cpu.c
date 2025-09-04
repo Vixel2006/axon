@@ -8,19 +8,6 @@
 #include "ops/ops.h"
 #include "utils.h"
 
-/**
- * @brief Helper function for matrix multiplication of raw float arrays.
- *
- * Computes C = A * B, where A is M x K, B is K x N, and C is M x N.
- * Assumes row-major order.
- *
- * @param A Pointer to the data of matrix A.
- * @param B Pointer to the data of matrix B.
- * @param C Pointer to the data of matrix C (output).
- * @param M Number of rows in A and C.
- * @param K Number of columns in A and rows in B.
- * @param N Number of columns in B and C.
- */
 static void _matmul_float_arrays(const float *A, const float *B, float *C,
                                  int M, int K, int N) {
   for (int i = 0; i < M; ++i) {
@@ -34,21 +21,6 @@ static void _matmul_float_arrays(const float *A, const float *B, float *C,
   }
 }
 
-/**
- * @brief Backward pass for addition operation.
- *
- * Accumulates gradients into the inputs of an addition operation.
- * Handles both tensor + tensor and tensor + scalar cases.
- *
- * @param out      Output tensor whose gradient is being propagated.
- * @param prev     Array of input tensors (1 or 2 depending on the case).
- * @param n_prev   Number of input tensors (1 for scalar add, 2 for tensor add).
- * @param extras   Pointer to scalar value if scalar addition was used,
- * otherwise NULL.
- *
- * @effects Modifies `prev[i]->grad` in-place by adding contributions from
- * `out->grad`.
- */
 void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -163,21 +135,6 @@ void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-/**
- * @brief Backward pass for subtraction operation.
- *
- * Accumulates gradients into the inputs of a subtraction operation.
- * Handles both tensor - tensor and tensor - scalar cases.
- *
- * @param out      Output tensor whose gradient is being propagated.
- * @param prev     Array of input tensors (1 or 2 depending on the case).
- * @param n_prev   Number of input tensors (1 for scalar sub, 2 for tensor sub).
- * @param extras   Pointer to scalar value if scalar subtraction was used,
- * otherwise NULL.
- *
- * @effects Modifies `prev[i]->grad` in-place by adding or subtracting
- * contributions from `out->grad`.
- */
 void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -292,18 +249,6 @@ void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-/**
- * @brief Backward pass for reverse subtraction (scalar - tensor).
- *
- * Computes gradients when the forward op was `b - a` (scalar minus tensor).
- *
- * @param out      Output tensor whose gradient is being propagated.
- * @param prev     Array containing the single tensor input.
- * @param n_prev   Should always be 1 for rsub.
- * @param extras   Pointer to scalar value `b` used in forward pass.
- *
- * @effects Subtracts `out->grad` from `a->grad`.
- */
 void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
   float b = *((float *)extras);
@@ -345,20 +290,6 @@ void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-/**
- * @brief Backward pass for multiplication operation.
- *
- * Accumulates gradients into the inputs of a multiplication operation.
- * Handles both tensor * tensor and tensor * scalar cases.
- *
- * @param out      Output tensor whose gradient is being propagated.
- * @param prev     Array of input tensors (1 or 2 depending on the case).
- * @param n_prev   Number of input tensors (1 for scalar mul, 2 for tensor mul).
- * @param extras   Pointer to scalar value if scalar multiplication was used,
- * otherwise NULL.
- *
- * @effects Updates gradients of inputs using the product rule.
- */
 void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -553,20 +484,6 @@ void pow_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-/**
- * @brief Backward pass for division operation.
- *
- * Accumulates gradients into the inputs of a division operation.
- * Handles both tensor / tensor and tensor / scalar cases.
- *
- * @param out      Output tensor whose gradient is being propagated.
- * @param prev     Array of input tensors (1 or 2 depending on the case).
- * @param n_prev   Number of input tensors (1 for scalar div, 2 for tensor div).
- * @param extras   Pointer to scalar value if scalar division was used,
- * otherwise NULL.
- *
- * @effects Updates gradients of inputs according to the quotient rule.
- */
 void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -693,19 +610,6 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-/**
- * @brief Backward pass for reverse division (scalar / tensor).
- *
- * Computes gradients when the forward op was `b / a` (scalar divided by
- * tensor).
- *
- * @param out      Output tensor whose gradient is being propagated.
- * @param prev     Array containing the single tensor input.
- * @param n_prev   Should always be 1 for rdiv.
- * @param extras   Pointer to scalar value `b` used in forward pass.
- *
- * @effects Updates `a->grad` using `-b / (a^2)` multiplied by `out->grad`.
- */
 void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
   float b = *((float *)extras);

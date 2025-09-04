@@ -1,10 +1,10 @@
 #include "tensor.h"
 
 #include <immintrin.h>
-#include <math.h>  // For randn
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>  // For uniform (seeding rand)
+#include <time.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -15,7 +15,8 @@ bool is_contiguous(Tensor *t) {
 
   for (int i = t->ndim - 1; i >= 0; --i) {
     if (t->shape[i] > 1) {
-      if (t->strides[i] != expected_stride) return false;
+      if (t->strides[i] != expected_stride)
+        return false;
 
       expected_stride *= t->shape[i];
     }
@@ -24,35 +25,25 @@ bool is_contiguous(Tensor *t) {
   return true;
 }
 
-/**
- * @brief Get the total number of elements in a tensor.
- *
- * @param shape  Pointer to array of dimension sizes.
- * @param ndim   Number of dimensions.
- * @return int   Flattened size (product of all dims). Returns 0 if invalid.
- */
 int numel(const int *shape, int ndim) {
-  if (ndim <= 0 || !shape) return 0;
+  if (ndim <= 0 || !shape)
+    return 0;
   int size = 1;
   for (int i = 0; i < ndim; ++i) {
-    if (shape[i] <= 0) return 0;
+    if (shape[i] <= 0)
+      return 0;
     size *= shape[i];
   }
   return size;
 }
 
-/**
- * @brief Compute strides for a tensor from its shape.
- *
- * @param shape  Pointer to array of dimension sizes.
- * @param ndim   Number of dimensions.
- * @return int*  Newly allocated array of strides (caller frees). NULL on error.
- */
 int *compute_strides(const int *shape, int ndim) {
-  if (ndim <= 0 || !shape) return NULL;
+  if (ndim <= 0 || !shape)
+    return NULL;
 
   int *strides = malloc(ndim * sizeof(int));
-  if (!strides) return NULL;
+  if (!strides)
+    return NULL;
 
   strides[ndim - 1] = 1;
   for (int i = ndim - 2; i >= 0; --i) {
@@ -61,13 +52,6 @@ int *compute_strides(const int *shape, int ndim) {
   return strides;
 }
 
-/**
- * @brief Initialize all gradient values of a tensor to 1.0.
- *
- * @param t  Pointer to tensor whose gradients will be set.
- *
- * @note Used to seed backpropagation.
- */
 void set_ones_grad(Tensor *t) {
   int size = numel(t->shape, t->ndim);
   for (int i = 0; i < size; ++i) {
@@ -75,32 +59,22 @@ void set_ones_grad(Tensor *t) {
   }
 }
 
-/**
- * @brief Allocate an empty tensor object (metadata only).
- *
- * @return Tensor*  Newly allocated tensor with zero-initialized fields.
- */
 Tensor *malloc_tensor_empty() {
   Tensor *t = malloc(sizeof(Tensor));
-  if (!t) return NULL;
+  if (!t)
+    return NULL;
 
   memset(t, 0, sizeof(Tensor));
   return t;
 }
 
-/**
- * @brief Allocate a tensor with a given shape.
- *
- * @param shape          Pointer to array of dimension sizes.
- * @param ndim           Number of dimensions.
- * @param requires_grad  Whether to allocate gradient storage.
- * @return Tensor*       Newly allocated tensor with zeroed data/gradients.
- */
 Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
-  if (ndim < 0 || (ndim > 0 && !shape)) return NULL;
+  if (ndim < 0 || (ndim > 0 && !shape))
+    return NULL;
 
   Tensor *t = malloc(sizeof(Tensor));
-  if (!t) return NULL;
+  if (!t)
+    return NULL;
 
   t->ndim = ndim;
 
@@ -169,23 +143,14 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
   return t;
 }
 
-/**
- * @brief Allocate a tensor with explicit shape, strides, and data.
- *
- * @param shape          Pointer to array of dimension sizes.
- * @param ndim           Number of dimensions.
- * @param strides        Pointer to array of strides (or NULL for default).
- * @param data           Pointer to data array (copied into tensor).
- * @param requires_grad  Whether to allocate gradient storage.
- * @param grad           Pointer to gradient data (copied if provided).
- * @return Tensor*       Newly allocated tensor with copied data.
- */
 Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
                            float *data, bool requires_grad, float *grad) {
-  if (ndim < 0 || (ndim > 0 && (!shape || !data))) return NULL;
+  if (ndim < 0 || (ndim > 0 && (!shape || !data)))
+    return NULL;
 
   Tensor *t = malloc(sizeof(Tensor));
-  if (!t) return NULL;
+  if (!t)
+    return NULL;
 
   memset(t, 0, sizeof(Tensor));
   t->ndim = ndim;
@@ -254,54 +219,37 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
   return t;
 }
 
-/**
- * @brief Free a tensor and its associated memory.
- *
- * @param t  Pointer to tensor to free.
- *
- * @note Frees data, grad, shape, strides, and the tensor struct itself.
- */
 void free_tensor(Tensor *t) {
   if (t) {
-    if (t->data && t->owns_data) free(t->data);
+    if (t->data && t->owns_data)
+      free(t->data);
 
-    if (t->grad && t->owns_data) free(t->grad);
+    if (t->grad && t->owns_data)
+      free(t->grad);
 
-    if (t->shape) free(t->shape);
+    if (t->shape)
+      free(t->shape);
 
-    if (t->strides) free(t->strides);
+    if (t->strides)
+      free(t->strides);
 
     free(t);
   }
 }
 
-/**
- * @brief Create a new tensor with all elements initialized to zero.
- *
- * @param shape  Pointer to array of dimension sizes.
- * @param ndim   Number of dimensions.
- * @param requires_grad  Whether to allocate gradient storage.
- * @return Tensor* Newly allocated tensor with zeroed data.
- */
 Tensor *zeros(const int *shape, int ndim, bool requires_grad) {
   Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
-  if (!t) return NULL;
+  if (!t)
+    return NULL;
 
   // malloc_tensor_shape already sets data to 0, so nothing more to do here.
   return t;
 }
 
-/**
- * @brief Create a new tensor with all elements initialized to one.
- *
- * @param shape  Pointer to array of dimension sizes.
- * @param ndim   Number of dimensions.
- * @param requires_grad  Whether to allocate gradient storage.
- * @return Tensor* Newly allocated tensor with data set to one.
- */
 Tensor *ones(const int *shape, int ndim, bool requires_grad) {
   Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
-  if (!t) return NULL;
+  if (!t)
+    return NULL;
 
   int size = numel(shape, ndim);
   for (int i = 0; i < size; ++i) {
@@ -310,21 +258,11 @@ Tensor *ones(const int *shape, int ndim, bool requires_grad) {
   return t;
 }
 
-/**
- * @brief Create a new tensor with elements initialized to random values from a
- * uniform distribution.
- *
- * @param shape  Pointer to array of dimension sizes.
- * @param ndim   Number of dimensions.
- * @param low    Lower bound of the uniform distribution (inclusive).
- * @param high   Upper bound of the uniform distribution (exclusive).
- * @param requires_grad  Whether to allocate gradient storage.
- * @return Tensor* Newly allocated tensor with uniformly distributed data.
- */
 Tensor *uniform(const int *shape, int ndim, float low, float high,
                 bool requires_grad) {
   Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
-  if (!t) return NULL;
+  if (!t)
+    return NULL;
 
   // Seed the random number generator if not already seeded.
   // This is a simple approach; in a real application, seeding should be done
@@ -342,22 +280,12 @@ Tensor *uniform(const int *shape, int ndim, float low, float high,
   return t;
 }
 
-/**
- * @brief Create a new tensor with elements initialized to random values from a
- * standard normal distribution (mean 0, variance 1) using the Box-Muller
- * transform.
- *
- * @param shape  Pointer to array of dimension sizes.
- * @param ndim   Number of dimensions.
- * @param seed   Seed for the random number generator.
- * @param requires_grad  Whether to allocate gradient storage.
- * @return Tensor* Newly allocated tensor with normally distributed data.
- */
 Tensor *randn(const int *shape, int ndim, int seed, bool requires_grad) {
   Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
-  if (!t) return NULL;
+  if (!t)
+    return NULL;
 
-  srand(seed);  // Seed for reproducibility
+  srand(seed); // Seed for reproducibility
 
   int size = numel(shape, ndim);
   for (int i = 0; i < size; i += 2) {
