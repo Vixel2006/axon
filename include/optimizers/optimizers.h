@@ -1,5 +1,5 @@
-#ifndef NAWAH_OPTIMIZERS_H
-#define NAWAH_OPTIMIZERS_H
+#ifndef IDRAK_OPTIMIZERS_H
+#define IDRAK_OPTIMIZERS_H
 
 #include "tensor.h"
 

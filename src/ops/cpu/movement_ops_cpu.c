@@ -4,22 +4,6 @@
 #include "ops/ops.h"
 #include "ops/ops_utils.h"
 
-/**
- * @brief Reshapes a tensor view without copying data.
- *
- * Creates a new view `out` of tensor `in` with the given shape.
- * The underlying `data` and `grad` buffers are shared between
- * `in` and `out`. Only metadata (shape, strides) is updated.
- *
- * @param in     Input tensor.
- * @param out    Output tensor (allocated by caller).
- * @param shape  New shape array.
- * @param ndim   Number of dimensions in the new shape.
- *
- * @effects Allocates and sets `out->shape` and `out->strides`.
- * @effects Shares `in->data` and `in->grad` with `out`.
- * @note No copy is performed. Caller must ensure the new shape is valid.
- */
 void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
   if (tensor_copy_layout(in, out, shape) != 0)
     return;
@@ -32,20 +16,6 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
   tensor_init_view(out, in);
 }
 
-/**
- * @brief Adds a dimension of size 1 at the specified position.
- *
- * Creates a view of `in` with an extra dimension of size 1
- * inserted at position `dim`.
- *
- * @param in   Input tensor.
- * @param out  Output tensor (allocated by caller).
- * @param dim  Dimension index where the new axis is inserted.
- *
- * @effects Allocates and sets `out->shape` and `out->strides`.
- * @effects Shares `in->data` and `in->grad` with `out`.
- * @note No data copy, only metadata change.
- */
 void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
   if (dim < 0 || dim > in->ndim)
     return;
@@ -79,19 +49,6 @@ void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
   tensor_init_view(out, in);
 }
 
-/**
- * @brief Removes a dimension of size 1 at the specified position.
- *
- * Creates a view of `in` with the dimension at index `dim` removed.
- *
- * @param in   Input tensor.
- * @param out  Output tensor (allocated by caller).
- * @param dim  Dimension index to remove (must be of size 1).
- *
- * @effects Allocates and sets `out->shape` and `out->strides`.
- * @effects Shares `in->data` and `in->grad` with `out`.
- * @note Caller must ensure the removed dimension is actually size 1.
- */
 void squeeze_op(Tensor *in, Tensor *out, int dim) {
   if (dim < 0 || dim >= in->ndim || in->shape[dim] != 1)
     return;
@@ -123,20 +80,6 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
   tensor_init_view(out, in);
 }
 
-/**
- * @brief Transposes two dimensions of a tensor.
- *
- * Creates a view of `in` with dimensions `N` and `M` swapped.
- *
- * @param in   Input tensor.
- * @param out  Output tensor (allocated by caller).
- * @param N    First dimension index.
- * @param M    Second dimension index.
- *
- * @effects Allocates and sets `out->shape` and `out->strides`.
- * @effects Shares `in->data` and `in->grad` with `out`.
- * @note Only metadata is updated, no copy is performed.
- */
 void transpose_op(Tensor *in, Tensor *out, int N, int M) {
   if (N < 0 || N >= in->ndim || M < 0 || M >= in->ndim)
     return;
@@ -168,21 +111,6 @@ void transpose_op(Tensor *in, Tensor *out, int N, int M) {
   tensor_init_view(out, in);
 }
 
-/**
- * @brief Expands a tensor to a larger shape using broadcasting rules.
- *
- * Creates a view of `in` with expanded dimensions according to `shape`.
- * Dimensions of size 1 can be broadcast to larger sizes, other dimensions
- * must match.
- *
- * @param in     Input tensor.
- * @param out    Output tensor (allocated by caller).
- * @param shape  Target shape array (same ndim as `in`).
- *
- * @effects Allocates and sets `out->shape` and `out->strides`.
- * @effects Shares `in->data` and `in->grad` with `out`.
- * @note Expansion uses stride=0 for broadcasted dims.
- */
 void expand_op(Tensor *in, Tensor *out, const int *shape) {
   out->ndim = in->ndim;
   if (tensor_alloc_shape(out->ndim, shape, &out->shape) != 0)
@@ -205,20 +133,6 @@ void expand_op(Tensor *in, Tensor *out, const int *shape) {
   tensor_init_view(out, in);
 }
 
-/**
- * @brief Broadcasts a tensor to a new shape with potentially more dimensions.
- *
- * Creates a view of `in` broadcast to the target shape. The input tensor
- * is broadcast according to NumPy broadcasting rules.
- *
- * @param in     Input tensor.
- * @param out    Output tensor (allocated by caller).
- * @param ndim   Number of dimensions in target shape.
- * @param shape  Target shape array.
- *
- * @effects Allocates and sets `out->shape` and `out->strides`.
- * @effects Shares `in->data` and `in->grad` with `out`.
- */
 void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
   out->ndim = ndim;
   if (tensor_alloc_shape(ndim, shape, &out->shape) != 0)

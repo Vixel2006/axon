@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='elnawah',
+    name='idrak',
     version='0.1.0',
     packages=find_packages(where='.'),
     install_requires=[

@@ -2,7 +2,7 @@ import ctypes
 import os
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-library_path = os.path.join(project_root, "build", "libelnawah.so")
+library_path = os.path.join(project_root, "build", "libidrak.so")
 
 tensor_lib = None
 try:

@@ -8,23 +8,6 @@
 
 #include "ops/ops.h"
 
-/**
- * @brief Computes the sum of tensor elements along a given axis.
- *
- * Reduces tensor `a` by summing elements along the specified axis.
- * Stores the result in `out`. Supports optional dimension retention
- * via `keepdim`.
- *
- * @param a        Input tensor.
- * @param out      Output tensor (allocated by caller).
- * @param axis     Dimension along which to reduce.
- * @param keepdim  If true, retains reduced dimension with size=1.
- *
- * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
- * @effects Fills `out->data` with sums along `axis`.
- * @effects Shares autograd flag (`requires_grad`) with input `a`.
- * @note Uses AVX2 SIMD for inner-loop summation when stride == 1.
- */
 void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   // 1. Adjust ndim for output (drop or keep reduction axis)
   out->ndim = keepdim ? a->ndim : a->ndim - 1;
@@ -206,23 +189,6 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->requires_grad = a->requires_grad;
 }
 
-/**
- * @brief Computes the mean of tensor elements along a given axis.
- *
- * Reduces tensor `a` by averaging elements along the specified axis.
- * Stores the result in `out`. Supports optional dimension retention
- * via `keepdim`.
- *
- * @param a        Input tensor.
- * @param out      Output tensor (allocated by caller).
- * @param axis     Dimension along which to reduce.
- * @param keepdim  If true, retains reduced dimension with size=1.
- *
- * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
- * @effects Fills `out->data` with mean values along `axis`.
- * @effects Shares autograd flag (`requires_grad`) with input `a`.
- * @note Internally computes sum with AVX2 SIMD and divides by reduction size.
- */
 void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->ndim = keepdim ? a->ndim : a->ndim - 1;
 
@@ -389,23 +355,6 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->requires_grad = a->requires_grad;
 }
 
-/**
- * @brief Computes the maximum of tensor elements along a given axis.
- *
- * Reduces tensor `a` by taking the maximum along the specified axis.
- * Stores the result in `out`. Supports optional dimension retention
- * via `keepdim`.
- *
- * @param a        Input tensor.
- * @param out      Output tensor (allocated by caller).
- * @param axis     Dimension along which to reduce.
- * @param keepdim  If true, retains reduced dimension with size=1.
- *
- * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
- * @effects Fills `out->data` with maximum values along `axis`.
- * @effects Shares autograd flag (`requires_grad`) with input `a`.
- * @note Uses AVX2 SIMD vectorized max for stride==1, with scalar fallback.
- */
 void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->ndim = keepdim ? a->ndim : a->ndim - 1;
 
@@ -579,20 +528,6 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->requires_grad = a->requires_grad;
 }
 
-/**
- * @brief Computes the sum of all tensor elements (full reduction).
- *
- * Reduces tensor `a` by summing all elements across all dimensions.
- * The output tensor will be a scalar (0-dimensional tensor).
- *
- * @param a   Input tensor.
- * @param out Output tensor (allocated by caller) - will be scalar.
- *
- * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
- * @effects Sets `out` as a scalar tensor with the sum of all elements.
- * @effects Shares autograd flag (`requires_grad`) with input `a`.
- * @note Uses AVX2 SIMD for vectorized summation when possible.
- */
 void sum_full_op(Tensor *a, Tensor *out) {
   out->ndim = 0;
   out->shape = NULL;
@@ -682,20 +617,6 @@ void sum_full_op(Tensor *a, Tensor *out) {
   out->requires_grad = a->requires_grad;
 }
 
-/**
- * @brief Computes the mean of all tensor elements (full reduction).
- *
- * Reduces tensor `a` by computing the average of all elements across all
- * dimensions. The output tensor will be a scalar (0-dimensional tensor).
- *
- * @param a   Input tensor.
- * @param out Output tensor (allocated by caller) - will be scalar.
- *
- * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
- * @effects Sets `out` as a scalar tensor with the mean of all elements.
- * @effects Shares autograd flag (`requires_grad`) with input `a`.
- * @note Uses AVX2 SIMD for vectorized summation when possible.
- */
 void mean_full_op(Tensor *a, Tensor *out) {
   sum_full_op(a, out);
 
@@ -709,20 +630,6 @@ void mean_full_op(Tensor *a, Tensor *out) {
   }
 }
 
-/**
- * @brief Computes the maximum of all tensor elements (full reduction).
- *
- * Reduces tensor `a` by finding the maximum element across all dimensions.
- * The output tensor will be a scalar (0-dimensional tensor).
- *
- * @param a   Input tensor.
- * @param out Output tensor (allocated by caller) - will be scalar.
- *
- * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
- * @effects Sets `out` as a scalar tensor with the maximum element value.
- * @effects Shares autograd flag (`requires_grad`) with input `a`.
- * @note Uses AVX2 SIMD for vectorized max when possible.
- */
 void max_full_op(Tensor *a, Tensor *out) {
   out->ndim = 0;
   out->shape = NULL;

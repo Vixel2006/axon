@@ -1,7 +1,7 @@
 from .optimizer import Optimizer
 from py.core.tensor import Tensor
 from py.functions import zeros
-from py.elnawah_bindings.c_wrapper_functions import c_adam, c_zero_grad
+from py.idrak_bindings.c_wrapper_functions import c_adam, c_zero_grad
 
 class Adam(Optimizer):
     def __init__(self, params: list[Tensor], lr: float, betas: tuple[float, float] = (0.9, 0.999), epsilon = 1e-8):

@@ -1,4 +1,4 @@
-<h1 align="center">Nawah</h1>
+<h1 align="center">Idrak</h1>
 
 <p align="center">
   This is not a deep learning framework. It's an argument.
@@ -17,7 +17,7 @@
 
 For too long, deep learning frameworks have suffered from the **Coupling Problem**. Your model's architecture (`__init__`), its core logic (`forward`), its training loop, and its configuration are all entangled within a single, monolithic class. This leads to boilerplate, hidden states, and a development process that feels more like archaeology than creation.
 
-Nawah is built on a simple, powerful, and controversial idea: **The Great Separation.**
+Idrak is built on a simple, powerful, and controversial idea: **The Great Separation.**
 
 We argue that a sane workflow demands the complete decoupling of three distinct concepts:
 1.  **The State (`Net`):** Your model's learnable parameters. It should be nothing more than a transparent, dictionary-like container. A blueprint registry.
@@ -28,14 +28,14 @@ Stop building god objects. Start designing clean, composable systems.
 
 <br>
 
-## The Nawah Way in 4 Steps
+## The Idrak Way in 4 Steps
 
 See how The Great Separation leads to a cleaner, faster, and more hackable workflow.
 
 ### Step 1: Define the Truth (`Config`)
 
 ```python
-import nawah as nw
+import idrak as nw
 
 class TrainingConfig:
     in_channels = 3
@@ -50,7 +50,7 @@ class TrainingConfig:
 ### Step 2: Build the State (`Net`)
 
 ```python
-from nawah.factories import resnet_block
+from idrak.factories import resnet_block
 
 config = TrainingConfig()
 model = nn.Net()
@@ -94,7 +94,7 @@ history = runner.train(
 
 ## 💣 Hackability Is Not a Feature. It's the Point.
 
-Most libraries hide their internals like it’s some sacred artifact. Nawah doesn’t do that. Everything is an object you can poke, inspect, and mutate at runtime.
+Most libraries hide their internals like it’s some sacred artifact. Idrak doesn’t do that. Everything is an object you can poke, inspect, and mutate at runtime.
 
 - 🔍 Access **all model parameters** with `net.params`
 - 🧱 Access **buffers** (non-trainable states) with `net.buffers`
@@ -104,7 +104,7 @@ Most libraries hide their internals like it’s some sacred artifact. Nawah does
 - 👁️‍🗨️ Pure functional `>>` pipelines — you trace, log, wrap, or fuse
 - 🧬 Plug and play — it’s just Python dicts and functional calls
 
-Frameworks treat you like a user. Nawah treats you like a hacker.
+Frameworks treat you like a user. Idrak treats you like a hacker.
 
 You want to freeze weights? Detach the gradient. You want to mutate activations on the fly? Go ahead. Want to track internal outputs? Inject a hook or just override the fn inline. It's your engine. Drive it like a maniac.
 
@@ -135,8 +135,8 @@ The Great Separation enables our ultimate goal: bridging the gap between high-le
 ## 🚀 Getting Started
 
 ```bash
-git clone https://github.com/yushi2006/nawah.git
-cd nawah
+git clone https://github.com/yushi2006/idrak.git
+cd idrak
 pip install -e .
 ```
 
