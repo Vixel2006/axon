@@ -318,7 +318,7 @@ class Tensor(CTensor):
 
         self._node.realize(graph)
 
-        self._node.backward(graph[::-1])
+        self._node.backward(graph)
 
     @staticmethod
     def safe_c_numel(shape_ptr, ndim):

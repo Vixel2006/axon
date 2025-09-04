@@ -181,10 +181,27 @@ class Node:
                     node._c_node.contents.out = node.out_tensor._c_tensor
 
     def backward(self, graph):
-        for i, node in enumerate(graph):
-            c_prev_array = (ctypes.POINTER(CTensor) * len(node.input_tensors))()
-            for i, t in enumerate(node.input_tensors):
-                c_prev_array[i] = t._c_tensor
+        if not graph:
+            return
+
+        visited = set()
+
+        for node in reversed(graph):
+            if node in visited:
+                continue
+            visited.add(node)
+
+            out_t = node.out_tensor
+            if getattr(out_t, "grad", None) is None:
+                continue
+
+            n_prev = len(node.input_tensors)
+            if n_prev > 0:
+                c_prev_array = (ctypes.POINTER(CTensor) * n_prev)()
+                for j, t in enumerate(node.input_tensors):
+                    c_prev_array[j] = getattr(t, "_c_tensor", None)
+            else:
+                c_prev_array = None
 
             if isinstance(node._extras_obj, ctypes._SimpleCData):
                 extras_to_pass = ctypes.byref(node._extras_obj)
@@ -195,25 +212,19 @@ class Node:
                 node._python_backward_fn(
                     node.out_tensor._c_tensor,
                     c_prev_array,
-                    len(node.input_tensors),
+                    n_prev,
                     extras_to_pass,
                 )
             elif node.backward_fn:
                 node.backward_fn(
                     node.out_tensor._c_tensor,
                     c_prev_array,
-                    len(node.input_tensors),
+                    n_prev,
                     extras_to_pass,
                 )
 
-            for input_tensor in node.input_tensors:
-                if (
-                    input_tensor.requires_grad
-                    and hasattr(input_tensor, "_node")
-                    and input_tensor._node
-                ):
-                    input_tensor._node.backward(graph[i + 1 :])
-    
+
+
     def __del__(self):
         if self._c_node:
             c_free_node(self._c_node)
