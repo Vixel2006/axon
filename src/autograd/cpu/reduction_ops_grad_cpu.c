@@ -8,7 +8,6 @@
 
 #define SIMD_WIDTH 8
 
-// Forward declaration for max_full_grad_op
 void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras);
 
 void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
@@ -382,17 +381,6 @@ void sum_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-/**
- * @brief Backward pass for mean_full_op.
- *
- * For full mean reduction, the gradient is distributed equally to all input
- * elements, but scaled by 1/N where N is the total number of elements.
- *
- * @param out    Output tensor (scalar from forward pass).
- * @param prev   Array of input tensors (prev[0] is the input tensor).
- * @param n_prev Number of input tensors (should be 1).
- * @param extras Additional data (unused).
- */
 void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *in = prev[0];
 
@@ -438,18 +426,6 @@ void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-/**
- * @brief Backward pass for max_full_op.
- *
- * For full max reduction, gradients only flow to input elements that achieved
- * the maximum value. If multiple elements have the same maximum value,
- * the gradient is distributed among them.
- *
- * @param out    Output tensor (scalar from forward pass).
- * @param prev   Array of input tensors (prev[0] is the input tensor).
- * @param n_prev Number of input tensors (should be 1).
- * @param extras Additional data (unused).
- */
 void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *in = prev[0];
 

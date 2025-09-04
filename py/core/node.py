@@ -2,74 +2,13 @@ from __future__ import annotations
 
 from typing import Optional, Callable, Tuple, Dict, Any
 
-from py.elnawah_bindings.c_wrapper_functions import c_malloc_node, c_free_node
-from py.elnawah_bindings.ctypes_definitions import CTensor, CNode
+from py.idrak_bindings.c_wrapper_functions import c_malloc_node, c_free_node
+from py.idrak_bindings.ctypes_definitions import CTensor, CNode
 
 import ctypes
 
 
 class Node:
-    """
-    Node:
-    Represents a computation node in the lazy execution graph.
-    Each node tracks the output tensor, input tensors, forward function,
-    backward function, and any extra data needed for execution.
-
-    Parameters
-    ----------
-    out_tensor : Tensor
-        The output tensor produced by this node.
-    input_tensors : list[Tensor]
-        List of input tensors consumed by this node.
-    forward_fn : Callable
-        The forward function to compute the output.
-    forward_args : Tuple
-        Positional arguments passed to the forward function.
-    forward_kwargs : Dict
-        Keyword arguments passed to the forward function.
-    backward_fn : Any, optional
-        Function or pointer to the backward function used for gradient computation.
-        If callable, treated as a Python backward function; otherwise, assumed
-        to be a C function pointer. Default is None.
-    extras : Any, optional
-        Additional context or data required for forward/backward execution.
-        Can be ctypes objects, C function pointers, or Python objects.
-
-    Attributes
-    ----------
-    out_tensor : Tensor
-        Output tensor reference.
-    input_tensors : list[Tensor]
-        Input tensor references.
-    forward_fn : Callable
-        Forward function reference.
-    backward_fn : Any
-        Backward function reference (Python or C).
-    extras : Any
-        Extra context data.
-    _extras_obj : Any
-        Internal storage for extras if passed as ctypes data.
-    _c_node : ctypes.POINTER
-        Underlying C node pointer for interoperability with C backend.
-    _python_backward_fn : Callable
-        Python-specific backward function (if provided).
-
-    Methods
-    -------
-    topo_sort() -> List[Node]
-        Performs topological sorting starting from this node and returns
-        an ordered list of nodes such that inputs are realized before outputs.
-
-    realize(graph: List[Node]) -> None
-        Executes the forward functions of nodes in topological order, updating
-        their output tensors with computed values.
-
-    backward(graph: List[Node]) -> None
-        Executes backward passes for each node in reverse topological order.
-        Propagates gradients through the graph by calling Python or C
-        backward functions.
-    """
-
     def __init__(
         self,
         out_tensor: "Tensor",

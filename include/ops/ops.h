@@ -1,5 +1,5 @@
-#ifndef NAWAH_OPS_H
-#define NAWAH_OPS_H
+#ifndef IDRAK_OPS_H
+#define IDRAK_OPS_H
 
 #include "tensor.h"
 
