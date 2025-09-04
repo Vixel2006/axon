@@ -152,7 +152,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         base_in_offset += (size_t)coord * a->strides[current_a_dim_for_base++];
         temp_idx %= product_trailing_prefix;
       }
-      current_a_dim_for_base++;  // skip reduction axis
+      current_a_dim_for_base++; // skip reduction axis
 
       temp_idx = post_idx_linear;
       for (int d = axis + 1; d < a->ndim; ++d) {
@@ -576,5 +576,252 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
   free(out_coords);
 
+  out->requires_grad = a->requires_grad;
+}
+
+/**
+ * @brief Computes the sum of all tensor elements (full reduction).
+ *
+ * Reduces tensor `a` by summing all elements across all dimensions.
+ * The output tensor will be a scalar (0-dimensional tensor).
+ *
+ * @param a   Input tensor.
+ * @param out Output tensor (allocated by caller) - will be scalar.
+ *
+ * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
+ * @effects Sets `out` as a scalar tensor with the sum of all elements.
+ * @effects Shares autograd flag (`requires_grad`) with input `a`.
+ * @note Uses AVX2 SIMD for vectorized summation when possible.
+ */
+void sum_full_op(Tensor *a, Tensor *out) {
+  out->ndim = 0;
+  out->shape = NULL;
+  out->strides = NULL;
+
+  out->data = (float *)malloc(sizeof(float));
+  if (!out->data) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->data\n");
+    free_tensor(out);
+    return;
+  }
+
+  size_t total_elements = 1;
+  for (int i = 0; i < a->ndim; ++i) {
+    total_elements *= a->shape[i];
+  }
+
+  bool is_contiguous = true;
+  if (a->ndim > 0) {
+    size_t expected_stride = 1;
+    for (int i = a->ndim - 1; i >= 0; --i) {
+      if (a->strides[i] != expected_stride) {
+        is_contiguous = false;
+        break;
+      }
+      expected_stride *= a->shape[i];
+    }
+  }
+
+  float total_sum = 0.0f;
+  const int VEC_SIZE = 8;
+
+  if (is_contiguous) {
+    __m256 sum_vec = _mm256_setzero_ps();
+    size_t i = 0;
+
+    for (; i + (VEC_SIZE - 1) < total_elements; i += VEC_SIZE) {
+      __m256 vec_a = _mm256_loadu_ps(&a->data[i]);
+      sum_vec = _mm256_add_ps(sum_vec, vec_a);
+    }
+
+    sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
+    sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
+    __m128 lo_half = _mm256_extractf128_ps(sum_vec, 0);
+    __m128 hi_half = _mm256_extractf128_ps(sum_vec, 1);
+    __m128 total_sum_m128 = _mm_add_ps(lo_half, hi_half);
+    total_sum = _mm_cvtss_f32(total_sum_m128);
+
+    for (; i < total_elements; ++i) {
+      total_sum += a->data[i];
+    }
+  } else {
+    int *coords = (int *)malloc(a->ndim * sizeof(int));
+    if (!coords) {
+      fprintf(stderr, "Error: Failed to allocate memory for coords\n");
+      free(out->data);
+      free_tensor(out);
+      return;
+    }
+
+    memset(coords, 0, a->ndim * sizeof(int));
+
+    for (size_t elem = 0; elem < total_elements; ++elem) {
+      size_t flat_idx = 0;
+      for (int d = 0; d < a->ndim; ++d) {
+        flat_idx += (size_t)coords[d] * a->strides[d];
+      }
+
+      total_sum += a->data[flat_idx];
+
+      int carry = 1;
+      for (int d = a->ndim - 1; d >= 0 && carry; --d) {
+        coords[d] += carry;
+        if (coords[d] < a->shape[d]) {
+          carry = 0;
+        } else {
+          coords[d] = 0;
+          carry = 1;
+        }
+      }
+    }
+
+    free(coords);
+  }
+
+  out->data[0] = total_sum;
+  out->requires_grad = a->requires_grad;
+}
+
+/**
+ * @brief Computes the mean of all tensor elements (full reduction).
+ *
+ * Reduces tensor `a` by computing the average of all elements across all
+ * dimensions. The output tensor will be a scalar (0-dimensional tensor).
+ *
+ * @param a   Input tensor.
+ * @param out Output tensor (allocated by caller) - will be scalar.
+ *
+ * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
+ * @effects Sets `out` as a scalar tensor with the mean of all elements.
+ * @effects Shares autograd flag (`requires_grad`) with input `a`.
+ * @note Uses AVX2 SIMD for vectorized summation when possible.
+ */
+void mean_full_op(Tensor *a, Tensor *out) {
+  sum_full_op(a, out);
+
+  size_t total_elements = 1;
+  for (int i = 0; i < a->ndim; ++i) {
+    total_elements *= a->shape[i];
+  }
+
+  if (total_elements > 0) {
+    out->data[0] /= total_elements;
+  }
+}
+
+/**
+ * @brief Computes the maximum of all tensor elements (full reduction).
+ *
+ * Reduces tensor `a` by finding the maximum element across all dimensions.
+ * The output tensor will be a scalar (0-dimensional tensor).
+ *
+ * @param a   Input tensor.
+ * @param out Output tensor (allocated by caller) - will be scalar.
+ *
+ * @effects Allocates and sets `out->shape`, `out->strides`, and `out->data`.
+ * @effects Sets `out` as a scalar tensor with the maximum element value.
+ * @effects Shares autograd flag (`requires_grad`) with input `a`.
+ * @note Uses AVX2 SIMD for vectorized max when possible.
+ */
+void max_full_op(Tensor *a, Tensor *out) {
+  out->ndim = 0;
+  out->shape = NULL;
+  out->strides = NULL;
+
+  out->data = (float *)malloc(sizeof(float));
+  if (!out->data) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->data\n");
+    free_tensor(out);
+    return;
+  }
+
+  size_t total_elements = 1;
+  for (int i = 0; i < a->ndim; ++i) {
+    total_elements *= a->shape[i];
+  }
+
+  if (total_elements == 0) {
+    out->data[0] = -FLT_MAX;
+    out->requires_grad = a->requires_grad;
+    return;
+  }
+
+  bool is_contiguous = true;
+  if (a->ndim > 0) {
+    size_t expected_stride = 1;
+    for (int i = a->ndim - 1; i >= 0; --i) {
+      if (a->strides[i] != expected_stride) {
+        is_contiguous = false;
+        break;
+      }
+      expected_stride *= a->shape[i];
+    }
+  }
+
+  float max_val = -FLT_MAX;
+  const int VEC_SIZE = 8;
+
+  if (is_contiguous) {
+    __m256 max_vec = _mm256_set1_ps(-FLT_MAX);
+    size_t i = 0;
+
+    for (; i + (VEC_SIZE - 1) < total_elements; i += VEC_SIZE) {
+      __m256 vec_a = _mm256_loadu_ps(&a->data[i]);
+      max_vec = _mm256_max_ps(max_vec, vec_a);
+    }
+
+    __m128 vlow = _mm256_castps256_ps128(max_vec);
+    __m128 vhigh = _mm256_extractf128_ps(max_vec, 1);
+    vlow = _mm_max_ps(vlow, vhigh);
+    vlow =
+        _mm_max_ps(vlow, _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(2, 3, 0, 1)));
+    vlow =
+        _mm_max_ps(vlow, _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(1, 0, 3, 2)));
+    max_val = _mm_cvtss_f32(vlow);
+
+    for (; i < total_elements; ++i) {
+      max_val = fmaxf(max_val, a->data[i]);
+    }
+  } else {
+    int *coords = (int *)malloc(a->ndim * sizeof(int));
+    if (!coords) {
+      fprintf(stderr, "Error: Failed to allocate memory for coords\n");
+      free(out->data);
+      free_tensor(out);
+      return;
+    }
+
+    memset(coords, 0, a->ndim * sizeof(int));
+    bool first = true;
+
+    for (size_t elem = 0; elem < total_elements; ++elem) {
+      size_t flat_idx = 0;
+      for (int d = 0; d < a->ndim; ++d) {
+        flat_idx += (size_t)coords[d] * a->strides[d];
+      }
+
+      if (first) {
+        max_val = a->data[flat_idx];
+        first = false;
+      } else {
+        max_val = fmaxf(max_val, a->data[flat_idx]);
+      }
+
+      int carry = 1;
+      for (int d = a->ndim - 1; d >= 0 && carry; --d) {
+        coords[d] += carry;
+        if (coords[d] < a->shape[d]) {
+          carry = 0;
+        } else {
+          coords[d] = 0;
+          carry = 1;
+        }
+      }
+    }
+
+    free(coords);
+  }
+
+  out->data[0] = max_val;
   out->requires_grad = a->requires_grad;
 }

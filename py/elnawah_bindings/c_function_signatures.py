@@ -273,6 +273,48 @@ if tensor_lib:
     ]
     tensor_lib.sum_op.restype = None
 
+    tensor_lib.sum_full_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.sum_full_op.restype = None
+
+    tensor_lib.mean_full_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.mean_full_op.restype = None
+
+    tensor_lib.max_full_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.max_full_op.restype = None
+
+    tensor_lib.sum_full_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.sum_full_grad_op.restype = None
+
+    tensor_lib.mean_full_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.mean_full_grad_op.restype = None
+
+    tensor_lib.max_full_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.max_full_grad_op.restype = None
+
     # Binary operations
     tensor_lib.add_op.argtypes = [
         ctypes.POINTER(CTensor),
