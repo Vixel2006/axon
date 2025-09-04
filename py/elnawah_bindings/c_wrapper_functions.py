@@ -296,6 +296,11 @@ if tensor_lib:
         in_tensor_ptrs = (ctypes.POINTER(CTensor) * num_tensors)(*in_tensors)
         tensor_lib.stack_op(in_tensor_ptrs, out_tensor_ptr, num_tensors, axis)
 
+    # Optimizers
+    def c_sgd(params, num_params, lr):
+        in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
+        tensor_lib.sgd(in_param_ptrs, num_params, lr)
+
 else:
 
     def c_numel(shape, ndim):
