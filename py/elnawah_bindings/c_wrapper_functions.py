@@ -301,6 +301,16 @@ if tensor_lib:
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
         tensor_lib.sgd(in_param_ptrs, num_params, lr)
 
+    def c_adam(params, m_estimates, v_estimates, num_params, time_step, lr, beta1, beta2, epsilon):
+        in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
+        m_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*m_estimates)
+        v_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*v_estimates)
+        tensor_lib.adam(in_param_ptrs, m_estimates_ptrs, v_estimates_ptrs, num_params, time_step, lr, beta1, beta2, epsilon)
+
+    def c_zero_grad(params, num_params):
+        in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
+        tensor_lib.zero_grad(in_param_ptrs, num_params)
+
 else:
 
     def c_numel(shape, ndim):

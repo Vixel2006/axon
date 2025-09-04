@@ -22,7 +22,7 @@ add_library(elnawah SHARED
   src/ops/cpu/binary_ops_cpu.c src/ops/cpu/binary_ops_scalar_cpu.c src/ops/cpu/movement_ops_cpu.c
   src/autograd/cpu/binary_ops_grad_cpu.c src/autograd/cpu/unary_ops_grad_cpu.c
   src/autograd/cpu/reduction_ops_grad_cpu.c src/utils.c src/autograd/autograd_utils.c src/ops/ops_utils.c
-  src/optimizers/sgd.c
+  src/optimizers/sgd.c src/optimizers/adam.c src/optimizers/zero_grad.c
 )
 
 target_include_directories(elnawah PUBLIC include ${SLEEF_INCLUDE_DIR})

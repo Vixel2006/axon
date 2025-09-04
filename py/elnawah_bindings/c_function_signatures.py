@@ -443,3 +443,22 @@ if tensor_lib:
         ctypes.c_float,
     ]
     tensor_lib.sgd.restype = None
+
+    tensor_lib.adam.argtypes = [
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_float,
+        ctypes.c_float,
+        ctypes.c_float,
+        ctypes.c_float,
+    ]
+    tensor_lib.adam.restype = None
+
+    tensor_lib.zero_grad.argtypes = [
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+    ]
+    tensor_lib.zero_grad.restype = None
