@@ -1,5 +1,5 @@
 from .optimizer import Optimizer
-from py.elnawah_bindings.c_wrapper_functions import c_sgd
+from py.elnawah_bindings.c_wrapper_functions import c_sgd, c_zero_grad
 from py.core.tensor import Tensor
 
 class SGD(Optimizer):
@@ -12,7 +12,7 @@ class SGD(Optimizer):
         c_sgd(self.params, self.num_params, self.lr)
 
     def zero_grad(self):
-        pass
+        c_zero_grad(self.params, self.num_params)
 
 if __name__ == "__main__":
     a = Tensor((1,2), [2,3])
@@ -32,3 +32,8 @@ if __name__ == "__main__":
 
     print(a)
     print(b)
+
+    optim.zero_grad()
+
+    print(a.grad)
+    print(b.grad)
