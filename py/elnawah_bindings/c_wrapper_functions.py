@@ -189,6 +189,15 @@ if tensor_lib:
     def c_max_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.max_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
+    def c_sum_full_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.sum_full_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_mean_full_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.mean_full_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_max_full_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.max_full_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
     # Unary operations wrappers
     def c_relu(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.relu_op(in_tensor_ptr, out_tensor_ptr)
@@ -217,6 +226,15 @@ if tensor_lib:
 
     def c_max(in_tensor_ptr, out_tensor_ptr, axis, keepdim):
         tensor_lib.max_op(in_tensor_ptr, out_tensor_ptr, axis, keepdim)
+
+    def c_sum_full(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.sum_full_op(in_tensor_ptr, out_tensor_ptr)
+
+    def c_mean_full(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.mean_full_op(in_tensor_ptr, out_tensor_ptr)
+
+    def c_max_full(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.max_full_op(in_tensor_ptr, out_tensor_ptr)
 
     # Binary operations wrappers
     def c_add(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):

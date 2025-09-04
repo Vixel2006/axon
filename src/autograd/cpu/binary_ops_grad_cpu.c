@@ -492,7 +492,6 @@ void pow_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         __m256 x = _mm256_loadu_ps(a->data + i);
         __m256 dout = _mm256_loadu_ps(out->grad + i);
         __m256 a_grad = _mm256_loadu_ps(a->grad + i);
-
         float tmp[8];
         _mm256_storeu_ps(tmp, x);
         for (int j = 0; j < 8; ++j) {
@@ -622,7 +621,7 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
       if (a->requires_grad) {
         int *a_strides = a->strides;
         int *out_strides = out->strides;
-        for (int linear = 0; linear = size; ++linear) {
+        for (int linear = 0; linear < size; ++linear) {
           int idx = linear;
           int a_offset = 0, out_offset = 0;
 
