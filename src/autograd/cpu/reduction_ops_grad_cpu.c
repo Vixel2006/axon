@@ -1,4 +1,5 @@
 #include <immintrin.h>
+#include <stdio.h> // For printf
 #include <stdlib.h>
 
 #include "autograd/autograd.h"
@@ -6,6 +7,9 @@
 #include "utils.h"
 
 #define SIMD_WIDTH 8
+
+// Forward declaration for max_full_grad_op
+void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras);
 
 void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *in = prev[0];
@@ -219,6 +223,12 @@ void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     return;
   }
 
+  // If output is a scalar, it's a full reduction. Delegate to max_full_grad_op.
+  if (out->ndim == 0) {
+    max_full_grad_op(out, prev, n_prev, extras);
+    return;
+  }
+
   int reduced_dim = get_reduced_dim(in->shape, out->shape, in->ndim, out->ndim);
 
   if (reduced_dim == -1) {
@@ -400,9 +410,9 @@ void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
     int i = 0;
     for (; i + SIMD_WIDTH - 1 < in_size; i += SIMD_WIDTH) {
-      __m256 in_grad = _mm256_loadu_ps(&in->grad[i]);
+      __m256 in_grad = _mm256_loadu_ps(in->grad + i);
       __m256 new_grad = _mm256_add_ps(in_grad, grad_vec);
-      _mm256_storeu_ps(&in->grad[i], new_grad);
+      _mm256_storeu_ps(in->grad + i, new_grad);
     }
 
     for (; i < in_size; ++i) {
@@ -491,4 +501,3 @@ void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     }
   }
 }
-

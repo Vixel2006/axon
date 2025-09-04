@@ -462,54 +462,67 @@ void pow_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
   float b = *((float *)extras);
 
+  if (!a->requires_grad)
+    return;
+
   if (!is_contiguous(a) || !is_contiguous(out)) {
-    if (a->requires_grad) {
-      int *a_strides = a->strides;
-      int *out_strides = out->strides;
-      for (int linear = 0; linear < size; ++linear) {
-        int idx = linear;
-        int a_offset = 0, out_offset = 0;
+    // Non-contiguous fallback
+    int *a_strides = a->strides;
+    int *out_strides = out->strides;
 
-        for (int d = ndim - 1; d >= 0; --d) {
-          int coord = idx % shape[d];
-          idx /= shape[d];
+    for (int linear = 0; linear < size; ++linear) {
+      int idx = linear;
+      int a_offset = 0, out_offset = 0;
 
-          a_offset += coord * a_strides[d];
-          out_offset += coord * out_strides[d];
-        }
-
-        float x = a->data[a_offset];
-        a->grad[a_offset] += out->grad[out_offset] * (b * powf(x, b - 1.0f));
+      for (int d = ndim - 1; d >= 0; --d) {
+        int coord = idx % shape[d];
+        idx /= shape[d];
+        a_offset += coord * a_strides[d];
+        out_offset += coord * out_strides[d];
       }
+
+      float x = a->data[a_offset];
+      float grad_val = 0.0f;
+
+      // numerical stability check
+      if (!(x == 0.0f && (b - 1.0f) < 0.0f)) {
+        grad_val = b * powf(x, b - 1.0f);
+      }
+      a->grad[a_offset] += out->grad[out_offset] * grad_val;
     }
   } else {
-    if (a->requires_grad) {
-      int i = 0;
-      __m256 scalar_b = _mm256_set1_ps(b);
-      __m256 scalar_bm1 = _mm256_set1_ps(b - 1.0f);
+    int i = 0;
+    __m256 scalar_b = _mm256_set1_ps(b);
+    float c = b - 1.0f;
+    __m256 scalar_bm1 = _mm256_set1_ps(c);
+    __m256 zero = _mm256_setzero_ps();
 
-      for (; i + 7 < size; i += 8) {
-        __m256 x = _mm256_loadu_ps(a->data + i);
-        __m256 dout = _mm256_loadu_ps(out->grad + i);
-        __m256 a_grad = _mm256_loadu_ps(a->grad + i);
-        float tmp[8];
-        _mm256_storeu_ps(tmp, x);
-        for (int j = 0; j < 8; ++j) {
-          tmp[j] = powf(tmp[j], b - 1.0f);
-        }
-        __m256 x_pow = _mm256_loadu_ps(tmp);
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 dout = _mm256_loadu_ps(out->grad + i);
+      __m256 agrad = _mm256_loadu_ps(a->grad + i);
 
-        __m256 coeff = _mm256_mul_ps(scalar_b, x_pow);
+      __m256 x_pow = Sleef_powf8_u10avx2(x, scalar_bm1);
+      __m256 coeff = _mm256_mul_ps(scalar_b, x_pow);
 
-        __m256 da = _mm256_fmadd_ps(dout, coeff, a_grad);
+      // mask problematic case: x==0 && (b-1)<0
+      __m256 zero_mask = _mm256_cmp_ps(x, zero, _CMP_EQ_OQ);
+      __m256 neg_exp_mask = _mm256_cmp_ps(scalar_bm1, zero, _CMP_LT_OQ);
+      __m256 problem_mask = _mm256_and_ps(zero_mask, neg_exp_mask);
+      coeff = _mm256_blendv_ps(coeff, zero, problem_mask);
 
-        _mm256_storeu_ps(a->grad + i, da);
+      __m256 da = _mm256_fmadd_ps(dout, coeff, agrad);
+      _mm256_storeu_ps(a->grad + i, da);
+    }
+
+    for (; i < size; ++i) {
+      float x = a->data[i];
+      float grad_val = 0.0f;
+
+      if (!(x == 0.0f && (b - 1.0f) < 0.0f)) {
+        grad_val = b * powf(x, c);
       }
-
-      for (; i < size; ++i) {
-        float x = a->data[i];
-        a->grad[i] += out->grad[i] * (b * powf(x, b - 1.0f));
-      }
+      a->grad[i] += out->grad[i] * grad_val;
     }
   }
 }
