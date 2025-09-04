@@ -435,3 +435,11 @@ if tensor_lib:
         ctypes.c_int,
     ]
     tensor_lib.stack_op.restype = None
+
+    # Optimizers
+    tensor_lib.sgd.argtypes = [
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_float,
+    ]
+    tensor_lib.sgd.restype = None
