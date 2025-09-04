@@ -1,9 +1,9 @@
 #include <immintrin.h>
-#include <stdlib.h> // For malloc/free if I decide to use it, but I'm avoiding it.
+#include <stdlib.h>
 
 #include "autograd/autograd.h"
 #include "autograd/autograd_utils.h"
-#include "utils.h" // Added this for numel, is_contiguous
+#include "utils.h"
 
 #define SIMD_WIDTH 8
 
@@ -323,3 +323,172 @@ void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     }
   }
 }
+
+void sum_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  Tensor *in = prev[0];
+
+  if (!in->requires_grad) {
+    return;
+  }
+
+  // out is a scalar, so out->grad[0] contains the gradient
+  float output_grad = out->grad[0];
+  int in_size = numel(in->shape, in->ndim);
+
+  if (is_contiguous(in)) {
+    // Fast path: contiguous input tensor
+    __m256 grad_vec = _mm256_set1_ps(output_grad);
+
+    int i = 0;
+    for (; i + SIMD_WIDTH - 1 < in_size; i += SIMD_WIDTH) {
+      __m256 in_grad = _mm256_loadu_ps(&in->grad[i]);
+      __m256 new_grad = _mm256_add_ps(in_grad, grad_vec);
+      _mm256_storeu_ps(&in->grad[i], new_grad);
+    }
+
+    // Handle remaining elements
+    for (; i < in_size; ++i) {
+      in->grad[i] += output_grad;
+    }
+  } else {
+    // Slow path: non-contiguous input tensor
+    int *in_strides = in->strides;
+    int *in_shape = in->shape;
+    int in_ndim = in->ndim;
+
+    for (int linear_idx = 0; linear_idx < in_size; ++linear_idx) {
+      int temp_idx = linear_idx;
+      int in_offset = 0;
+
+      // Convert linear index to multidimensional coordinates and compute offset
+      for (int d = in_ndim - 1; d >= 0; --d) {
+        int coord = temp_idx % in_shape[d];
+        temp_idx /= in_shape[d];
+        in_offset += coord * in_strides[d];
+      }
+
+      in->grad[in_offset] += output_grad;
+    }
+  }
+}
+
+/**
+ * @brief Backward pass for mean_full_op.
+ *
+ * For full mean reduction, the gradient is distributed equally to all input
+ * elements, but scaled by 1/N where N is the total number of elements.
+ *
+ * @param out    Output tensor (scalar from forward pass).
+ * @param prev   Array of input tensors (prev[0] is the input tensor).
+ * @param n_prev Number of input tensors (should be 1).
+ * @param extras Additional data (unused).
+ */
+void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  Tensor *in = prev[0];
+
+  if (!in->requires_grad) {
+    return;
+  }
+
+  float output_grad = out->grad[0];
+  int in_size = numel(in->shape, in->ndim);
+
+  float scaled_grad = output_grad / in_size;
+
+  if (is_contiguous(in)) {
+    __m256 grad_vec = _mm256_set1_ps(scaled_grad);
+
+    int i = 0;
+    for (; i + SIMD_WIDTH - 1 < in_size; i += SIMD_WIDTH) {
+      __m256 in_grad = _mm256_loadu_ps(&in->grad[i]);
+      __m256 new_grad = _mm256_add_ps(in_grad, grad_vec);
+      _mm256_storeu_ps(&in->grad[i], new_grad);
+    }
+
+    for (; i < in_size; ++i) {
+      in->grad[i] += scaled_grad;
+    }
+  } else {
+    int *in_strides = in->strides;
+    int *in_shape = in->shape;
+    int in_ndim = in->ndim;
+
+    for (int linear_idx = 0; linear_idx < in_size; ++linear_idx) {
+      int temp_idx = linear_idx;
+      int in_offset = 0;
+
+      for (int d = in_ndim - 1; d >= 0; --d) {
+        int coord = temp_idx % in_shape[d];
+        temp_idx /= in_shape[d];
+        in_offset += coord * in_strides[d];
+      }
+
+      in->grad[in_offset] += scaled_grad;
+    }
+  }
+}
+
+/**
+ * @brief Backward pass for max_full_op.
+ *
+ * For full max reduction, gradients only flow to input elements that achieved
+ * the maximum value. If multiple elements have the same maximum value,
+ * the gradient is distributed among them.
+ *
+ * @param out    Output tensor (scalar from forward pass).
+ * @param prev   Array of input tensors (prev[0] is the input tensor).
+ * @param n_prev Number of input tensors (should be 1).
+ * @param extras Additional data (unused).
+ */
+void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  Tensor *in = prev[0];
+
+  if (!in->requires_grad) {
+    return;
+  }
+
+  float output_grad = out->grad[0];
+  float max_val = out->data[0];
+  int in_size = numel(in->shape, in->ndim);
+
+  if (is_contiguous(in)) {
+    __m256 grad_vec = _mm256_set1_ps(output_grad);
+    __m256 max_vec = _mm256_set1_ps(max_val);
+
+    int i = 0;
+    for (; i + SIMD_WIDTH - 1 < in_size; i += SIMD_WIDTH) {
+      __m256 data_vec = _mm256_loadu_ps(&in->data[i]);
+      __m256 mask = _mm256_cmp_ps(data_vec, max_vec, _CMP_EQ_OQ);
+      __m256 grad_contrib = _mm256_and_ps(grad_vec, mask);
+      __m256 in_grad = _mm256_loadu_ps(&in->grad[i]);
+      __m256 new_grad = _mm256_add_ps(in_grad, grad_contrib);
+      _mm256_storeu_ps(&in->grad[i], new_grad);
+    }
+
+    for (; i < in_size; ++i) {
+      if (in->data[i] == max_val) {
+        in->grad[i] += output_grad;
+      }
+    }
+  } else {
+    int *in_strides = in->strides;
+    int *in_shape = in->shape;
+    int in_ndim = in->ndim;
+
+    for (int linear_idx = 0; linear_idx < in_size; ++linear_idx) {
+      int temp_idx = linear_idx;
+      int in_offset = 0;
+
+      for (int d = in_ndim - 1; d >= 0; --d) {
+        int coord = temp_idx % in_shape[d];
+        temp_idx /= in_shape[d];
+        in_offset += coord * in_strides[d];
+      }
+
+      if (in->data[in_offset] == max_val) {
+        in->grad[in_offset] += output_grad;
+      }
+    }
+  }
+}
+
