@@ -1,5 +1,5 @@
-#ifndef NAWAH_AUTOGRAD_UTILS_H
-#define NAWAH_AUTOGRAD_UTILS_H
+#ifndef IDRAK_AUTOGRAD_UTILS_H
+#define IDRAK_AUTOGRAD_UTILS_H
 
 #include "tensor.h"
 

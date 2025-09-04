@@ -4,7 +4,7 @@ from py.ops.uop import *
 from py.ops.bop import *
 from py.ops.mop import *
 from py.ops.rop import *
-from py.elnawah_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
+from py.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
 
 # =========== Initialization Operations ============
 def zeros(shape: tuple[int, ...] | list[int], requires_grad: bool = True) -> Tensor: return Tensor(_c_tensor_ptr=c_zeros(shape, len(shape), requires_grad))

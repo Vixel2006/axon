@@ -3,8 +3,8 @@ from typing import Any
 import ctypes
 import math
 from .op import LazyOp
-from py.elnawah_bindings.ctypes_definitions import CTensor, Conv2DBackwardExtras
-from py.elnawah_bindings.c_wrapper_functions import (
+from py.idrak_bindings.ctypes_definitions import CTensor, Conv2DBackwardExtras
+from py.idrak_bindings.c_wrapper_functions import (
     c_add,
     c_sub,
     c_mul,

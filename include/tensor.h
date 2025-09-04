@@ -1,5 +1,5 @@
-#ifndef NAWAH_TENSOR_H
-#define NAWAH_TENSOR_H
+#ifndef IDRAK_TENSOR_H
+#define IDRAK_TENSOR_H
 
 #include <stdbool.h>
 #include <stdlib.h>

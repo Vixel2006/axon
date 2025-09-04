@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from py.elnawah_bindings.c_wrapper_functions import (
+from py.idrak_bindings.c_wrapper_functions import (
     c_malloc_tensor_empty,
     c_malloc_tensor_shape,
     c_malloc_tensor_full,
@@ -9,8 +9,8 @@ from py.elnawah_bindings.c_wrapper_functions import (
     c_compute_strides,
     c_set_ones_grad,
 )
-from py.elnawah_bindings.ctypes_definitions import CTensor
-from py.elnawah_bindings.c_library_loader import tensor_lib
+from py.idrak_bindings.ctypes_definitions import CTensor
+from py.idrak_bindings.c_library_loader import tensor_lib
 
 from .node import Node
 from py.ops.uop import *
@@ -24,20 +24,6 @@ from typing import Union
 
 
 def _flatten_list(nested_list):
-    """
-    Recursively flattens a nested list or tuple into a single flat list.
-
-    Parameters
-    ----------
-    nested_list : list | tuple | any
-        The object to flatten. Non-list/tuple inputs are wrapped in a list.
-
-    Returns
-    -------
-    list
-        A one-dimensional list containing all elements of `nested_list`.
-    """
-
     if not isinstance(nested_list, (list, tuple)):
         return [nested_list]
     flattened = []
@@ -50,34 +36,7 @@ def _flatten_list(nested_list):
 
 
 class Tensor(CTensor):
-    """
-    Core tensor class for the autodiff engine.
-    Wraps a C-allocated tensor (via ctypes) and provides Pythonic operators,
-    gradient tracking, and integration with lazy execution nodes.
-    """
-
     def __init__(self, shape=None, data=None, requires_grad=True, _c_tensor_ptr=None):
-        """
-        Create a new Tensor, backed by a C-allocated CTensor.
-
-        Parameters
-        ----------
-        shape : tuple[int] | list[int] | None
-            Shape of the tensor. If None, defaults to empty allocation.
-        data : list[float] | np.ndarray | None
-            Initial data to fill the tensor. If provided, shape must also be provided.
-        requires_grad : bool, default=True
-            Whether this tensor should participate in autograd.
-        _c_tensor_ptr : ctypes.POINTER(CTensor) | None
-            Low-level pointer to an already-allocated C tensor.
-            Used internally for wrapping existing tensors.
-
-        Raises
-        ------
-        ValueError
-            If arguments are invalid (e.g., shape provided without data mismatch).
-        """
-
         if _c_tensor_ptr is not None:
             self._c_tensor = _c_tensor_ptr
             if self._c_tensor and self._c_tensor.contents:

@@ -7,21 +7,6 @@
 
 #define SIMD_WIDTH 8
 
-/**
- * @brief Elementwise addition of two tensors (SIMD-optimized).
- *
- * Performs elementwise addition of tensors `a` and `b` and stores
- * the result in `out`. Uses AVX2 SIMD (width=8 floats) for most
- * of the computation, with a scalar fallback for any leftover elements.
- *
- * @param a   Input tensor.
- * @param b   Input tensor.
- * @param out Output tensor (must be allocated with same shape as `a` and `b`).
- *
- * @effects Updates `out->data` with elementwise sum of `a` and `b`.
- * @effects Sets `out->requires_grad` if either `a` or `b` requires grad.
- * @note Assumes contiguous memory layout.
- */
 void add_op(Tensor *a, Tensor *b, Tensor *out) {
   int size = numel(a->shape, a->ndim);
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
@@ -65,19 +50,6 @@ void add_op(Tensor *a, Tensor *b, Tensor *out) {
   out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
 }
 
-/**
- * @brief Elementwise subtraction of two tensors (SIMD-optimized).
- *
- * Computes elementwise difference `a - b` and stores the result in `out`.
- * Uses AVX2 SIMD with a scalar fallback.
- *
- * @param a   Input tensor.
- * @param b   Input tensor.
- * @param out Output tensor (must be allocated with same shape as `a` and `b`).
- *
- * @effects Updates `out->data` with elementwise difference.
- * @effects Sets `out->requires_grad` if either `a` or `b` requires grad.
- */
 void sub_op(Tensor *a, Tensor *b, Tensor *out) {
   int size = numel(a->shape, a->ndim);
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
@@ -121,18 +93,6 @@ void sub_op(Tensor *a, Tensor *b, Tensor *out) {
   out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
 }
 
-/**
- * @brief Elementwise multiplication of two tensors (SIMD-optimized).
- *
- * Computes elementwise product `a * b` and stores the result in `out`.
- *
- * @param a   Input tensor.
- * @param b   Input tensor.
- * @param out Output tensor (must be allocated with same shape as `a` and `b`).
- *
- * @effects Updates `out->data` with elementwise product.
- * @effects Sets `out->requires_grad` if either `a` or `b` requires grad.
- */
 void mul_op(Tensor *a, Tensor *b, Tensor *out) {
   int size = numel(a->shape, a->ndim);
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
@@ -176,18 +136,6 @@ void mul_op(Tensor *a, Tensor *b, Tensor *out) {
   out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
 }
 
-/**
- * @brief Elementwise division of two tensors (SIMD-optimized).
- *
- * Computes elementwise quotient `a / b` and stores the result in `out`.
- *
- * @param a   Input tensor (numerator).
- * @param b   Input tensor (denominator).
- * @param out Output tensor (must be allocated with same shape as `a` and `b`).
- *
- * @effects Updates `out->data` with elementwise quotient.
- * @effects Sets `out->requires_grad` if either `a` or `b` requires grad.
- */
 void div_op(Tensor *a, Tensor *b, Tensor *out) {
   int size = numel(a->shape, b->ndim);
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
@@ -231,27 +179,6 @@ void div_op(Tensor *a, Tensor *b, Tensor *out) {
   out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
 }
 
-/**
- * @brief Batched matrix multiplication with SIMD optimization.
- *
- * Computes batched matrix product of `a` and `b`:
- *   out = a @ b
- * for tensors shaped [..., N, K] and [..., K, P], producing [..., N, P].
- * Uses AVX2 SIMD (width=8 floats) for partial dot products, then
- * completes the remainder with scalar operations.
- *
- * @param a   Left-hand tensor (shape [..., N, K]).
- * @param b   Right-hand tensor (shape [..., K, P]).
- * @param out Output tensor (shape [..., N, P], allocated inside function).
- * @param N   Rows in `a`.
- * @param K   Shared inner dimension.
- * @param P   Columns in `b`.
- *
- * @effects Allocates memory for `out->shape`, `out->strides`, and
- * `out->data`.
- * @effects Updates `out->data` with batched matmul results.
- * @effects Sets `out->requires_grad` if either `a` or `b` requires grad.
- */
 void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
   // 1. Figure out how many "batch matmuls" we need.
   // Example: if a and b are 3D tensors, the leading dim(s) represent batch
@@ -427,4 +354,3 @@ void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
     }
   }
 }
-
