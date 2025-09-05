@@ -16,4 +16,3 @@ int get_flat_index(const Tensor *t, const int *indices) {
   }
   return flat_index;
 }
-
