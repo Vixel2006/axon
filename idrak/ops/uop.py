@@ -1,8 +1,8 @@
 from __future__ import annotations
 import ctypes
 from .op import LazyOp
-from py.idrak_bindings.ctypes_definitions import CTensor
-from py.idrak_bindings.c_wrapper_functions import c_relu, c_log, c_exp, c_abs, c_neg, c_relu_grad_op, c_log_grad_op, c_abs_grad_op, c_exp_grad_op, c_neg_grad_op
+from idrak.idrak_bindings.ctypes_definitions import CTensor
+from idrak.idrak_bindings.c_wrapper_functions import c_relu, c_log, c_exp, c_abs, c_neg, c_relu_grad_op, c_log_grad_op, c_abs_grad_op, c_exp_grad_op, c_neg_grad_op
 
 class UOp(LazyOp):
     @staticmethod

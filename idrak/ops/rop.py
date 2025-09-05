@@ -2,8 +2,8 @@ from __future__ import annotations
 from typing import Any
 import ctypes
 from .op import LazyOp
-from py.idrak_bindings.ctypes_definitions import CTensor
-from py.idrak_bindings.c_wrapper_functions import (
+from idrak.idrak_bindings.ctypes_definitions import CTensor
+from idrak.idrak_bindings.c_wrapper_functions import (
     c_sum,
     c_mean,
     c_max,

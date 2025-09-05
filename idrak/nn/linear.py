@@ -1,7 +1,7 @@
 from .module import Module
-from py.functions import *
-from py.core.tensor import Tensor
-from py.nn.init import xavier_uniform_, xavier_normal_
+from idrak.functions import *
+from idrak.core.tensor import Tensor
+from idrak.nn.init import xavier_uniform_, xavier_normal_
 
 
 class Linear(Module):
@@ -21,13 +21,3 @@ class Linear(Module):
 
         return out
 
-
-if __name__ == "__main__":
-    net = Linear(2, 3, bias=True)
-
-    x = Tensor((4, 2), [[3, 4], [3, 4], [4, 5], [6, 7]])
-
-    y = net.forward(x)
-
-    y.realize()
-    print(y)

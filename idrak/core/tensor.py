@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from py.idrak_bindings.c_wrapper_functions import (
+from idrak.idrak_bindings.c_wrapper_functions import (
     c_malloc_tensor_empty,
     c_malloc_tensor_shape,
     c_malloc_tensor_full,
@@ -9,14 +9,14 @@ from py.idrak_bindings.c_wrapper_functions import (
     c_compute_strides,
     c_set_ones_grad,
 )
-from py.idrak_bindings.ctypes_definitions import CTensor
-from py.idrak_bindings.c_library_loader import tensor_lib
+from idrak.idrak_bindings.ctypes_definitions import CTensor
+from idrak.idrak_bindings.c_library_loader import tensor_lib
 
 from .node import Node
-from py.ops.uop import *
-from py.ops.bop import *
-from py.ops.mop import *
-from py.ops.rop import *
+from idrak.ops.uop import *
+from idrak.ops.bop import *
+from idrak.ops.mop import *
+from idrak.ops.rop import *
 
 import numpy as np
 import ctypes
