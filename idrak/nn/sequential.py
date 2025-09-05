@@ -1,7 +1,7 @@
 from .module import Module
 from typing import Union, Callable
 from .linear import Linear
-from py.core import Tensor
+from idrak.core import Tensor
 
 class Sequential(Module):
     def __init__(self, *layers):
@@ -18,15 +18,3 @@ class Sequential(Module):
             x = layer(x)
         return x
     
-
-if __name__ == "__main__":
-    t = Tensor((2,2), [[2,3], [2,3]])
-    model = Sequential(
-        Linear(2,3, bias=False),
-        Linear(3, 4, bias=False)
-    )
-
-    pred = model(t)
-
-    pred.realize()
-

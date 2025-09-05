@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 from abc import ABC, abstractmethod
-from py.idrak_bindings.ctypes_definitions import CTensor
+from idrak.idrak_bindings.ctypes_definitions import CTensor
 
 class LazyOp(ABC):
     @abstractmethod
@@ -22,8 +22,8 @@ class LazyOp(ABC):
     
     @classmethod
     def create_node(cls, *args, **kwargs):
-        from py.core.node import Node
-        from py.core.tensor import Tensor
+        from idrak.core.node import Node
+        from idrak.core.tensor import Tensor
 
         out_shape = cls.calc_out_shape(*args, **kwargs)
 

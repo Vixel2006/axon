@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from py.core.tensor import Tensor
+from idrak.core.tensor import Tensor
 
 class Optimizer(ABC):
     @abstractmethod

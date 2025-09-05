@@ -1,6 +1,6 @@
 import math
-from py.functions import uniform
-from py.core.tensor import Tensor
+from idrak.functions import uniform
+from idrak.core.tensor import Tensor
 
 def xavier_uniform_(shape: tuple[int, ...], in_features: int, out_features: int) -> Tensor:
     bound = math.sqrt(6 / in_features + out_features)
