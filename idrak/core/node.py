@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Optional, Callable, Tuple, Dict, Any
 
-from py.idrak_bindings.c_wrapper_functions import c_malloc_node, c_free_node
-from py.idrak_bindings.ctypes_definitions import CTensor, CNode
+from idrak.idrak_bindings.c_wrapper_functions import c_malloc_node, c_free_node
+from idrak.idrak_bindings.ctypes_definitions import CTensor, CNode
 
 import ctypes
 

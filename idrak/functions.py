@@ -1,10 +1,10 @@
 from os import wait
-from py.core.tensor import Tensor
-from py.ops.uop import *
-from py.ops.bop import *
-from py.ops.mop import *
-from py.ops.rop import *
-from py.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
+from idrak.core.tensor import Tensor
+from idrak.ops.uop import *
+from idrak.ops.bop import *
+from idrak.ops.mop import *
+from idrak.ops.rop import *
+from idrak.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
 
 # =========== Initialization Operations ============
 def zeros(shape: tuple[int, ...] | list[int], requires_grad: bool = True) -> Tensor: return Tensor(_c_tensor_ptr=c_zeros(shape, len(shape), requires_grad))
@@ -55,15 +55,4 @@ def div(a: Tensor | float, b: Tensor | float) -> Tensor:
 def sum(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Sum.create_node(a, dim=dim, keepdim=keepdim)
 def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(a, dim=dim, keepdim=keepdim)
 def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
-
-if __name__ == "__main__":
-    a = Tensor((2,2), [[1,2], [1,2]])
-    b = Tensor((2,2), [[3,4], [2,3]])
-    c = Tensor((2,2), [[5,6], [4,5]])
-
-
-    d = concat([a, b, c], axis=0)
-
-    d.realize()
-    print(d)
 
