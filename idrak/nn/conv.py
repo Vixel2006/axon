@@ -1,7 +1,7 @@
 from os import wait
 from .module import Module
-from py.core.tensor import Tensor
-from py.functions import zeros, conv2d
+from idrak.core.tensor import Tensor
+from idrak.functions import zeros, conv2d
 from .init import *
 
 class Conv2d(Module):
@@ -33,14 +33,3 @@ class Conv2d(Module):
         
         return out
 
-if __name__ == "__main__":
-    x = Tensor((1,1,4,4), [[[1,2,3,4], [1,2,3,4], [1,2,3,4], [1,2,3,4]]])
-    layer = Conv2d(in_channels=1, out_channels=2, kernel_size=(2,2))
-
-    pred = layer(x)
-
-    pred.backward()
-
-
-    print(pred)
-    print(layer.weights.grad)
