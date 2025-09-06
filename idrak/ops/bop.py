@@ -198,5 +198,4 @@ class Conv2D(BOp):
         return out
     
     @staticmethod
-    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
-        c_conv_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_conv_grad_op(out_ptr, prev_ptrs, n_prev, extras)

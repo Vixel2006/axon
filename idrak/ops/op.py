@@ -27,11 +27,37 @@ class LazyOp(ABC):
 
         out_shape = cls.calc_out_shape(*args, **kwargs)
 
-        requires_grad = any(isinstance(arg, CTensor) and arg.requires_grad for arg in args)
+        # Collect all Tensor inputs for requires_grad and input_tensors
+        processed_inputs_for_node = []
+        requires_grad_flag = False
 
-        out = Tensor(shape=out_shape, requires_grad=requires_grad)
+        for arg in args:
+            if isinstance(arg, Tensor):
+                processed_inputs_for_node.append(arg)
+                if arg.requires_grad:
+                    requires_grad_flag = True
+            elif isinstance(arg, CTensor):
+                # If a raw CTensor is passed, it needs to be wrapped in a Tensor object.
+                # This assumes Tensor can be initialized with a c_tensor argument.
+                temp_tensor = Tensor(c_tensor=arg)
+                processed_inputs_for_node.append(temp_tensor)
+                if temp_tensor.requires_grad:
+                    requires_grad_flag = True
+            elif isinstance(arg, (list, tuple)):
+                for item in arg:
+                    if isinstance(item, Tensor):
+                        processed_inputs_for_node.append(item)
+                        if item.requires_grad:
+                            requires_grad_flag = True
+                    elif isinstance(item, CTensor):
+                        temp_tensor = Tensor(c_tensor=item)
+                        processed_inputs_for_node.append(temp_tensor)
+                        if temp_tensor.requires_grad:
+                            requires_grad_flag = True
 
-        in_tensors = [arg for arg in args if isinstance(arg, CTensor)]
+        out = Tensor(shape=out_shape, requires_grad=requires_grad_flag)
+
+        in_tensors = processed_inputs_for_node
 
         extras = cls.create_ctx_struct(*args, **kwargs)
 
