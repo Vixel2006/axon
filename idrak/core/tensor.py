@@ -7,7 +7,6 @@ from idrak.idrak_bindings.c_wrapper_functions import (
     c_free_tensor,
     c_numel,
     c_compute_strides,
-    c_set_ones_grad,
 )
 from idrak.idrak_bindings.ctypes_definitions import CTensor
 from idrak.idrak_bindings.c_library_loader import tensor_lib
@@ -272,7 +271,6 @@ class Tensor(CTensor):
         self._node.realize(graph)
 
     def backward(self):
-        c_set_ones_grad(self._c_tensor)
         graph = self._node.topo_sort()
 
         self._node.realize(graph)
