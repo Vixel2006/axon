@@ -229,6 +229,23 @@ if tensor_lib:
 
     tensor_lib.max_grad_op.restype = None
 
+    # Movement operations grad
+    tensor_lib.stack_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.stack_grad_op.restype = None
+
+    tensor_lib.concat_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.concat_grad_op.restype = None
+
     # Unary operations
     tensor_lib.relu_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.relu_op.restype = None

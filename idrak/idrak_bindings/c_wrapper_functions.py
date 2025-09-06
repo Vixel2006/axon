@@ -198,6 +198,12 @@ if tensor_lib:
     def c_max_full_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.max_full_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
+    def c_stack_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.stack_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
+    def c_concat_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.concat_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
     # Unary operations wrappers
     def c_relu(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.relu_op(in_tensor_ptr, out_tensor_ptr)

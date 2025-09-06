@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, Callable, Tuple, Dict, Any
 
-from idrak.idrak_bindings.c_wrapper_functions import c_malloc_node, c_free_node
+from idrak.idrak_bindings.c_wrapper_functions import c_malloc_node, c_free_node, c_set_ones_grad
 from idrak.idrak_bindings.ctypes_definitions import CTensor, CNode
 
 import ctypes
@@ -125,6 +125,7 @@ class Node:
 
         visited = set()
 
+        c_set_ones_grad(graph[-1].out_tensor._c_tensor)
         for node in reversed(graph):
             if node in visited:
                 continue

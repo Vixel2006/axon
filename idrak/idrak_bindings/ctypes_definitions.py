@@ -35,10 +35,13 @@ class Conv2DBackwardExtras(ctypes.Structure):
         ("Wout", ctypes.c_int),
     ]
 
-BackwardFnType = ctypes.CFUNCTYPE(
-    None,
-    ctypes.POINTER(CTensor),
-    ctypes.POINTER(ctypes.POINTER(CTensor)),
-    ctypes.c_int,
-    ctypes.c_void_p,
-)
+class StackExtras(ctypes.Structure):
+    _fields_ = [
+        ("axis", ctypes.c_int),
+    ]
+
+class ConcatExtras(ctypes.Structure):
+    _fields_ = [
+        ("axis", ctypes.c_int),
+    ]
+
