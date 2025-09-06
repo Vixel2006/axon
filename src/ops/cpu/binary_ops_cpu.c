@@ -354,3 +354,54 @@ void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
     }
   }
 }
+
+void dot_op(Tensor *a, Tensor *b, Tensor *out) {
+  int size = numel(a->shape, a->ndim);
+
+  if (!is_contiguous(a) || !is_contiguous(b)) {
+    float sum = 0.0f;
+    int *a_strides = a->strides;
+    int *b_strides = b->strides;
+
+    for (int linear = 0; linear < size; ++linear) {
+      int idx = linear;
+      int a_offset = 0, b_offset = 0;
+
+      for (int d = a->ndim - 1; d >= 0; --d) {
+        int coord = idx % a->shape[d];
+        idx /= a->shape[d];
+
+        a_offset += coord * a_strides[d];
+        b_offset += coord * b_strides[d];
+      }
+      sum += a->data[a_offset] * b->data[b_offset];
+    }
+    out->data[0] = sum;
+  } else {
+    float sum = 0.0f;
+    int i = 0;
+
+    for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 y = _mm256_loadu_ps(b->data + i);
+      __m256 prod_vec = _mm256_mul_ps(x, y);
+
+      // Horizontal sum across the SIMD vector
+      __m128 sum_high = _mm256_extractf128_ps(prod_vec, 1);
+      __m128 sum_low = _mm256_castps256_ps128(prod_vec);
+      __m128 sum128 = _mm_add_ps(sum_high, sum_low);
+      __m128 shuf = _mm_movehdup_ps(sum128);
+      __m128 sums = _mm_add_ps(sum128, shuf);
+      shuf = _mm_movehl_ps(shuf, sums);
+      sums = _mm_add_ss(sums, shuf);
+      sum += _mm_cvtss_f32(sums);
+    }
+
+    for (; i < size; ++i) {
+      sum += a->data[i] * b->data[i];
+    }
+    out->data[0] = sum;
+  }
+
+  out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
+}

@@ -35,9 +35,11 @@ def add(a: Tensor | float, b: Tensor | float) -> Tensor: return Add.create_node(
 def mul(a: Tensor | float, b: Tensor | float) -> Tensor: return Mul.create_node(a, b)
 def pow(a: Tensor, b: Tensor | float) -> Tensor: return Pow.create_node(a, b)
 def matmul(a: Tensor, b: Tensor) -> Tensor: return MatMul.create_node(a, b)
+def dot(a: Tensor, b: Tensor) -> Tensor: return Dot.create_node(a, b)
 
 def conv2d(a: Tensor, b: Tensor, kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int) -> Tensor:
     return Conv2D.create_node(a, b, kernel_size=kernel_size, stride=stride, padding=padding)
+
 
 def sub(a: Tensor | float, b: Tensor | float) -> Tensor:
     if isinstance(a, Tensor):
@@ -60,12 +62,10 @@ if __name__ == "__main__":
     a = Tensor((2,2), [[1,2], [3,4]])
     b = Tensor((2,2), [[1,2],[3,4]])
     
-    c = concat([a,b])
-
-    d = c - 2
+    d = dot(a, b)
 
     d.backward()
 
-    print(c);print(a);print(b)
-    print(c.grad);print(a.grad);print(b.grad)
+    print(d);print(a);print(b)
+    print(d.grad);print(a.grad);print(b.grad)
 

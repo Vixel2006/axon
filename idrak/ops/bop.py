@@ -27,7 +27,9 @@ from idrak.idrak_bindings.c_wrapper_functions import (
     c_div_grad_op,
     c_rdiv_grad_op,
     c_rsub_grad_op,
-    c_conv_grad_op
+    c_conv_grad_op,
+    c_dot,
+    c_dot_grad_op
 )
 
 class BOp(LazyOp):
@@ -199,3 +201,17 @@ class Conv2D(BOp):
     
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_conv_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+
+class Dot(BOp):
+    @staticmethod
+    def calc_out_shape(a: "Tensor", b: "Tensor"):
+        return (1,)
+
+    @staticmethod
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor") -> "Tensor":
+        c_dot(a._c_tensor, b._c_tensor, out._c_tensor)
+        return out
+
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
+        c_dot_grad_op(out_ptr, prev_ptrs, n_prev, extras)
