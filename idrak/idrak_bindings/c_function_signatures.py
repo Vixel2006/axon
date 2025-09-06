@@ -153,6 +153,14 @@ if tensor_lib:
     ]
     tensor_lib.conv2d_grad_op.restype = None
 
+    tensor_lib.dot_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.dot_grad_op.restype = None
+
     tensor_lib.relu_grad_op.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
@@ -380,6 +388,13 @@ if tensor_lib:
         ctypes.c_int,
     ]
     tensor_lib.conv2d_op.restype = None
+
+    tensor_lib.dot_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.dot_op.restype = None
 
     # Binary operations with scalars
     tensor_lib.add_scalar_op.argtypes = [

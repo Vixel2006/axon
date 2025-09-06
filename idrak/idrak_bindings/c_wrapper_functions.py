@@ -204,6 +204,9 @@ if tensor_lib:
     def c_concat_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.concat_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
+    def c_dot_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.dot_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
     # Unary operations wrappers
     def c_relu(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.relu_op(in_tensor_ptr, out_tensor_ptr)
@@ -266,6 +269,9 @@ if tensor_lib:
         tensor_lib.conv2d_op(
             a_tensor_ptr, b_tensor_ptr, out_tensor_ptr, c_kernel_size, c_stride, padding
         )
+
+    def c_dot(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        tensor_lib.dot_op(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr)
 
     # Binary operations with scalars wrappers
     def c_add_scalar(a_tensor_ptr, b, out_tensor_ptr):

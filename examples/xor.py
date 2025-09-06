@@ -8,7 +8,7 @@ from idrak.functions import *
 # Define the dataset
 class XorSet(Dataset):
     def __init__(self):
-        self.x = [Tensor((2,), [0, 0]), Tensor((2,), [0,1]), Tensor((2,), [1, 0]), Tensor((2,), [1,1])]
+        self.x = [Tensor((1, 2), [0, 0]), Tensor((1, 2), [0,1]), Tensor((1, 2), [1, 0]), Tensor((1, 2), [1,1])]
         self.y = [Tensor((1,), [0]), Tensor((1,), [1]), Tensor((1,), [1]), Tensor((1,), [0])]
 
 
@@ -22,26 +22,33 @@ xorset = XorSet()
 
 # Define the tanh function for the final leyar
 def tanh(x: Tensor) -> Tensor:
-    return x >> exp() >> sub(-x >> exp()) >> div(x >> exp() >> add(-x >> exp()))
+    return (exp(x) - exp(-x)) / (exp(x) + exp(-x))
 
 # Here we define the model
-model = nn.Sequential([
-    nn.Linear(2, 4),
-])
+model = nn.Sequential(
+    nn.Linear(2, 4, bias=False),
+    nn.Linear(4, 1, bias=False)
+)
 
 # Here we define the optimizer
-optimizer = optim.sgd(model.params, 0.01)
+optimizer = optim.SGD(model.params, 0.01)
 
 # Here we do the loop
 for i in range(10):
     for input, truth in xorset:
-        optim.zero_grad()
+        optimizer.zero_grad()
 
         pred = model(input)
 
-        pred.backward()
+        loss = pred - truth
 
-        optim.step()
+        loss.backward()
 
-print(model(Tensor((2,), [0, 0])))
+        optimizer.step()
+
+truth = model(Tensor((1,2), [0, 0]))
+
+truth.realize()
+
+print(truth)
 
