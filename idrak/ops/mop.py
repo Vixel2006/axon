@@ -3,8 +3,10 @@ from os import wait
 from typing import Any
 import ctypes
 from .op import LazyOp
-from idrak.idrak_bindings.ctypes_definitions import CTensor
+from idrak.idrak_bindings.ctypes_definitions import CTensor, StackExtras, ConcatExtras
 from idrak.idrak_bindings.c_wrapper_functions import (
+    c_concat_grad_op,
+    c_stack_grad_op,
     c_view,
     c_unsqueeze,
     c_squeeze,
@@ -18,7 +20,7 @@ from idrak.idrak_bindings.c_wrapper_functions import (
 class View(LazyOp):
     @staticmethod
     def calc_out_shape(a: "Tensor", shape: tuple[int, ...]) -> tuple[int, ...]:
-        from py.core.tensor import Tensor
+        from idrak.core.tensor import Tensor
 
         if a.numel() != Tensor.safe_c_numel(shape, len(shape)):
             raise RuntimeError(
@@ -78,8 +80,14 @@ class Broadcast(LazyOp):
 
 class Concat(LazyOp):
     @staticmethod
+    def create_ctx_struct(a: list["Tensor"], axis: int):
+        extras = ConcatExtras(axis=axis)
+        ctx = ctypes.pointer(extras)
+        return ctx
+
+    @staticmethod
     def calc_out_shape(a: list["Tensor"], axis: int) -> tuple[int, ...]:
-        from py.core.tensor import Tensor
+        from idrak.core.tensor import Tensor
 
         shape = list(a[0].shape)
 
@@ -100,10 +108,21 @@ class Concat(LazyOp):
         c_concat(inputs, out._c_tensor, len(inputs), axis)
         return out
 
+    @staticmethod
+    def backward(out: ctypes.POINTER(CTensor), a: ctypes.POINTER(ctypes.POINTER(Tensor)), n_prev: int, extras): c_concat_grad_op(out, a, n_prev, extras)
+
 class Stack(LazyOp):
     @staticmethod
+    def create_ctx_struct(a: list["Tensor"], axis: int):
+        extras = StackExtras(axis=axis)
+
+        ctx = ctypes.pointer(extras)
+
+        return ctx
+
+    @staticmethod
     def calc_out_shape(a: list["Tensor"], axis: int) -> tuple[int, ...]:
-        from py.core.tensor import Tensor
+        from idrak.core.tensor import Tensor
 
         shape = [0 for _ in range(len(a[0].shape) + 1)]
 
@@ -126,3 +145,6 @@ class Stack(LazyOp):
         c_stack(inputs, out._c_tensor, len(inputs), axis)
         return out
 
+
+    @staticmethod
+    def backward(out_ptr: ctypes.POINTER(CTensor), in_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_stack_grad_op(out_ptr, in_ptrs, n_prev, extras)

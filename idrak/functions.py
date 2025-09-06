@@ -56,3 +56,16 @@ def sum(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: ret
 def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(a, dim=dim, keepdim=keepdim)
 def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
 
+if __name__ == "__main__":
+    a = Tensor((2,2), [[1,2], [3,4]])
+    b = Tensor((2,2), [[1,2],[3,4]])
+    
+    c = concat([a,b])
+
+    d = c - 2
+
+    d.backward()
+
+    print(c);print(a);print(b)
+    print(c.grad);print(a.grad);print(b.grad)
+
