@@ -830,3 +830,79 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     }
   }
 }
+
+void dot_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  Tensor *a = prev[0];
+  Tensor *b = prev[1];
+
+  int size = numel(a->shape, a->ndim);
+  float dout = out->grad[0];
+
+  if (!is_contiguous(a) || !is_contiguous(b)) {
+    if (a->requires_grad) {
+      int *a_strides = a->strides;
+      int *b_strides = b->strides;
+      for (int linear = 0; linear < size; ++linear) {
+        int idx = linear;
+        int a_offset = 0, b_offset = 0;
+
+        for (int d = a->ndim - 1; d >= 0; --d) {
+          int coord = idx % a->shape[d];
+          idx /= a->shape[d];
+
+          a_offset += coord * a_strides[d];
+          b_offset += coord * b_strides[d];
+        }
+        a->grad[a_offset] += dout * b->data[b_offset];
+      }
+    }
+
+    if (b->requires_grad) {
+      int *a_strides = a->strides;
+      int *b_strides = b->strides;
+      for (int linear = 0; linear < size; ++linear) {
+        int idx = linear;
+        int a_offset = 0, b_offset = 0;
+
+        for (int d = a->ndim - 1; d >= 0; --d) {
+          int coord = idx % a->shape[d];
+          idx /= a->shape[d];
+
+          a_offset += coord * a_strides[d];
+          b_offset += coord * b_strides[d];
+        }
+        b->grad[b_offset] += dout * a->data[a_offset];
+      }
+    }
+  } else {
+    if (a->requires_grad) {
+      int i = 0;
+      __m256 dout_vec = _mm256_set1_ps(dout);
+      for (; i + 7 < size; i += 8) {
+        __m256 a_grad = _mm256_loadu_ps(a->grad + i);
+        __m256 b_data = _mm256_loadu_ps(b->data + i);
+        __m256 da = _mm256_fmadd_ps(dout_vec, b_data, a_grad);
+        _mm256_storeu_ps(a->grad + i, da);
+      }
+
+      for (; i < size; ++i) {
+        a->grad[i] += dout * b->data[i];
+      }
+    }
+
+    if (b->requires_grad) {
+      int i = 0;
+      __m256 dout_vec = _mm256_set1_ps(dout);
+      for (; i + 7 < size; i += 8) {
+        __m256 b_grad = _mm256_loadu_ps(b->grad + i);
+        __m256 a_data = _mm256_loadu_ps(a->data + i);
+        __m256 db = _mm256_fmadd_ps(dout_vec, a_data, b_grad);
+        _mm256_storeu_ps(b->grad + i, db);
+      }
+
+      for (; i < size; ++i) {
+        b->grad[i] += dout * a->data[i];
+      }
+    }
+  }
+}
