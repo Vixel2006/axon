@@ -11,8 +11,8 @@ void sgd(Tensor **params, int num_params, float lr) {
     int num_elements = numel(params[i]->shape, params[i]->ndim);
 
     if (is_contiguous(params[i])) {
-      float *data_ptr = params[i]->data;
-      float *grad_ptr = params[i]->grad;
+      float *data_ptr = params[i]->data->ptr;
+      float *grad_ptr = params[i]->grad->ptr;
 
       int j = 0;
       for (; j + SIMD_WIDTH - 1 < num_elements; j += SIMD_WIDTH) {
@@ -36,7 +36,7 @@ void sgd(Tensor **params, int num_params, float lr) {
 
       for (int k = 0; k < num_elements; ++k) {
         int data_flat_idx = get_flat_index(params[i], current_indices);
-        params[i]->data[data_flat_idx] -= lr * params[i]->grad[data_flat_idx];
+        params[i]->data->ptr[data_flat_idx] -= lr * params[i]->grad->ptr[data_flat_idx];
 
         for (int dim = params[i]->ndim - 1; dim >= 0; --dim) {
           current_indices[dim]++;

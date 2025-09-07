@@ -19,7 +19,8 @@ void stack_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     int input_tensor_numel = numel(input_tensor->shape, input_tensor->ndim);
 
     for (int j = 0; j < input_tensor_numel; ++j) {
-      // Convert linear index j to multi-dimensional coordinates for input_tensor
+      // Convert linear index j to multi-dimensional coordinates for
+      // input_tensor
       int *input_coords = malloc(input_tensor->ndim * sizeof(int));
       int temp_j = j;
       for (int d = input_tensor->ndim - 1; d >= 0; --d) {
@@ -34,7 +35,8 @@ void stack_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         if (d < axis) {
           out_coords[d] = input_coords[d];
         } else if (d == axis) {
-          out_coords[d] = idx; // The index of the current input tensor in the stack
+          out_coords[d] =
+              idx; // The index of the current input tensor in the stack
         } else {
           out_coords[d] = input_coords[d - 1];
         }
@@ -47,7 +49,7 @@ void stack_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
       }
 
       // Accumulate gradient
-      input_tensor->grad[j] += out->grad[out_linear_idx];
+      input_tensor->grad->ptr[j] += out->grad->ptr[out_linear_idx];
 
       free(input_coords);
       free(out_coords);
@@ -64,13 +66,15 @@ void concat_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   for (int i = 0; i < n_prev; ++i) {
     Tensor *input_tensor = prev[i];
 
-    // Calculate the size of the current input tensor's slice along the concat axis
+    // Calculate the size of the current input tensor's slice along the concat
+    // axis
     int slice_size_along_axis = input_tensor->shape[axis];
 
     int input_tensor_numel = numel(input_tensor->shape, input_tensor->ndim);
 
     for (int j = 0; j < input_tensor_numel; ++j) {
-      // Convert linear index j to multi-dimensional coordinates for input_tensor
+      // Convert linear index j to multi-dimensional coordinates for
+      // input_tensor
       int *input_coords = malloc(input_tensor->ndim * sizeof(int));
       int temp_j = j;
       for (int d = input_tensor->ndim - 1; d >= 0; --d) {
@@ -95,7 +99,7 @@ void concat_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
       }
 
       // Accumulate gradient
-      input_tensor->grad[j] += out->grad[out_linear_idx];
+      input_tensor->grad->ptr[j] += out->grad->ptr[out_linear_idx];
 
       free(input_coords);
       free(out_coords);

@@ -1,9 +1,15 @@
 import ctypes
 from .c_library_loader import tensor_lib
-from .ctypes_definitions import CTensor, CNode
+from .ctypes_definitions import CTensor, CNode, CSharedPtr
 
 if tensor_lib:
     # Define the C function signatures
+    tensor_lib.malloc_shared_ptr.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int]
+    tensor_lib.malloc_shared_ptr.restype = ctypes.POINTER(CSharedPtr)
+
+    tensor_lib.free_shared_ptr.argtypes = [ctypes.POINTER(ctypes.POINTER(CSharedPtr))]
+    tensor_lib.free_shared_ptr.restype = None
+
     tensor_lib.numel.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.numel.restype = ctypes.c_int
 
@@ -27,13 +33,13 @@ if tensor_lib:
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,
         ctypes.POINTER(ctypes.c_int),
-        ctypes.POINTER(ctypes.c_float),
+        ctypes.POINTER(CSharedPtr),
         ctypes.c_bool,
-        ctypes.POINTER(ctypes.c_float),
+        ctypes.POINTER(CSharedPtr),
     ]
     tensor_lib.malloc_tensor_full.restype = ctypes.POINTER(CTensor)
 
-    tensor_lib.free_tensor.argtypes = [ctypes.POINTER(CTensor)]
+    tensor_lib.free_tensor.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor))]
     tensor_lib.free_tensor.restype = None
 
     tensor_lib.zeros.argtypes = [

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from os import wait
 from typing import Any
 from abc import ABC, abstractmethod
 from idrak.idrak_bindings.ctypes_definitions import CTensor
@@ -27,7 +28,6 @@ class LazyOp(ABC):
 
         out_shape = cls.calc_out_shape(*args, **kwargs)
 
-        # Collect all Tensor inputs for requires_grad and input_tensors
         processed_inputs_for_node = []
         requires_grad_flag = False
 
@@ -37,8 +37,6 @@ class LazyOp(ABC):
                 if arg.requires_grad:
                     requires_grad_flag = True
             elif isinstance(arg, CTensor):
-                # If a raw CTensor is passed, it needs to be wrapped in a Tensor object.
-                # This assumes Tensor can be initialized with a c_tensor argument.
                 temp_tensor = Tensor(c_tensor=arg)
                 processed_inputs_for_node.append(temp_tensor)
                 if temp_tensor.requires_grad:

@@ -5,22 +5,30 @@
 #include <stdlib.h>
 
 typedef struct {
-  float *data;
+  float *ptr;
+  unsigned int ref_counter;
+} SharedPtr;
+
+typedef struct {
+  SharedPtr *data;
+  SharedPtr *grad;
   int ndim;
   int *shape;
   int *strides;
   bool requires_grad;
-  bool owns_data;
-  float *grad;
   void *grad_fn;
 } Tensor;
+
+SharedPtr *malloc_shared_ptr(float *ptr, int size);
+void free_shared_ptr(SharedPtr **ptr);
 
 Tensor *malloc_tensor_empty();
 Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad);
 Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
-                           float *data, bool requires_grad, float *grad);
+                           SharedPtr *data, bool requires_grad,
+                           SharedPtr *grad);
 
-void free_tensor(Tensor *t);
+void free_tensor(Tensor **t);
 
 int numel(const int *shape, int ndim);
 int *compute_strides(const int *shape, int ndim);

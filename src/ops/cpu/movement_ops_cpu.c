@@ -9,8 +9,7 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
     return;
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides) {
-    free(out->shape);
-    out->shape = NULL;
+    free_tensor(&out);
     return;
   }
   tensor_init_view(out, in);
@@ -170,7 +169,7 @@ void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
 
   out->shape = malloc(out->ndim * sizeof(int));
   if (!out->shape) {
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -188,13 +187,21 @@ void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
   out->strides = compute_strides(out->shape, out->ndim);
   int total_size = numel(out->shape, out->ndim);
 
-  out->data = malloc(total_size * sizeof(float));
-  out->grad = malloc(total_size * sizeof(float));
-
-  if (!out->data || !out->grad) {
-    free_tensor(out);
+  float *concat_data_buffer = calloc(total_size, sizeof(float));
+  if (!concat_data_buffer) {
+    free_tensor(&out);
     return;
   }
+  out->data = malloc_shared_ptr(concat_data_buffer, total_size);
+  free(concat_data_buffer);
+
+  float *concat_grad_buffer = calloc(total_size, sizeof(float));
+  if (!concat_grad_buffer) {
+    free_tensor(&out);
+    return;
+  }
+  out->grad = malloc_shared_ptr(concat_grad_buffer, total_size);
+  free(concat_grad_buffer);
 
   out->requires_grad = false;
 
@@ -227,11 +234,11 @@ void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
         out_idx += out_coords[d] * out->strides[d];
       }
 
-      out->data[out_idx] = in[tensor_idx]->data[i];
+      out->data->ptr[out_idx] = in[tensor_idx]->data->ptr[i];
       if (in[tensor_idx]->grad) {
-        out->grad[out_idx] = in[tensor_idx]->grad[i];
+        out->grad->ptr[out_idx] = in[tensor_idx]->grad->ptr[i];
       } else {
-        out->grad[out_idx] = 0.0f;
+        out->grad->ptr[out_idx] = 0.0f;
       }
 
       free(in_coords);
@@ -240,14 +247,15 @@ void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
     axis_offset += in[tensor_idx]->shape[axis];
   }
 
-  out->owns_data = true;
+  out->data->ref_counter = 1;
+  out->grad->ref_counter = 1;
 }
 
 void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
   out->ndim = in[0]->ndim + 1;
   out->shape = malloc(out->ndim * sizeof(int));
   if (!out->shape) {
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -265,12 +273,21 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
   out->strides = compute_strides(out->shape, out->ndim);
   int total_size = numel(out->shape, out->ndim);
 
-  out->data = malloc(total_size * sizeof(float));
-  out->grad = malloc(total_size * sizeof(float));
-  if (!out->data || !out->grad) {
-    free_tensor(out);
+  float *stack_data_buffer = calloc(total_size, sizeof(float));
+  if (!stack_data_buffer) {
+    free_tensor(&out);
     return;
   }
+  out->data = malloc_shared_ptr(stack_data_buffer, total_size);
+  free(stack_data_buffer);
+
+  float *stack_grad_buffer = calloc(total_size, sizeof(float));
+  if (!stack_grad_buffer) {
+    free_tensor(&out);
+    return;
+  }
+  out->grad = malloc_shared_ptr(stack_grad_buffer, total_size);
+  free(stack_grad_buffer);
 
   out->requires_grad = false;
 
@@ -309,11 +326,11 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
       }
 
       // Copy data and gradients
-      out->data[output_idx] = in[tensor_idx]->data[input_idx];
+      out->data->ptr[output_idx] = in[tensor_idx]->data->ptr[input_idx];
       if (in[tensor_idx]->grad) {
-        out->grad[output_idx] = in[tensor_idx]->grad[input_idx];
+        out->grad->ptr[output_idx] = in[tensor_idx]->grad->ptr[input_idx];
       } else {
-        out->grad[output_idx] = 0.0f;
+        out->grad->ptr[output_idx] = 0.0f;
       }
 
       free(out_coords);
@@ -334,5 +351,6 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
     free(coords);
   }
 
-  out->owns_data = true;
+  out->data->ref_counter = 1;
+  out->grad->ref_counter = 1;
 }
