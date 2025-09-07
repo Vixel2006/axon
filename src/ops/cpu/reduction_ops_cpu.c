@@ -9,6 +9,19 @@
 #include "ops/ops.h"
 
 void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
+  if (out->shape) {
+    free(out->shape);
+    out->shape = NULL;
+  }
+  if (out->strides) {
+    free(out->strides);
+    out->strides = NULL;
+  }
+  if (out->data && out->data->ptr) {
+    free(out->data->ptr);
+    out->data->ptr = NULL;
+  }
+
   // 1. Adjust ndim for output (drop or keep reduction axis)
   out->ndim = keepdim ? a->ndim : a->ndim - 1;
 
@@ -169,13 +182,12 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m128 total_sum_m128 = _mm_add_ps(lo_half, hi_half);
         current_sum_val = _mm_cvtss_f32(total_sum_m128);
 
-        // Scalar fallback for remaining elements
         for (; i < reduction_size; ++i) {
           current_sum_val +=
               a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a];
         }
-      } else { // Non-SIMD path for non-contiguous strides
-        for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
+      } else {
+        for (i = 0; i < reduction_size; ++i) {
           current_sum_val +=
               a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a];
         }
@@ -191,6 +203,19 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
+  if (out->shape) {
+    free(out->shape);
+    out->shape = NULL;
+  }
+  if (out->strides) {
+    free(out->strides);
+    out->strides = NULL;
+  }
+  if (out->data && out->data->ptr) {
+    free(out->data->ptr);
+    out->data->ptr = NULL;
+  }
+
   out->ndim = keepdim ? a->ndim : a->ndim - 1;
 
   out->shape = (int *)malloc(out->ndim * sizeof(int));
@@ -336,12 +361,11 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m128 total_sum_m128 = _mm_add_ps(lo_half, hi_half);
         current_sum_val = _mm_cvtss_f32(total_sum_m128);
 
-        // Scalar fallback for remaining elements
         for (; i < reduction_size; ++i) {
           current_sum_val +=
               a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a];
         }
-      } else { // Non-SIMD path for non-contiguous strides
+      } else {
         for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
           current_sum_val +=
               a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a];
@@ -358,6 +382,19 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
+  if (out->shape) {
+    free(out->shape);
+    out->shape = NULL;
+  }
+  if (out->strides) {
+    free(out->strides);
+    out->strides = NULL;
+  }
+  if (out->data && out->data->ptr) {
+    free(out->data->ptr);
+    out->data->ptr = NULL;
+  }
+
   out->ndim = keepdim ? a->ndim : a->ndim - 1;
 
   out->shape = (int *)malloc(out->ndim * sizeof(int));
@@ -508,13 +545,12 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
                           _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(1, 0, 3, 2)));
         current_max_val = _mm_cvtss_f32(vlow);
 
-        // Scalar fallback for remaining elements
         for (; i < reduction_size; ++i) {
           current_max_val = fmaxf(
               current_max_val,
               a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a]);
         }
-      } else { // Non-SIMD path for non-contiguous strides
+      } else {
         for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
           current_max_val = fmaxf(
               current_max_val,
@@ -532,6 +568,19 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void sum_full_op(Tensor *a, Tensor *out) {
+  if (out && out->shape) {
+    free(out->shape);
+    out->shape = NULL;
+  }
+  if (out && out->strides) {
+    free(out->strides);
+    out->strides = NULL;
+  }
+  if (out && out->data && out->data->ptr) {
+    free(out->data->ptr);
+    out->data->ptr = NULL;
+  }
+
   out->ndim = 0;
   out->shape = NULL;
   out->strides = NULL;
@@ -539,7 +588,6 @@ void sum_full_op(Tensor *a, Tensor *out) {
   out->data->ptr = (float *)malloc(sizeof(float));
   if (!out->data->ptr) {
     fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
-    free_tensor(&out);
     return;
   }
 
@@ -587,7 +635,7 @@ void sum_full_op(Tensor *a, Tensor *out) {
     if (!coords) {
       fprintf(stderr, "Error: Failed to allocate memory for coords\n");
       free(out->data->ptr);
-      free_tensor(&out);
+      out->data->ptr = NULL;
       return;
     }
 
@@ -623,6 +671,11 @@ void sum_full_op(Tensor *a, Tensor *out) {
 void mean_full_op(Tensor *a, Tensor *out) {
   sum_full_op(a, out);
 
+  if (out && out->data && out->data->ptr == NULL) {
+    fprintf(stderr, "Error: sum_full_op failed, cannot compute mean.\n");
+    return;
+  }
+
   size_t total_elements = 1;
   for (int i = 0; i < a->ndim; ++i) {
     total_elements *= a->shape[i];
@@ -630,10 +683,27 @@ void mean_full_op(Tensor *a, Tensor *out) {
 
   if (total_elements > 0) {
     out->data->ptr[0] /= total_elements;
+  } else {
+    if (out && out->data && out->data->ptr) {
+      out->data->ptr[0] = 0.0f;
+    }
   }
 }
 
 void max_full_op(Tensor *a, Tensor *out) {
+  if (out && out->shape) {
+    free(out->shape);
+    out->shape = NULL;
+  }
+  if (out && out->strides) {
+    free(out->strides);
+    out->strides = NULL;
+  }
+  if (out && out->data && out->data->ptr) {
+    free(out->data->ptr);
+    out->data->ptr = NULL;
+  }
+
   out->ndim = 0;
   out->shape = NULL;
   out->strides = NULL;
@@ -641,7 +711,6 @@ void max_full_op(Tensor *a, Tensor *out) {
   out->data->ptr = (float *)malloc(sizeof(float));
   if (!out->data->ptr) {
     fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
-    free_tensor(&out);
     return;
   }
 
@@ -697,7 +766,7 @@ void max_full_op(Tensor *a, Tensor *out) {
     if (!coords) {
       fprintf(stderr, "Error: Failed to allocate memory for coords\n");
       free(out->data->ptr);
-      free_tensor(&out);
+      out->data->ptr = NULL;
       return;
     }
 
@@ -734,39 +803,4 @@ void max_full_op(Tensor *a, Tensor *out) {
 
   out->data->ptr[0] = max_val;
   out->requires_grad = a->requires_grad;
-}
-
-int main() {
-  // Define tensor shape
-  int shape[] = {2, 2};
-  int ndim = 2;
-
-  // Initialize two tensors
-  Tensor *a = malloc_tensor_shape(shape, ndim, false);
-
-  // Set some values
-  a->data->ptr[0] = 1.0f;
-  a->data->ptr[1] = 2.0f;
-  a->data->ptr[2] = 3.0f;
-  a->data->ptr[3] = 4.0f;
-
-  // Create output tensor
-  Tensor *out = malloc_tensor_shape(shape, ndim, false);
-
-  int new_shape[] = {2, 2, 2};
-  // Perform addition
-  unsqueeze_op(a, out, 0);
-
-  // Print result
-  printf("Result of a * b:\n");
-  for (int i = 0; i < numel(shape, ndim); ++i) {
-    printf("%f ", out->data->ptr[i]);
-  }
-  printf("\n");
-
-  // Free tensors
-  free_tensor(&a);
-  free_tensor(&out);
-
-  return 0;
 }
