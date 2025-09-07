@@ -2,7 +2,6 @@
 #include <stdio.h>
 
 int tensor_alloc_shape(int ndim, const int *shape, int **out_shape) {
-  *out_shape = malloc(ndim * sizeof(int));
   if (!*out_shape)
     return -1;
   memcpy(*out_shape, shape, ndim * sizeof(int));
@@ -10,7 +9,6 @@ int tensor_alloc_shape(int ndim, const int *shape, int **out_shape) {
 }
 
 int tensor_alloc_strides(int ndim, const int *strides, int **out_strides) {
-  *out_strides = malloc(ndim * sizeof(int));
   if (!*out_strides)
     return -1;
   memcpy(*out_strides, strides, ndim * sizeof(int));

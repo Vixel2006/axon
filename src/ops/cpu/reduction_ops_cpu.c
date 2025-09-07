@@ -157,7 +157,8 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m256 sum_vec = _mm256_setzero_ps();
 
         for (; i + (VEC_SIZE - 1) < reduction_size; i += VEC_SIZE) {
-          __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
+          __m256 vec_a =
+              _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
           sum_vec = _mm256_add_ps(sum_vec, vec_a);
         }
 
@@ -323,7 +324,8 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m256 sum_vec = _mm256_setzero_ps();
 
         for (; i + (VEC_SIZE - 1) < reduction_size; i += VEC_SIZE) {
-          __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
+          __m256 vec_a =
+              _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
           sum_vec = _mm256_add_ps(sum_vec, vec_a);
         }
 
@@ -492,7 +494,8 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m256 max_vec = neg_flt_max_vec;
 
         for (; i + (VEC_SIZE - 1) < reduction_size; i += VEC_SIZE) {
-          __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
+          __m256 vec_a =
+              _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
           max_vec = _mm256_max_ps(max_vec, vec_a);
         }
 
@@ -507,15 +510,15 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
         // Scalar fallback for remaining elements
         for (; i < reduction_size; ++i) {
-          current_max_val =
-              fmaxf(current_max_val,
-                    a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a]);
+          current_max_val = fmaxf(
+              current_max_val,
+              a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a]);
         }
       } else { // Non-SIMD path for non-contiguous strides
         for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
-          current_max_val =
-              fmaxf(current_max_val,
-                    a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a]);
+          current_max_val = fmaxf(
+              current_max_val,
+              a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a]);
         }
       }
 
@@ -731,4 +734,39 @@ void max_full_op(Tensor *a, Tensor *out) {
 
   out->data->ptr[0] = max_val;
   out->requires_grad = a->requires_grad;
+}
+
+int main() {
+  // Define tensor shape
+  int shape[] = {2, 2};
+  int ndim = 2;
+
+  // Initialize two tensors
+  Tensor *a = malloc_tensor_shape(shape, ndim, false);
+
+  // Set some values
+  a->data->ptr[0] = 1.0f;
+  a->data->ptr[1] = 2.0f;
+  a->data->ptr[2] = 3.0f;
+  a->data->ptr[3] = 4.0f;
+
+  // Create output tensor
+  Tensor *out = malloc_tensor_shape(shape, ndim, false);
+
+  int new_shape[] = {2, 2, 2};
+  // Perform addition
+  unsqueeze_op(a, out, 0);
+
+  // Print result
+  printf("Result of a * b:\n");
+  for (int i = 0; i < numel(shape, ndim); ++i) {
+    printf("%f ", out->data->ptr[i]);
+  }
+  printf("\n");
+
+  // Free tensors
+  free_tensor(&a);
+  free_tensor(&out);
+
+  return 0;
 }
