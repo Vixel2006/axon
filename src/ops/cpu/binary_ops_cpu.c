@@ -185,38 +185,35 @@ void div_op(Tensor *a, Tensor *b, Tensor *out) {
 
 void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
   // 1. Figure out how many "batch matmuls" we need.
-  // Example: if a and b are 3D tensors, the leading dim(s) represent batch
-  // size. We multiply all leading dims (except the last two, which are the
-  // matmul dims).
   int num_batches = 1;
-  out->shape = malloc(a->ndim * sizeof(int));
-  if (!out->shape) {
-    free_tensor(&out);
-    return;
-  }
+
+  // Set up output tensor dimensions
   out->ndim = a->ndim;
   for (int i = 0; i < out->ndim - 2; ++i) {
     num_batches *= a->shape[i];
-    out->shape[i] = a->shape[i];
+    out->shape[i] =
+        a->shape[i]; // This modifies existing allocation, which is fine
   }
   out->shape[a->ndim - 2] = N;
   out->shape[a->ndim - 1] = P;
-  out->strides = compute_strides(out->shape, out->ndim);
-  int size = numel(out->shape, out->ndim);
-  float *initial_data = calloc(size, sizeof(float));
-  if (!initial_data) {
-    free_tensor(&out);
-    return;
+
+  // Free old strides and compute new ones
+  if (out->strides) {
+    free(out->strides);
   }
-  out->data = malloc_shared_ptr(initial_data, size);
-  free(initial_data);
-  if (!out->data) {
-    free_tensor(&out);
-    return;
+  out->strides = compute_strides(out->shape, out->ndim);
+
+  int size = numel(out->shape, out->ndim);
+
+  // Check if we need to resize the data buffer
+  // (In a real implementation, you might want to check the current size)
+  // For now, we'll assume the output tensor was allocated with the correct size
+  // and just zero out the existing data
+  for (int i = 0; i < size; ++i) {
+    out->data->ptr[i] = 0.0f;
   }
 
-  // 2. Precompute per-batch strides so we can jump to the right slice of
-  // data.
+  // 2. Precompute per-batch strides so we can jump to the right slice of data.
   int a_batch_stride = (a->ndim > 2) ? a->strides[a->ndim - 3] : N * K;
   int b_batch_stride = (b->ndim > 2) ? b->strides[b->ndim - 3] : K * P;
   int out_batch_stride = (out->ndim > 2) ? out->strides[out->ndim - 3] : N * P;
@@ -249,8 +246,6 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
     }
   } else {
     // 3. Vectorization setup.
-    // We'll compute dot products in chunks of SIMD_WIDTH=8 floats, and then
-    // finish the remainder scalar.
     const int k_simd = (K / SIMD_WIDTH) * SIMD_WIDTH;
 
     // 4. Batched matmul loop: [num_batches, N, P].
@@ -274,8 +269,7 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
             __m256 b_vec = _mm256_loadu_ps(
                 &b->data
                      ->ptr[b_curr_stride + col + k * b->strides[b->ndim - 2]]);
-            sum_vec =
-                _mm256_fmadd_ps(a_vec, b_vec, sum_vec); // a fused multiply-add
+            sum_vec = _mm256_fmadd_ps(a_vec, b_vec, sum_vec);
           }
 
           // Horizontal sum across the SIMD vector
@@ -427,8 +421,8 @@ int main() {
   int ndim = 2;
 
   // Initialize two tensors
-  Tensor *a = zeros(shape, ndim, false);
-  Tensor *b = zeros(shape, ndim, false);
+  Tensor *a = malloc_tensor_shape(shape, ndim, false);
+  Tensor *b = malloc_tensor_shape(shape, ndim, false);
 
   // Set some values
   a->data->ptr[0] = 1.0f;
@@ -442,10 +436,10 @@ int main() {
   b->data->ptr[3] = 8.0f;
 
   // Create output tensor
-  Tensor *out = zeros(shape, ndim, false);
+  Tensor *out = malloc_tensor_shape(shape, ndim, false);
 
   // Perform addition
-  add_op(a, b, out);
+  div_op(a, b, out);
 
   // Print result
   printf("Result of a * b:\n");
