@@ -27,7 +27,7 @@ def tanh(x: Tensor) -> Tensor:
 # Here we define the model
 model = nn.Sequential(
     nn.Linear(2, 4, bias=False),
-    nn.Linear(4, 1, bias=False)
+    nn.Linear(4, 1, bias=False),
 )
 
 # Here we define the optimizer
@@ -40,15 +40,14 @@ for i in range(10):
 
         pred = model(input)
 
-        loss = pred - truth
 
-        loss.backward()
+        pred.backward()
 
         optimizer.step()
 
-truth = model(Tensor((1,2), [0, 0]))
+    truth = model(Tensor((1,2), [1, 0]))
 
-truth.realize()
 
-print(truth)
+    truth.realize()
 
+    print(truth)

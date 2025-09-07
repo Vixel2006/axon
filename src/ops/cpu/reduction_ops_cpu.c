@@ -16,7 +16,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->shape = (int *)malloc(out->ndim * sizeof(int));
   if (!out->shape) {
     fprintf(stderr, "Error: Failed to allocate memory for out->shape\n");
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -35,7 +35,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   if (!out->strides && out->ndim > 0) {
     fprintf(stderr, "Error: Failed to allocate memory for out->strides\n");
     free(out->shape);
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -43,16 +43,16 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   for (int i = 0; i < out->ndim; ++i) {
     out_total_size *= out->shape[i];
   }
-  out->data = (float *)malloc(out_total_size * sizeof(float));
-  if (!out->data) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data\n");
+  out->data->ptr = (float *)malloc(out_total_size * sizeof(float));
+  if (!out->data->ptr) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
     free(out->shape);
     free(out->strides);
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
-  memset(out->data, 0, out_total_size * sizeof(float));
+  memset(out->data->ptr, 0, out_total_size * sizeof(float));
 
   // 3. Decompose shape into batch × reduction × post parts
   int batch_num = 1;
@@ -71,7 +71,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   int *out_coords = (int *)malloc(out->ndim * sizeof(int));
   if (!out_coords) {
     fprintf(stderr, "Error: Failed to allocate memory for out_coords\n");
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -113,7 +113,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         temp_idx %= product_trailing_suffix;
       }
 
-      // Map output coords to flat index in out->data
+      // Map output coords to flat index in out->data->ptr
       size_t out_offset = 0;
       for (int d = 0; d < out->ndim; ++d) {
         out_offset += (size_t)out_coords[d] * out->strides[d];
@@ -157,7 +157,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m256 sum_vec = _mm256_setzero_ps();
 
         for (; i + (VEC_SIZE - 1) < reduction_size; i += VEC_SIZE) {
-          __m256 vec_a = _mm256_loadu_ps(&a->data[base_in_offset + (size_t)i]);
+          __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
           sum_vec = _mm256_add_ps(sum_vec, vec_a);
         }
 
@@ -171,16 +171,16 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         // Scalar fallback for remaining elements
         for (; i < reduction_size; ++i) {
           current_sum_val +=
-              a->data[base_in_offset + (size_t)i * reduction_stride_a];
+              a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a];
         }
       } else { // Non-SIMD path for non-contiguous strides
         for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
           current_sum_val +=
-              a->data[base_in_offset + (size_t)i * reduction_stride_a];
+              a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a];
         }
       }
 
-      out->data[out_offset] = current_sum_val;
+      out->data->ptr[out_offset] = current_sum_val;
     }
   }
 
@@ -195,7 +195,7 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->shape = (int *)malloc(out->ndim * sizeof(int));
   if (!out->shape) {
     fprintf(stderr, "Error: Failed to allocate memory for out->shape\n");
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -214,7 +214,7 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   if (!out->strides && out->ndim > 0) {
     fprintf(stderr, "Error: Failed to allocate memory for out->strides\n");
     free(out->shape);
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -222,16 +222,16 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   for (int i = 0; i < out->ndim; ++i) {
     out_total_size *= out->shape[i];
   }
-  out->data = (float *)malloc(out_total_size * sizeof(float));
-  if (!out->data) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data\n");
+  out->data->ptr = (float *)malloc(out_total_size * sizeof(float));
+  if (!out->data->ptr) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
     free(out->shape);
     free(out->strides);
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
-  memset(out->data, 0, out_total_size * sizeof(float));
+  memset(out->data->ptr, 0, out_total_size * sizeof(float));
 
   int batch_num = 1;
   for (int i = 0; i < axis; ++i) {
@@ -248,7 +248,7 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   int *out_coords = (int *)malloc(out->ndim * sizeof(int));
   if (!out_coords) {
     fprintf(stderr, "Error: Failed to allocate memory for out_coords\n");
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -323,7 +323,7 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m256 sum_vec = _mm256_setzero_ps();
 
         for (; i + (VEC_SIZE - 1) < reduction_size; i += VEC_SIZE) {
-          __m256 vec_a = _mm256_loadu_ps(&a->data[base_in_offset + (size_t)i]);
+          __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
           sum_vec = _mm256_add_ps(sum_vec, vec_a);
         }
 
@@ -337,16 +337,16 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         // Scalar fallback for remaining elements
         for (; i < reduction_size; ++i) {
           current_sum_val +=
-              a->data[base_in_offset + (size_t)i * reduction_stride_a];
+              a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a];
         }
       } else { // Non-SIMD path for non-contiguous strides
         for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
           current_sum_val +=
-              a->data[base_in_offset + (size_t)i * reduction_stride_a];
+              a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a];
         }
       }
 
-      out->data[out_offset] = current_sum_val / reduction_size;
+      out->data->ptr[out_offset] = current_sum_val / reduction_size;
     }
   }
 
@@ -361,7 +361,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   out->shape = (int *)malloc(out->ndim * sizeof(int));
   if (!out->shape) {
     fprintf(stderr, "Error: Failed to allocate memory for out->shape\n");
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -380,7 +380,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   if (!out->strides && out->ndim > 0) {
     fprintf(stderr, "Error: Failed to allocate memory for out->strides\n");
     free(out->shape);
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -388,17 +388,17 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   for (int i = 0; i < out->ndim; ++i) {
     out_total_size *= out->shape[i];
   }
-  out->data = (float *)malloc(out_total_size * sizeof(float));
-  if (!out->data) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data\n");
+  out->data->ptr = (float *)malloc(out_total_size * sizeof(float));
+  if (!out->data->ptr) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
     free(out->shape);
     free(out->strides);
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
   for (size_t k = 0; k < out_total_size; ++k) {
-    out->data[k] = -FLT_MAX;
+    out->data->ptr[k] = -FLT_MAX;
   }
 
   int batch_num = 1;
@@ -416,7 +416,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   int *out_coords = (int *)malloc(out->ndim * sizeof(int));
   if (!out_coords) {
     fprintf(stderr, "Error: Failed to allocate memory for out_coords\n");
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -492,7 +492,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         __m256 max_vec = neg_flt_max_vec;
 
         for (; i + (VEC_SIZE - 1) < reduction_size; i += VEC_SIZE) {
-          __m256 vec_a = _mm256_loadu_ps(&a->data[base_in_offset + (size_t)i]);
+          __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
           max_vec = _mm256_max_ps(max_vec, vec_a);
         }
 
@@ -509,17 +509,17 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
         for (; i < reduction_size; ++i) {
           current_max_val =
               fmaxf(current_max_val,
-                    a->data[base_in_offset + (size_t)i * reduction_stride_a]);
+                    a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a]);
         }
       } else { // Non-SIMD path for non-contiguous strides
         for (i = 0; i < reduction_size; ++i) { // Reset i for this loop
           current_max_val =
               fmaxf(current_max_val,
-                    a->data[base_in_offset + (size_t)i * reduction_stride_a]);
+                    a->data->ptr[base_in_offset + (size_t)i * reduction_stride_a]);
         }
       }
 
-      out->data[out_offset] = current_max_val;
+      out->data->ptr[out_offset] = current_max_val;
     }
   }
 
@@ -533,10 +533,10 @@ void sum_full_op(Tensor *a, Tensor *out) {
   out->shape = NULL;
   out->strides = NULL;
 
-  out->data = (float *)malloc(sizeof(float));
-  if (!out->data) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data\n");
-    free_tensor(out);
+  out->data->ptr = (float *)malloc(sizeof(float));
+  if (!out->data->ptr) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
+    free_tensor(&out);
     return;
   }
 
@@ -565,7 +565,7 @@ void sum_full_op(Tensor *a, Tensor *out) {
     size_t i = 0;
 
     for (; i + (VEC_SIZE - 1) < total_elements; i += VEC_SIZE) {
-      __m256 vec_a = _mm256_loadu_ps(&a->data[i]);
+      __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[i]);
       sum_vec = _mm256_add_ps(sum_vec, vec_a);
     }
 
@@ -577,14 +577,14 @@ void sum_full_op(Tensor *a, Tensor *out) {
     total_sum = _mm_cvtss_f32(total_sum_m128);
 
     for (; i < total_elements; ++i) {
-      total_sum += a->data[i];
+      total_sum += a->data->ptr[i];
     }
   } else {
     int *coords = (int *)malloc(a->ndim * sizeof(int));
     if (!coords) {
       fprintf(stderr, "Error: Failed to allocate memory for coords\n");
-      free(out->data);
-      free_tensor(out);
+      free(out->data->ptr);
+      free_tensor(&out);
       return;
     }
 
@@ -596,7 +596,7 @@ void sum_full_op(Tensor *a, Tensor *out) {
         flat_idx += (size_t)coords[d] * a->strides[d];
       }
 
-      total_sum += a->data[flat_idx];
+      total_sum += a->data->ptr[flat_idx];
 
       int carry = 1;
       for (int d = a->ndim - 1; d >= 0 && carry; --d) {
@@ -613,7 +613,7 @@ void sum_full_op(Tensor *a, Tensor *out) {
     free(coords);
   }
 
-  out->data[0] = total_sum;
+  out->data->ptr[0] = total_sum;
   out->requires_grad = a->requires_grad;
 }
 
@@ -626,7 +626,7 @@ void mean_full_op(Tensor *a, Tensor *out) {
   }
 
   if (total_elements > 0) {
-    out->data[0] /= total_elements;
+    out->data->ptr[0] /= total_elements;
   }
 }
 
@@ -635,10 +635,10 @@ void max_full_op(Tensor *a, Tensor *out) {
   out->shape = NULL;
   out->strides = NULL;
 
-  out->data = (float *)malloc(sizeof(float));
-  if (!out->data) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data\n");
-    free_tensor(out);
+  out->data->ptr = (float *)malloc(sizeof(float));
+  if (!out->data->ptr) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
+    free_tensor(&out);
     return;
   }
 
@@ -648,7 +648,7 @@ void max_full_op(Tensor *a, Tensor *out) {
   }
 
   if (total_elements == 0) {
-    out->data[0] = -FLT_MAX;
+    out->data->ptr[0] = -FLT_MAX;
     out->requires_grad = a->requires_grad;
     return;
   }
@@ -673,7 +673,7 @@ void max_full_op(Tensor *a, Tensor *out) {
     size_t i = 0;
 
     for (; i + (VEC_SIZE - 1) < total_elements; i += VEC_SIZE) {
-      __m256 vec_a = _mm256_loadu_ps(&a->data[i]);
+      __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[i]);
       max_vec = _mm256_max_ps(max_vec, vec_a);
     }
 
@@ -687,14 +687,14 @@ void max_full_op(Tensor *a, Tensor *out) {
     max_val = _mm_cvtss_f32(vlow);
 
     for (; i < total_elements; ++i) {
-      max_val = fmaxf(max_val, a->data[i]);
+      max_val = fmaxf(max_val, a->data->ptr[i]);
     }
   } else {
     int *coords = (int *)malloc(a->ndim * sizeof(int));
     if (!coords) {
       fprintf(stderr, "Error: Failed to allocate memory for coords\n");
-      free(out->data);
-      free_tensor(out);
+      free(out->data->ptr);
+      free_tensor(&out);
       return;
     }
 
@@ -708,10 +708,10 @@ void max_full_op(Tensor *a, Tensor *out) {
       }
 
       if (first) {
-        max_val = a->data[flat_idx];
+        max_val = a->data->ptr[flat_idx];
         first = false;
       } else {
-        max_val = fmaxf(max_val, a->data[flat_idx]);
+        max_val = fmaxf(max_val, a->data->ptr[flat_idx]);
       }
 
       int carry = 1;
@@ -729,6 +729,6 @@ void max_full_op(Tensor *a, Tensor *out) {
     free(coords);
   }
 
-  out->data[0] = max_val;
+  out->data->ptr[0] = max_val;
   out->requires_grad = a->requires_grad;
 }
