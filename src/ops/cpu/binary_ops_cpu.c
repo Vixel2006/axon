@@ -1,10 +1,10 @@
+#include "ops/ops.h"
+#include "tensor.h" // Added for Tensor operations
+#include "utils.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
-
-#include "ops/ops.h"
-#include "utils.h"
-
+#include <stdio.h>
 #define SIMD_WIDTH 8
 
 void add_op(Tensor *a, Tensor *b, Tensor *out) {
@@ -30,20 +30,21 @@ void add_op(Tensor *a, Tensor *b, Tensor *out) {
         out_offset += coord * out_strides[d];
       }
 
-      out->data[out_offset] = a->data[a_offset] + b->data[b_offset];
+      out->data->ptr[out_offset] =
+          a->data->ptr[a_offset] + b->data->ptr[b_offset];
     }
   } else {
     int i = 0;
 
     for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
-      __m256 y = _mm256_loadu_ps(b->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 y = _mm256_loadu_ps(b->data->ptr + i);
       __m256 z = _mm256_add_ps(x, y);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = a->data[i] + b->data[i];
+      out->data->ptr[i] = a->data->ptr[i] + b->data->ptr[i];
     }
   }
 
@@ -73,20 +74,21 @@ void sub_op(Tensor *a, Tensor *b, Tensor *out) {
         out_offset += coord * out_strides[d];
       }
 
-      out->data[out_offset] = a->data[a_offset] - b->data[b_offset];
+      out->data->ptr[out_offset] =
+          a->data->ptr[a_offset] - b->data->ptr[b_offset];
     }
   } else {
     int i = 0;
 
     for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
-      __m256 y = _mm256_loadu_ps(b->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 y = _mm256_loadu_ps(b->data->ptr + i);
       __m256 z = _mm256_sub_ps(x, y);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = a->data[i] - b->data[i];
+      out->data->ptr[i] = a->data->ptr[i] - b->data->ptr[i];
     }
   }
 
@@ -116,20 +118,21 @@ void mul_op(Tensor *a, Tensor *b, Tensor *out) {
         out_offset += coord * out_strides[d];
       }
 
-      out->data[out_offset] = a->data[a_offset] * b->data[b_offset];
+      out->data->ptr[out_offset] =
+          a->data->ptr[a_offset] * b->data->ptr[b_offset];
     }
   } else {
     int i = 0;
 
     for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
-      __m256 y = _mm256_loadu_ps(b->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 y = _mm256_loadu_ps(b->data->ptr + i);
       __m256 z = _mm256_mul_ps(x, y);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = a->data[i] * b->data[i];
+      out->data->ptr[i] = a->data->ptr[i] * b->data->ptr[i];
     }
   }
 
@@ -159,20 +162,21 @@ void div_op(Tensor *a, Tensor *b, Tensor *out) {
         out_offset += coord * out_strides[d];
       }
 
-      out->data[out_offset] = a->data[a_offset] / b->data[b_offset];
+      out->data->ptr[out_offset] =
+          a->data->ptr[a_offset] / b->data->ptr[b_offset];
     }
   } else {
     int i = 0;
 
     for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
-      __m256 y = _mm256_loadu_ps(b->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 y = _mm256_loadu_ps(b->data->ptr + i);
       __m256 z = _mm256_div_ps(x, y);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = a->data[i] / b->data[i];
+      out->data->ptr[i] = a->data->ptr[i] / b->data->ptr[i];
     }
   }
 
@@ -187,7 +191,7 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
   int num_batches = 1;
   out->shape = malloc(a->ndim * sizeof(int));
   if (!out->shape) {
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
   out->ndim = a->ndim;
@@ -199,9 +203,15 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
   out->shape[a->ndim - 1] = P;
   out->strides = compute_strides(out->shape, out->ndim);
   int size = numel(out->shape, out->ndim);
-  out->data = malloc(size * sizeof(float));
+  float *initial_data = calloc(size, sizeof(float));
+  if (!initial_data) {
+    free_tensor(&out);
+    return;
+  }
+  out->data = malloc_shared_ptr(initial_data, size);
+  free(initial_data);
   if (!out->data) {
-    free_tensor(out);
+    free_tensor(&out);
     return;
   }
 
@@ -226,14 +236,14 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
 
           for (int k = 0; k < K; ++k) {
             float a_val =
-                a->data[a_curr_stride + row + k * a->strides[a->ndim - 1]];
+                a->data->ptr[a_curr_stride + row + k * a->strides[a->ndim - 1]];
             float b_val =
-                b->data[b_curr_stride + col + k * b->strides[b->ndim - 2]];
+                b->data->ptr[b_curr_stride + col + k * b->strides[b->ndim - 2]];
             sum += a_val * b_val;
           }
 
-          out->data[out_curr_stride + i * out->strides[out->ndim - 2] +
-                    j * out->strides[out->ndim - 1]] = sum;
+          out->data->ptr[out_curr_stride + i * out->strides[out->ndim - 2] +
+                         j * out->strides[out->ndim - 1]] = sum;
         }
       }
     }
@@ -259,9 +269,11 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
 
           for (int k = 0; k < k_simd; k += SIMD_WIDTH) {
             __m256 a_vec = _mm256_loadu_ps(
-                &a->data[a_curr_stride + row + k * a->strides[a->ndim - 1]]);
+                &a->data
+                     ->ptr[a_curr_stride + row + k * a->strides[a->ndim - 1]]);
             __m256 b_vec = _mm256_loadu_ps(
-                &b->data[b_curr_stride + col + k * b->strides[b->ndim - 2]]);
+                &b->data
+                     ->ptr[b_curr_stride + col + k * b->strides[b->ndim - 2]]);
             sum_vec =
                 _mm256_fmadd_ps(a_vec, b_vec, sum_vec); // a fused multiply-add
           }
@@ -278,13 +290,15 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
 
           // Finish leftover elements if K is not a multiple of 8
           for (int k = k_simd; k < K; ++k) {
-            sum += a->data[a_curr_stride + row + k * a->strides[a->ndim - 1]] *
-                   b->data[b_curr_stride + col + k * b->strides[b->ndim - 2]];
+            sum +=
+                a->data
+                    ->ptr[a_curr_stride + row + k * a->strides[a->ndim - 1]] *
+                b->data->ptr[b_curr_stride + col + k * b->strides[b->ndim - 2]];
           }
 
           // Write result into output tensor
-          out->data[out_curr_stride + i * out->strides[out->ndim - 2] +
-                    j * out->strides[out->ndim - 1]] = sum;
+          out->data->ptr[out_curr_stride + i * out->strides[out->ndim - 2] +
+                         j * out->strides[out->ndim - 1]] = sum;
         }
       }
     }
@@ -310,7 +324,7 @@ void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
   // Initialize output to zero
   int out_size = N * Cout * Hout * Wout;
   for (int i = 0; i < out_size; ++i) {
-    out->data[i] = 0.0f;
+    out->data->ptr[i] = 0.0f;
   }
 
   // Tile sizes
@@ -335,14 +349,15 @@ void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
 
                   if (ih >= 0 && ih < H && iw >= 0 && iw < W) {
                     int in_idx = n * Cin * H * W + ic * H * W + ih * W + iw;
-                    float in_val = in->data[in_idx];
+                    float in_val = in->data->ptr[in_idx];
 
                     for (int oc = 0; oc < Cout; ++oc) {
                       int kernel_idx =
                           oc * Cin * Kh * Kw + ic * Kh * Kw + kh * Kw + kw;
                       int out_idx = n * Cout * Hout * Wout + oc * Hout * Wout +
                                     oh * Wout + ow;
-                      out->data[out_idx] += in_val * kernel->data[kernel_idx];
+                      out->data->ptr[out_idx] +=
+                          in_val * kernel->data->ptr[kernel_idx];
                     }
                   }
                 }
@@ -374,16 +389,16 @@ void dot_op(Tensor *a, Tensor *b, Tensor *out) {
         a_offset += coord * a_strides[d];
         b_offset += coord * b_strides[d];
       }
-      sum += a->data[a_offset] * b->data[b_offset];
+      sum += a->data->ptr[a_offset] * b->data->ptr[b_offset];
     }
-    out->data[0] = sum;
+    out->data->ptr[0] = sum;
   } else {
     float sum = 0.0f;
     int i = 0;
 
     for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
-      __m256 y = _mm256_loadu_ps(b->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 y = _mm256_loadu_ps(b->data->ptr + i);
       __m256 prod_vec = _mm256_mul_ps(x, y);
 
       // Horizontal sum across the SIMD vector
@@ -398,10 +413,51 @@ void dot_op(Tensor *a, Tensor *b, Tensor *out) {
     }
 
     for (; i < size; ++i) {
-      sum += a->data[i] * b->data[i];
+      sum += a->data->ptr[i] * b->data->ptr[i];
     }
-    out->data[0] = sum;
+    out->data->ptr[0] = sum;
   }
 
   out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
+}
+
+int main() {
+  // Define tensor shape
+  int shape[] = {2, 2};
+  int ndim = 2;
+
+  // Initialize two tensors
+  Tensor *a = zeros(shape, ndim, false);
+  Tensor *b = zeros(shape, ndim, false);
+
+  // Set some values
+  a->data->ptr[0] = 1.0f;
+  a->data->ptr[1] = 2.0f;
+  a->data->ptr[2] = 3.0f;
+  a->data->ptr[3] = 4.0f;
+
+  b->data->ptr[0] = 5.0f;
+  b->data->ptr[1] = 6.0f;
+  b->data->ptr[2] = 7.0f;
+  b->data->ptr[3] = 8.0f;
+
+  // Create output tensor
+  Tensor *out = zeros(shape, ndim, false);
+
+  // Perform addition
+  add_op(a, b, out);
+
+  // Print result
+  printf("Result of a * b:\n");
+  for (int i = 0; i < numel(shape, ndim); ++i) {
+    printf("%f ", out->data->ptr[i]);
+  }
+  printf("\n");
+
+  // Free tensors
+  free_tensor(&a);
+  free_tensor(&b);
+  free_tensor(&out);
+
+  return 0;
 }

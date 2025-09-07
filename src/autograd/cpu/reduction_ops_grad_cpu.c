@@ -39,18 +39,18 @@ void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           in_offset += coord * in_strides[d];
           out_offset += coord * out_strides[d];
         }
-        in->grad[in_offset] += out->grad[out_offset];
+        in->grad->ptr[in_offset] += out->grad->ptr[out_offset];
       }
     } else {
       int i = 0;
       for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-        __m256 in_grad = _mm256_loadu_ps(in->grad + i);
-        __m256 dout = _mm256_loadu_ps(out->grad + i);
+        __m256 in_grad = _mm256_loadu_ps(in->grad->ptr + i);
+        __m256 dout = _mm256_loadu_ps(out->grad->ptr + i);
         __m256 new_in_grad = _mm256_add_ps(in_grad, dout);
-        _mm256_storeu_ps(in->grad + i, new_in_grad);
+        _mm256_storeu_ps(in->grad->ptr + i, new_in_grad);
       }
       for (; i < size; ++i) {
-        in->grad[i] += out->grad[i];
+        in->grad->ptr[i] += out->grad->ptr[i];
       }
     }
     return;
@@ -84,7 +84,7 @@ void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           current_out_dim_idx++;
         }
       }
-      in->grad[in_offset] += out->grad[out_offset];
+      in->grad->ptr[in_offset] += out->grad->ptr[out_offset];
     }
   } else {
     // Contiguous path (existing code)
@@ -92,7 +92,7 @@ void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     int num_batches = numel(out->shape, out->ndim);
 
     for (int batch_idx = 0; batch_idx < num_batches; ++batch_idx) {
-      float grad = out->grad[batch_idx];
+      float grad = out->grad->ptr[batch_idx];
 
       __m256 grad_vec = _mm256_set1_ps(grad);
 
@@ -100,13 +100,13 @@ void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
       int i = 0;
       for (; i + SIMD_WIDTH - 1 < reduce_size; i += SIMD_WIDTH) {
-        __m256 data_vec = _mm256_loadu_ps(&in->grad[base_offset + i]);
+        __m256 data_vec = _mm256_loadu_ps(&in->grad->ptr[base_offset + i]);
         data_vec = _mm256_add_ps(data_vec, grad_vec);
-        _mm256_storeu_ps(&in->grad[base_offset + i], data_vec);
+        _mm256_storeu_ps(&in->grad->ptr[base_offset + i], data_vec);
       }
 
       for (; i < reduce_size; ++i) {
-        in->grad[base_offset + i] += grad;
+        in->grad->ptr[base_offset + i] += grad;
       }
     }
   }
@@ -141,18 +141,18 @@ void mean_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           in_offset += coord * in_strides[d];
           out_offset += coord * out_strides[d];
         }
-        in->grad[in_offset] += out->grad[out_offset];
+        in->grad->ptr[in_offset] += out->grad->ptr[out_offset];
       }
     } else {
       int i = 0;
       for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-        __m256 in_grad = _mm256_loadu_ps(in->grad + i);
-        __m256 dout = _mm256_loadu_ps(out->grad + i);
+        __m256 in_grad = _mm256_loadu_ps(in->grad->ptr + i);
+        __m256 dout = _mm256_loadu_ps(out->grad->ptr + i);
         __m256 new_in_grad = _mm256_add_ps(in_grad, dout);
-        _mm256_storeu_ps(in->grad + i, new_in_grad);
+        _mm256_storeu_ps(in->grad->ptr + i, new_in_grad);
       }
       for (; i < size; ++i) {
-        in->grad[i] += out->grad[i];
+        in->grad->ptr[i] += out->grad->ptr[i];
       }
     }
     return;
@@ -188,14 +188,14 @@ void mean_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           current_out_dim_idx++;
         }
       }
-      in->grad[in_offset] += out->grad[out_offset] / reduce_size;
+      in->grad->ptr[in_offset] += out->grad->ptr[out_offset] / reduce_size;
     }
   } else {
     // Contiguous path (existing code)
     int num_batches = numel(out->shape, out->ndim);
 
     for (int batch_idx = 0; batch_idx < num_batches; ++batch_idx) {
-      float grad = out->grad[batch_idx];
+      float grad = out->grad->ptr[batch_idx];
 
       __m256 grad_vec = _mm256_set1_ps(grad / reduce_size);
 
@@ -203,13 +203,13 @@ void mean_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
       int i = 0;
       for (; i + SIMD_WIDTH - 1 < reduce_size; i += SIMD_WIDTH) {
-        __m256 data_vec = _mm256_loadu_ps(&in->grad[base_offset + i]);
+        __m256 data_vec = _mm256_loadu_ps(&in->grad->ptr[base_offset + i]);
         data_vec = _mm256_add_ps(data_vec, grad_vec);
-        _mm256_storeu_ps(&in->grad[base_offset + i], data_vec);
+        _mm256_storeu_ps(&in->grad->ptr[base_offset + i], data_vec);
       }
 
       for (; i < reduce_size; ++i) {
-        in->grad[base_offset + i] += grad / reduce_size;
+        in->grad->ptr[base_offset + i] += grad / reduce_size;
       }
     }
   }
@@ -250,18 +250,18 @@ void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           in_offset += coord * in_strides[d];
           out_offset += coord * out_strides[d];
         }
-        in->grad[in_offset] += out->grad[out_offset];
+        in->grad->ptr[in_offset] += out->grad->ptr[out_offset];
       }
     } else {
       int i = 0;
       for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-        __m256 in_grad = _mm256_loadu_ps(in->grad + i);
-        __m256 dout = _mm256_loadu_ps(out->grad + i);
+        __m256 in_grad = _mm256_loadu_ps(in->grad->ptr + i);
+        __m256 dout = _mm256_loadu_ps(out->grad->ptr + i);
         __m256 new_in_grad = _mm256_add_ps(in_grad, dout);
-        _mm256_storeu_ps(in->grad + i, new_in_grad);
+        _mm256_storeu_ps(in->grad->ptr + i, new_in_grad);
       }
       for (; i < size; ++i) {
-        in->grad[i] += out->grad[i];
+        in->grad->ptr[i] += out->grad->ptr[i];
       }
     }
     return;
@@ -296,8 +296,8 @@ void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         }
       }
 
-      if (in->data[in_offset] == out->data[out_offset]) {
-        in->grad[in_offset] += out->grad[out_offset];
+      if (in->data->ptr[in_offset] == out->data->ptr[out_offset]) {
+        in->grad->ptr[in_offset] += out->grad->ptr[out_offset];
       }
     }
   } else {
@@ -306,8 +306,8 @@ void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     int num_batches = numel(out->shape, out->ndim);
 
     for (int batch_idx = 0; batch_idx < num_batches; ++batch_idx) {
-      float grad = out->grad[batch_idx];
-      float max = out->data[batch_idx];
+      float grad = out->grad->ptr[batch_idx];
+      float max = out->data->ptr[batch_idx];
 
       __m256 grad_vec = _mm256_set1_ps(grad);
       __m256 max_vec = _mm256_set1_ps(max);
@@ -316,17 +316,17 @@ void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
       int i = 0;
       for (; i + SIMD_WIDTH - 1 < reduce_size; i += SIMD_WIDTH) {
-        __m256 data_vec = _mm256_loadu_ps(&in->data[base_offset + i]);
+        __m256 data_vec = _mm256_loadu_ps(&in->data->ptr[base_offset + i]);
         __m256 mask = _mm256_cmp_ps(data_vec, max_vec, _CMP_EQ_OQ);
         __m256 grad_contrib = _mm256_and_ps(grad_vec, mask);
-        __m256 in_grad = _mm256_loadu_ps(&in->grad[base_offset + i]);
+        __m256 in_grad = _mm256_loadu_ps(&in->grad->ptr[base_offset + i]);
         __m256 new_grad = _mm256_add_ps(in_grad, grad_contrib);
-        _mm256_storeu_ps(&in->grad[base_offset + i], new_grad);
+        _mm256_storeu_ps(&in->grad->ptr[base_offset + i], new_grad);
       }
 
       for (; i < reduce_size; ++i) {
-        if (in->data[base_offset + i] == max) {
-          in->grad[base_offset + i] += grad;
+        if (in->data->ptr[base_offset + i] == max) {
+          in->grad->ptr[base_offset + i] += grad;
         }
       }
     }
@@ -340,8 +340,8 @@ void sum_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     return;
   }
 
-  // out is a scalar, so out->grad[0] contains the gradient
-  float output_grad = out->grad[0];
+  // out is a scalar, so out->grad->ptr[0] contains the gradient
+  float output_grad = out->grad->ptr[0];
   int in_size = numel(in->shape, in->ndim);
 
   if (is_contiguous(in)) {
@@ -350,14 +350,14 @@ void sum_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
     int i = 0;
     for (; i + SIMD_WIDTH - 1 < in_size; i += SIMD_WIDTH) {
-      __m256 in_grad = _mm256_loadu_ps(&in->grad[i]);
+      __m256 in_grad = _mm256_loadu_ps(&in->grad->ptr[i]);
       __m256 new_grad = _mm256_add_ps(in_grad, grad_vec);
-      _mm256_storeu_ps(&in->grad[i], new_grad);
+      _mm256_storeu_ps(&in->grad->ptr[i], new_grad);
     }
 
     // Handle remaining elements
     for (; i < in_size; ++i) {
-      in->grad[i] += output_grad;
+      in->grad->ptr[i] += output_grad;
     }
   } else {
     // Slow path: non-contiguous input tensor
@@ -376,7 +376,7 @@ void sum_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         in_offset += coord * in_strides[d];
       }
 
-      in->grad[in_offset] += output_grad;
+      in->grad->ptr[in_offset] += output_grad;
     }
   }
 }
@@ -388,7 +388,7 @@ void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     return;
   }
 
-  float output_grad = out->grad[0];
+  float output_grad = out->grad->ptr[0];
   int in_size = numel(in->shape, in->ndim);
 
   float scaled_grad = output_grad / in_size;
@@ -398,13 +398,13 @@ void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
     int i = 0;
     for (; i + SIMD_WIDTH - 1 < in_size; i += SIMD_WIDTH) {
-      __m256 in_grad = _mm256_loadu_ps(in->grad + i);
+      __m256 in_grad = _mm256_loadu_ps(in->grad->ptr + i);
       __m256 new_grad = _mm256_add_ps(in_grad, grad_vec);
-      _mm256_storeu_ps(in->grad + i, new_grad);
+      _mm256_storeu_ps(in->grad->ptr + i, new_grad);
     }
 
     for (; i < in_size; ++i) {
-      in->grad[i] += scaled_grad;
+      in->grad->ptr[i] += scaled_grad;
     }
   } else {
     int *in_strides = in->strides;
@@ -421,7 +421,7 @@ void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         in_offset += coord * in_strides[d];
       }
 
-      in->grad[in_offset] += scaled_grad;
+      in->grad->ptr[in_offset] += scaled_grad;
     }
   }
 }
@@ -433,8 +433,8 @@ void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     return;
   }
 
-  float output_grad = out->grad[0];
-  float max_val = out->data[0];
+  float output_grad = out->grad->ptr[0];
+  float max_val = out->data->ptr[0];
   int in_size = numel(in->shape, in->ndim);
 
   if (is_contiguous(in)) {
@@ -443,17 +443,17 @@ void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
     int i = 0;
     for (; i + SIMD_WIDTH - 1 < in_size; i += SIMD_WIDTH) {
-      __m256 data_vec = _mm256_loadu_ps(&in->data[i]);
+      __m256 data_vec = _mm256_loadu_ps(&in->data->ptr[i]);
       __m256 mask = _mm256_cmp_ps(data_vec, max_vec, _CMP_EQ_OQ);
       __m256 grad_contrib = _mm256_and_ps(grad_vec, mask);
-      __m256 in_grad = _mm256_loadu_ps(&in->grad[i]);
+      __m256 in_grad = _mm256_loadu_ps(&in->grad->ptr[i]);
       __m256 new_grad = _mm256_add_ps(in_grad, grad_contrib);
-      _mm256_storeu_ps(&in->grad[i], new_grad);
+      _mm256_storeu_ps(&in->grad->ptr[i], new_grad);
     }
 
     for (; i < in_size; ++i) {
-      if (in->data[i] == max_val) {
-        in->grad[i] += output_grad;
+      if (in->data->ptr[i] == max_val) {
+        in->grad->ptr[i] += output_grad;
       }
     }
   } else {
@@ -471,8 +471,8 @@ void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         in_offset += coord * in_strides[d];
       }
 
-      if (in->data[in_offset] == max_val) {
-        in->grad[in_offset] += output_grad;
+      if (in->data->ptr[in_offset] == max_val) {
+        in->grad->ptr[in_offset] += output_grad;
       }
     }
   }

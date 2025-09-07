@@ -1,8 +1,7 @@
+#include "ops/ops.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
-
-#include "ops/ops.h"
 
 void add_scalar_op(Tensor *a, float b, Tensor *out) {
   int size = numel(a->shape, a->ndim);
@@ -20,20 +19,20 @@ void add_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = a->data[offset_a] + b;
+      out->data->ptr[offset_out] = a->data->ptr[offset_a] + b;
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
       __m256 z = _mm256_add_ps(x, scalar);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = a->data[i] + b;
+      out->data->ptr[i] = a->data->ptr[i] + b;
     }
   }
 
@@ -56,20 +55,20 @@ void sub_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = a->data[offset_a] - b;
+      out->data->ptr[offset_out] = a->data->ptr[offset_a] - b;
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
       __m256 z = _mm256_sub_ps(x, scalar);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = a->data[i] - b;
+      out->data->ptr[i] = a->data->ptr[i] - b;
     }
   }
 
@@ -93,20 +92,20 @@ void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
         out_offset += coord * out->strides[d];
       }
 
-      out->data[out_offset] = a - b->data[b_offset];
+      out->data->ptr[out_offset] = a - b->data->ptr[b_offset];
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(a);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(b->data + i);
+      __m256 x = _mm256_loadu_ps(b->data->ptr + i);
       __m256 z = _mm256_sub_ps(scalar, x);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = a - b->data[i];
+      out->data->ptr[i] = a - b->data->ptr[i];
     }
   }
 
@@ -129,20 +128,20 @@ void mul_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = a->data[offset_a] * b;
+      out->data->ptr[offset_out] = a->data->ptr[offset_a] * b;
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
       __m256 z = _mm256_mul_ps(x, scalar);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = a->data[i] * b;
+      out->data->ptr[i] = a->data->ptr[i] * b;
     }
   }
 
@@ -165,20 +164,20 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = a->data[offset_a] / b;
+      out->data->ptr[offset_out] = a->data->ptr[offset_a] / b;
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
       __m256 z = _mm256_div_ps(x, scalar);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = a->data[i] / b;
+      out->data->ptr[i] = a->data->ptr[i] / b;
     }
   }
 
@@ -201,20 +200,20 @@ void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = b / a->data[offset_a];
+      out->data->ptr[offset_out] = b / a->data->ptr[offset_a];
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
       __m256 z = _mm256_div_ps(scalar, x);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = b / a->data[i];
+      out->data->ptr[i] = b / a->data->ptr[i];
     }
   }
 
@@ -237,20 +236,20 @@ void pow_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = pow(a->data[offset_a], b);
+      out->data->ptr[offset_out] = pow(a->data->ptr[offset_a], b);
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data + i);
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
       __m256 y = Sleef_powf8_u10avx2(x, scalar);
-      _mm256_storeu_ps(out->data + i, y);
+      _mm256_storeu_ps(out->data->ptr + i, y);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = pow(a->data[i], b);
+      out->data->ptr[i] = pow(a->data->ptr[i], b);
     }
   }
   out->requires_grad = a->requires_grad;
