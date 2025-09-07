@@ -45,9 +45,9 @@ for i in range(10):
 
         optimizer.step()
 
-    truth = model(Tensor((1,2), [1, 0]))
+truth = model(Tensor((1,2), [1, 0]))
 
 
-    truth.realize()
+truth.realize()
 
-    print(truth)
+print(truth)

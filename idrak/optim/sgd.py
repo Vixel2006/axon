@@ -9,7 +9,9 @@ class SGD(Optimizer):
         self.lr = lr
     
     def step(self):
+        print("fuck me")
         c_sgd(self.params, self.num_params, self.lr)
+        print("Idon't here alltime")
 
     def zero_grad(self):
         c_zero_grad(self.params, self.num_params)

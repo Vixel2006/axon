@@ -62,12 +62,10 @@ if __name__ == "__main__":
     a = Tensor((2,2), [[1,2], [3,4]])
     b = Tensor((2,2), [[1,2],[3,4]])
 
-    d = a * b
+    d = a @ b
 
-    c = sum(d)
+    d.backward()
 
-    c.backward()
-
-    print(c);print(a);print(d)
-    print(c.grad);print(a.grad)
+    print(a);print(d)
+    print(a.grad);print(b.grad)
 

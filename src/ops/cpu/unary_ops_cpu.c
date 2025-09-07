@@ -1,10 +1,65 @@
+#include "ops/ops.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
+#include <string.h>
 
-#include "ops/ops.h"
+#define DEBUG 1
+
+#if DEBUG
+#include <stdio.h>
+#endif
+
+static void reconfigure_unary_output(Tensor *in, Tensor *out) {
+  if (out->shape) {
+    free(out->shape);
+    out->shape = NULL;
+  }
+  if (out->strides) {
+    free(out->strides);
+    out->strides = NULL;
+  }
+  if (out->data && out->data->ptr) {
+    free(out->data->ptr);
+    out->data->ptr = NULL;
+  }
+
+  out->ndim = in->ndim;
+  out->shape = (int *)malloc(out->ndim * sizeof(int));
+  if (!out->shape) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->shape\n");
+    return;
+  }
+  memcpy(out->shape, in->shape, out->ndim * sizeof(int));
+
+  out->strides = compute_strides(out->shape, out->ndim);
+  if (!out->strides && out->ndim > 0) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->strides\n");
+    free(out->shape);
+    out->shape = NULL;
+    return;
+  }
+
+  size_t out_total_size = numel(out->shape, out->ndim);
+  out->data->ptr = (float *)malloc(out_total_size * sizeof(float));
+  if (!out->data->ptr) {
+    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
+    free(out->shape);
+    out->shape = NULL;
+    if (out->strides) {
+      free(out->strides);
+      out->strides = NULL;
+    }
+    return;
+  }
+}
 
 void relu_op(Tensor *in, Tensor *out) {
+  reconfigure_unary_output(in, out);
+  if (!out->data->ptr) {
+    return;
+  }
+
   int size = numel(in->shape, in->ndim);
 
   if (!is_contiguous(in) || !is_contiguous(out)) {
@@ -42,6 +97,11 @@ void relu_op(Tensor *in, Tensor *out) {
 }
 
 void log_op(Tensor *in, Tensor *out) {
+  reconfigure_unary_output(in, out);
+  if (!out->data->ptr) {
+    return;
+  }
+
   int size = numel(in->shape, in->ndim);
 
   if (!is_contiguous(in) || !is_contiguous(out)) {
@@ -77,6 +137,11 @@ void log_op(Tensor *in, Tensor *out) {
 }
 
 void exp_op(Tensor *in, Tensor *out) {
+  reconfigure_unary_output(in, out);
+  if (!out->data->ptr) {
+    return;
+  }
+
   int size = numel(in->shape, in->ndim);
 
   if (!is_contiguous(in) || !is_contiguous(out)) {
@@ -114,6 +179,11 @@ void exp_op(Tensor *in, Tensor *out) {
 void softmax_op(Tensor *in, Tensor *out) {}
 
 void neg_op(Tensor *in, Tensor *out) {
+  reconfigure_unary_output(in, out);
+  if (!out->data->ptr) {
+    return;
+  }
+
   int size = numel(in->shape, in->ndim);
 
   if (!is_contiguous(in) || !is_contiguous(out)) {
@@ -152,6 +222,11 @@ void neg_op(Tensor *in, Tensor *out) {
 }
 
 void abs_op(Tensor *in, Tensor *out) {
+  reconfigure_unary_output(in, out);
+  if (!out->data->ptr) {
+    return;
+  }
+
   int size = numel(in->shape, in->ndim);
 
   if (!is_contiguous(in) || !is_contiguous(out)) {
@@ -168,8 +243,8 @@ void abs_op(Tensor *in, Tensor *out) {
       }
 
       out->data->ptr[offset_out] = in->data->ptr[offset_in] >= 0.0f
-                                  ? in->data->ptr[offset_in]
-                                  : 0.0f - in->data->ptr[offset_in];
+                                       ? in->data->ptr[offset_in]
+                                       : 0.0f - in->data->ptr[offset_in];
     }
   } else {
     int i = 0;
@@ -183,7 +258,8 @@ void abs_op(Tensor *in, Tensor *out) {
     }
 
     for (; i < size; ++i) {
-      out->data->ptr[i] = in->data->ptr[i] >= 0 ? in->data->ptr[i] : 0.0f - in->data->ptr[i];
+      out->data->ptr[i] =
+          in->data->ptr[i] >= 0 ? in->data->ptr[i] : 0.0f - in->data->ptr[i];
     }
   }
 
