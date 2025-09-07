@@ -3,6 +3,8 @@
 
 #include "tensor.h"
 
+
+
 typedef struct {
   Tensor *out;
   Tensor **prev;
@@ -11,11 +13,12 @@ typedef struct {
   void *extras;
   void *forward_fn;
   void *backward_fn;
-} Node;
+  } Node;
 
 Node *malloc_node(Tensor *out, Tensor **prev, int n_prev, void *extras,
                   void *forward_fn, void *backward_fn);
 
-void free_node(Node *p);
+void free_node(Node **p);
+
 
 #endif

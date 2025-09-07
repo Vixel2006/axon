@@ -18,7 +18,8 @@ static void cleanup_tensor_for_view(Tensor *out) {
     if (out->grad->ref_counter <= 1) {
       free(out->grad->ptr);
       free(out->grad);
-    } else {
+    }
+    else {
       out->grad->ref_counter--;
     }
   }
