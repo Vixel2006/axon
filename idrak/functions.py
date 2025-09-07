@@ -68,6 +68,6 @@ if __name__ == "__main__":
 
     c.backward()
 
-    print(c);print(a)
-    print(d.grad);print(a.grad)
+    print(c);print(a);print(d)
+    print(c.grad);print(a.grad)
 
