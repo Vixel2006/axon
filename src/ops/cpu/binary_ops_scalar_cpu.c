@@ -2,6 +2,7 @@
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
+#include <stdio.h>
 
 void add_scalar_op(Tensor *a, float b, Tensor *out) {
   int size = numel(a->shape, a->ndim);
