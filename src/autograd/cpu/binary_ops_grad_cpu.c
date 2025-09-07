@@ -316,7 +316,8 @@ void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
             b_offset += coord * b_strides[d];
             out_offset += coord * out_strides[d];
           }
-          a->grad->ptr[a_offset] += out->grad->ptr[out_offset] * b->data->ptr[b_offset];
+          a->grad->ptr[a_offset] +=
+              out->grad->ptr[out_offset] * b->data->ptr[b_offset];
         }
       }
 
@@ -336,7 +337,8 @@ void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
             b_offset += coord * b_strides[d];
             out_offset += coord * out_strides[d];
           }
-          b->grad->ptr[b_offset] += out->grad->ptr[out_offset] * a->data->ptr[a_offset];
+          b->grad->ptr[b_offset] +=
+              out->grad->ptr[out_offset] * a->data->ptr[a_offset];
         }
       }
     } else {
@@ -510,7 +512,8 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
             b_offset += coord * b_strides[d];
             out_offset += coord * out_strides[d];
           }
-          a->grad->ptr[a_offset] += out->grad->ptr[out_offset] / b->data->ptr[b_offset];
+          a->grad->ptr[a_offset] +=
+              out->grad->ptr[out_offset] / b->data->ptr[b_offset];
         }
       }
 
@@ -530,8 +533,9 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
             b_offset += coord * b_strides[d];
             out_offset += coord * out_strides[d];
           }
-          b->grad->ptr[b_offset] -= out->grad->ptr[out_offset] * a->data->ptr[a_offset] /
-                               (b->data->ptr[b_offset] * b->data->ptr[b_offset]);
+          b->grad->ptr[b_offset] -=
+              out->grad->ptr[out_offset] * a->data->ptr[a_offset] /
+              (b->data->ptr[b_offset] * b->data->ptr[b_offset]);
         }
       }
     } else {
@@ -565,7 +569,8 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         }
 
         for (; i < size; ++i) {
-          b->grad->ptr[i] -= out->grad->ptr[i] * a->data->ptr[i] / (b->data->ptr[i] * b->data->ptr[i]);
+          b->grad->ptr[i] -= out->grad->ptr[i] * a->data->ptr[i] /
+                             (b->data->ptr[i] * b->data->ptr[i]);
         }
       }
     }
@@ -633,8 +638,9 @@ void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           a_offset += coord * a_strides[d];
           out_offset += coord * out_strides[d];
         }
-        a->grad->ptr[a_offset] += out->grad->ptr[out_offset] * (-b) /
-                             (a->data->ptr[a_offset] * a->data->ptr[a_offset]);
+        a->grad->ptr[a_offset] +=
+            out->grad->ptr[out_offset] * (-b) /
+            (a->data->ptr[a_offset] * a->data->ptr[a_offset]);
       }
     } else {
       int i = 0;
@@ -650,7 +656,8 @@ void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
       }
 
       for (; i < size; ++i) {
-        a->grad->ptr[i] += out->grad->ptr[i] * (-b) / (a->data->ptr[i] * a->data->ptr[i]);
+        a->grad->ptr[i] +=
+            out->grad->ptr[i] * (-b) / (a->data->ptr[i] * a->data->ptr[i]);
       }
     }
   }
@@ -679,13 +686,13 @@ void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         for (int j = 0; j < K; ++j) {
           float sum = 0.0f;
           for (int m = 0; m < M; ++m) {
-            sum += out->grad->ptr[batch_idx * out_strides * M + i * out_strides +
-                             m * out_m_strides] *
+            sum += out->grad->ptr[batch_idx * out_strides * M +
+                                  i * out_strides + m * out_m_strides] *
                    b->data->ptr[batch_idx * b_strides * M + j * b_strides +
-                           m * b_m_strides];
+                                m * b_m_strides];
           }
           a->grad->ptr[batch_idx * a_strides * K + i * a_strides +
-                  j * a_k_strides] += sum;
+                       j * a_k_strides] += sum;
         }
       }
     }
@@ -700,12 +707,12 @@ void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           float sum = 0.0f;
           for (int n = 0; n < N; ++n) {
             sum += a->data->ptr[batch_idx * a_strides * K + n * a_strides +
-                           i * a_k_strides] *
-                   out->grad->ptr[batch_idx * out_strides * M + n * out_strides +
-                             j * out_m_strides];
+                                i * a_k_strides] *
+                   out->grad->ptr[batch_idx * out_strides * M +
+                                  n * out_strides + j * out_m_strides];
           }
           b->grad->ptr[batch_idx * b_strides * M + i * b_strides +
-                  j * b_m_strides] += sum;
+                       j * b_m_strides] += sum;
         }
       }
     }
@@ -765,7 +772,7 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
                     for (int cout = 0; cout < Cout; ++cout) {
                       float out_grad_val =
                           out->grad->ptr[n * Cout * Hout * Wout +
-                                    cout * Hout * Wout + oh * Wout + ow];
+                                         cout * Hout * Wout + oh * Wout + ow];
 
                       for (int cin = 0; cin < Cin; ++cin) {
                         int in_idx = n * Cin * Hin * Win + cin * Hin * Win +
@@ -808,7 +815,7 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
                     if (ih >= 0 && ih < Hin && iw >= 0 && iw < Win) {
                       float out_grad_val =
                           out->grad->ptr[n * Cout * Hout * Wout +
-                                    cout * Hout * Wout + oh * Wout + ow];
+                                         cout * Hout * Wout + oh * Wout + ow];
 
                       for (int cin = 0; cin < Cin; ++cin) {
                         int kernel_idx =

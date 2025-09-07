@@ -19,14 +19,11 @@ Node *malloc_node(Tensor *out, Tensor **prev, int n_prev, void *extras,
   return node;
 }
 
-void free_node(Node *n) {
-  if (n) {
-    if (n->extras)
-      free(n->extras);
-    if (n->forward_fn)
-      free(n->forward_fn);
-    if (n->backward_fn)
-      free(n->backward_fn);
-    free(n);
+void free_node(Node **n) {
+  if (n && *n) {
+    if ((*n)->extras)
+      free((*n)->extras);
+    free(*n);
+    *n = NULL;
   }
 }
