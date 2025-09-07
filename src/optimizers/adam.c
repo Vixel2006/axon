@@ -27,12 +27,12 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
   for (int i = 0; i < num_params; ++i) {
     int num_elements = numel(params[i]->shape, params[i]->ndim);
 
-    float *current_m_estimates = m_estimates[i]->data;
-    float *current_v_estimates = v_estimates[i]->data;
+    float *current_m_estimates = m_estimates[i]->data->ptr;
+    float *current_v_estimates = v_estimates[i]->data->ptr;
 
     if (is_contiguous(params[i])) {
-      float *param_data = params[i]->data;
-      float *param_grad = params[i]->grad;
+      float *param_data = params[i]->data->ptr;
+      float *param_grad = params[i]->grad->ptr;
 
       int j = 0;
       for (; j + SIMD_WIDTH - 1 < num_elements; j += SIMD_WIDTH) {
@@ -94,12 +94,12 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
 
         current_m_estimates[flat_idx] =
             beta1 * current_m_estimates[flat_idx] +
-            (1.0f - beta1) * params[i]->grad[flat_idx];
+            (1.0f - beta1) * params[i]->grad->ptr[flat_idx];
 
         current_v_estimates[flat_idx] =
             beta2 * current_v_estimates[flat_idx] +
             (1.0f - beta2) *
-                (params[i]->grad[flat_idx] * params[i]->grad[flat_idx]);
+                (params[i]->grad->ptr[flat_idx] * params[i]->grad->ptr[flat_idx]);
 
         float m_hat = current_m_estimates[flat_idx] / (1.0f - beta1_pow_t);
 
@@ -107,7 +107,7 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
 
         float update_term = learning_rate * m_hat / (sqrtf(v_hat) + epsilon);
 
-        params[i]->data[flat_idx] -= update_term;
+        params[i]->data->ptr[flat_idx] -= update_term;
 
         for (int dim = params[i]->ndim - 1; dim >= 0; --dim) {
           current_indices[dim]++;

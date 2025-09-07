@@ -90,9 +90,14 @@ class Tensor(CTensor):
         t = self._c_tensor.contents
 
         if t.ndim == 0:
-            if not t.data:
+            if not t.data or not t.data.contents.ptr:
                 raise ValueError("Invalid tensor: NULL data pointer")
-            return np.array(t.data[0], dtype=np.float32)
+            return np.array(t.data.contents.ptr[0], dtype=np.float32)
+
+        if self._shape == (1,):
+            if not t.data or not t.data.contents.ptr:
+                raise ValueError("Invalid tensor: NULL data pointer")
+            return np.array([t.data.contents.ptr[0]], dtype=np.float32)
 
         if t.ndim < 0:
             raise ValueError(f"Invalid tensor: negative ndim {t.ndim}")
@@ -102,7 +107,7 @@ class Tensor(CTensor):
                 "Invalid tensor: NULL shape pointer for multi-dimensional tensor"
             )
 
-        if not t.data:
+        if not t.data or not t.data.contents.ptr:
             raise ValueError("Invalid tensor: NULL data pointer")
 
         try:
@@ -131,7 +136,7 @@ class Tensor(CTensor):
                 flat_index += coord * t.strides[i]
             
             try:
-                result[idx] = t.data[flat_index]
+                result[idx] = t.data.contents.ptr[flat_index]
             except (IndexError, ValueError, ctypes.ArgumentError) as e:
                 raise ValueError(f"Failed to access tensor data at flat index {flat_index}: {e}")
         
@@ -144,11 +149,11 @@ class Tensor(CTensor):
 
         t = self._c_tensor.contents
 
-        if not t.requires_grad or not t.grad:
+        if not t.requires_grad or not t.grad or not t.grad.contents.ptr:
             return None
 
         if t.ndim == 0:
-            return np.array(t.grad[0], dtype=np.float32)
+            return np.array(t.grad.contents.ptr[0], dtype=np.float32)
 
         try:
             current_shape = (
@@ -176,7 +181,7 @@ class Tensor(CTensor):
                 flat_index += coord * t.strides[i]
             
             try:
-                result[idx] = t.grad[flat_index]
+                result[idx] = t.grad.contents.ptr[flat_index]
             except (IndexError, ValueError, ctypes.ArgumentError) as e:
                 raise ValueError(f"Failed to access tensor gradient at flat index {flat_index}: {e}")
         

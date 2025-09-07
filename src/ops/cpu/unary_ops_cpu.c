@@ -20,21 +20,21 @@ void relu_op(Tensor *in, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] =
-          in->data[offset_in] > 0 ? in->data[offset_in] : 0.0f;
+      out->data->ptr[offset_out] =
+          in->data->ptr[offset_in] > 0 ? in->data->ptr[offset_in] : 0.0f;
     }
   } else {
     int i = 0;
     __m256 zeros = _mm256_setzero_ps();
 
     for (; i + 7 < size; i += 8) {
-      __m256 vin = _mm256_loadu_ps(in->data + i);
+      __m256 vin = _mm256_loadu_ps(in->data->ptr + i);
       __m256 vout = _mm256_max_ps(vin, zeros);
-      _mm256_storeu_ps(out->data + i, vout);
+      _mm256_storeu_ps(out->data->ptr + i, vout);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = in->data[i] > 0.0f ? in->data[i] : 0.0f;
+      out->data->ptr[i] = in->data->ptr[i] > 0.0f ? in->data->ptr[i] : 0.0f;
     }
   }
 
@@ -57,19 +57,19 @@ void log_op(Tensor *in, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = logf(in->data[offset_in]);
+      out->data->ptr[offset_out] = logf(in->data->ptr[offset_in]);
     }
   } else {
     int i = 0;
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(in->data + i);
+      __m256 x = _mm256_loadu_ps(in->data->ptr + i);
       __m256 z = Sleef_logf8_u10avx2(x);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = logf(in->data[i]);
+      out->data->ptr[i] = logf(in->data->ptr[i]);
     }
   }
 
@@ -92,19 +92,19 @@ void exp_op(Tensor *in, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = expf(in->data[offset_in]);
+      out->data->ptr[offset_out] = expf(in->data->ptr[offset_in]);
     }
   } else {
     int i = 0;
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(in->data + i);
+      __m256 x = _mm256_loadu_ps(in->data->ptr + i);
       __m256 z = Sleef_expf8_u10avx2(x);
-      _mm256_storeu_ps(out->data + i, z);
+      _mm256_storeu_ps(out->data->ptr + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = expf(in->data[i]);
+      out->data->ptr[i] = expf(in->data->ptr[i]);
     }
   }
 
@@ -129,7 +129,7 @@ void neg_op(Tensor *in, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = 0.0f - in->data[offset_in];
+      out->data->ptr[offset_out] = 0.0f - in->data->ptr[offset_in];
     }
 
   } else {
@@ -138,13 +138,13 @@ void neg_op(Tensor *in, Tensor *out) {
     __m256 zeros = _mm256_setzero_ps();
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(in->data + i);
+      __m256 x = _mm256_loadu_ps(in->data->ptr + i);
       __m256 y = _mm256_sub_ps(zeros, x);
-      _mm256_storeu_ps(out->data + i, y);
+      _mm256_storeu_ps(out->data->ptr + i, y);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = 0.0f - in->data[i];
+      out->data->ptr[i] = 0.0f - in->data->ptr[i];
     }
   }
 
@@ -167,9 +167,9 @@ void abs_op(Tensor *in, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data[offset_out] = in->data[offset_in] >= 0.0f
-                                  ? in->data[offset_in]
-                                  : 0.0f - in->data[offset_in];
+      out->data->ptr[offset_out] = in->data->ptr[offset_in] >= 0.0f
+                                  ? in->data->ptr[offset_in]
+                                  : 0.0f - in->data->ptr[offset_in];
     }
   } else {
     int i = 0;
@@ -177,13 +177,13 @@ void abs_op(Tensor *in, Tensor *out) {
         _mm256_set1_epi32(0x7FFFFFFF)); // mask to remove sign bit
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(in->data + i);
+      __m256 x = _mm256_loadu_ps(in->data->ptr + i);
       __m256 y = _mm256_and_ps(x, mask);
-      _mm256_storeu_ps(out->data + i, y);
+      _mm256_storeu_ps(out->data->ptr + i, y);
     }
 
     for (; i < size; ++i) {
-      out->data[i] = in->data[i] >= 0 ? in->data[i] : 0.0f - in->data[i];
+      out->data->ptr[i] = in->data->ptr[i] >= 0 ? in->data->ptr[i] : 0.0f - in->data->ptr[i];
     }
   }
 

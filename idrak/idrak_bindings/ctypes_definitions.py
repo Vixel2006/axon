@@ -1,14 +1,21 @@
 import ctypes
 
+# Define the C SharedPtr struct
+class CSharedPtr(ctypes.Structure):
+    _fields_ = [
+        ("ptr", ctypes.POINTER(ctypes.c_float)),
+        ("ref_counter", ctypes.c_int),
+    ]
+
 # Define the C Tensor struct
 class CTensor(ctypes.Structure):
     _fields_ = [
-        ("data", ctypes.POINTER(ctypes.c_float)),
+        ("data", ctypes.POINTER(CSharedPtr)),
+        ("grad", ctypes.POINTER(CSharedPtr)),
         ("ndim", ctypes.c_int),
         ("shape", ctypes.POINTER(ctypes.c_int)),
         ("strides", ctypes.POINTER(ctypes.c_int)),
         ("requires_grad", ctypes.c_bool),
-        ("grad", ctypes.POINTER(ctypes.c_float)),
     ]
 
 
