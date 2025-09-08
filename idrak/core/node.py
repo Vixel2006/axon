@@ -163,8 +163,3 @@ class Node:
                     extras_to_pass,
                 )
 
-
-
-    def __del__(self):
-        if self._c_node:
-            c_free_node(self._c_node)

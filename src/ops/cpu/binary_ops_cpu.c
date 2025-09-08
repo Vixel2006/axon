@@ -1,13 +1,15 @@
 #include "ops/ops.h"
-#include "tensor.h" // Added for Tensor operations
+#include "tensor.h"
 #include "utils.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
-#include <stdio.h>
+
 #define SIMD_WIDTH 8
 
 void add_op(Tensor *a, Tensor *b, Tensor *out) {
+  DEBUG_PRINT("[IDRAK_DEBUG] add_op: Performing element-wise addition\n");
+
   int size = numel(a->shape, a->ndim);
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
@@ -52,6 +54,8 @@ void add_op(Tensor *a, Tensor *b, Tensor *out) {
 }
 
 void sub_op(Tensor *a, Tensor *b, Tensor *out) {
+  DEBUG_PRINT("[IDRAK_DEBUG] sub_op: Performing element-wise subtraction\n");
+
   int size = numel(a->shape, a->ndim);
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
@@ -96,6 +100,8 @@ void sub_op(Tensor *a, Tensor *b, Tensor *out) {
 }
 
 void mul_op(Tensor *a, Tensor *b, Tensor *out) {
+  DEBUG_PRINT("[IDRAK_DEBUG] mul_op: Performing element-wise multiplication\n");
+
   int size = numel(a->shape, a->ndim);
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
@@ -140,6 +146,8 @@ void mul_op(Tensor *a, Tensor *b, Tensor *out) {
 }
 
 void div_op(Tensor *a, Tensor *b, Tensor *out) {
+  DEBUG_PRINT("[IDRAK_DEBUG] div_op: Performing element-wise division\n");
+
   int size = numel(a->shape, b->ndim);
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
@@ -184,6 +192,10 @@ void div_op(Tensor *a, Tensor *b, Tensor *out) {
 }
 
 void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
+  DEBUG_PRINT("[IDRAK_DEBUG] matmul_op: Performing matrix multiplication "
+              "(N=%d, K=%d, P=%d)\n",
+              N, K, P);
+
   // 1. Figure out how many "batch matmuls" we need.
   int num_batches = 1;
 
@@ -303,6 +315,8 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
 
 void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
                const int *stride, const int padding) {
+  DEBUG_PRINT("[IDRAK_DEBUG] conv2d_op: Performing 2D convolution\n");
+
   int Cin = kernel_size[0];
   int Cout = kernel_size[1];
   int Kh = kernel_size[2];
@@ -365,6 +379,8 @@ void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
 }
 
 void dot_op(Tensor *a, Tensor *b, Tensor *out) {
+  DEBUG_PRINT("[IDRAK_DEBUG] dot_op: Performing dot product\n");
+
   int size = numel(a->shape, a->ndim);
 
   if (!is_contiguous(a) || !is_contiguous(b)) {

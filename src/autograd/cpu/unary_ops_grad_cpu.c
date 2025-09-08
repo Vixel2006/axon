@@ -1,11 +1,13 @@
+#include "utils.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
 
 #include "autograd/autograd.h"
-#include "utils.h"
 
 void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT("relu_grad_op: Computing gradient for ReLU\n");
+
   Tensor *a = prev[0];
 
   int size = numel(a->shape, a->ndim);
@@ -53,6 +55,8 @@ void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT("log_grad_op: Computing gradient for natural logarithm\n");
+
   Tensor *a = prev[0];
 
   int size = numel(a->shape, a->ndim);
@@ -74,7 +78,8 @@ void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           a_offset += coord * a_strides[d];
           out_offset += coord * out_strides[d];
         }
-        a->grad->ptr[a_offset] += out->grad->ptr[out_offset] / a->data->ptr[a_offset];
+        a->grad->ptr[a_offset] +=
+            out->grad->ptr[out_offset] / a->data->ptr[a_offset];
       }
     }
   } else {
@@ -98,6 +103,8 @@ void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT("exp_grad_op: Computing gradient for exponential\n");
+
   Tensor *a = prev[0];
 
   int size = numel(a->shape, a->ndim);
@@ -119,7 +126,8 @@ void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           a_offset += coord * a_strides[d];
           out_offset += coord * out_strides[d];
         }
-        a->grad->ptr[a_offset] += out->grad->ptr[out_offset] * out->data->ptr[out_offset];
+        a->grad->ptr[a_offset] +=
+            out->grad->ptr[out_offset] * out->data->ptr[out_offset];
       }
     }
   } else {
@@ -141,9 +149,11 @@ void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-void softmax_grad_op(Tensor *in, Tensor *out) {}
+void softmax_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {}
 
 void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT("neg_grad_op: Computing gradient for negation\n");
+
   Tensor *a = prev[0];
 
   int size = numel(a->shape, a->ndim);
@@ -191,6 +201,8 @@ void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void abs_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT("abs_grad_op: Computing gradient for absolute value\n");
+
   Tensor *a = prev[0];
   int size = numel(a->shape, a->ndim);
   int ndim = out->ndim;

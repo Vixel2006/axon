@@ -1,16 +1,18 @@
 #include "ops/ops.h"
+#include "utils.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
 #include <string.h>
 
-#define DEBUG 1
-
 #if DEBUG
-#include <stdio.h>
+#include "utils.h"
 #endif
 
 static void reconfigure_unary_output(Tensor *in, Tensor *out) {
+  DEBUG_PRINT(
+      "reconfigure_unary_output: Reconfiguring output tensor for unary op\n");
+
   if (out->shape) {
     free(out->shape);
     out->shape = NULL;
@@ -55,6 +57,8 @@ static void reconfigure_unary_output(Tensor *in, Tensor *out) {
 }
 
 void relu_op(Tensor *in, Tensor *out) {
+  DEBUG_PRINT("relu_op: Performing ReLU activation\n");
+
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     return;
@@ -97,6 +101,8 @@ void relu_op(Tensor *in, Tensor *out) {
 }
 
 void log_op(Tensor *in, Tensor *out) {
+  DEBUG_PRINT("log_op: Performing natural logarithm\n");
+
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     return;
@@ -137,6 +143,8 @@ void log_op(Tensor *in, Tensor *out) {
 }
 
 void exp_op(Tensor *in, Tensor *out) {
+  DEBUG_PRINT("exp_op: Performing exponential\n");
+
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     return;
@@ -176,9 +184,13 @@ void exp_op(Tensor *in, Tensor *out) {
   out->requires_grad = in->requires_grad ? true : false;
 }
 
-void softmax_op(Tensor *in, Tensor *out) {}
+void softmax_op(Tensor *in, Tensor *out) {
+  DEBUG_PRINT("softmax_op: Performing softmax activation\n");
+}
 
 void neg_op(Tensor *in, Tensor *out) {
+  DEBUG_PRINT("neg_op: Performing negation\n");
+
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     return;
@@ -222,6 +234,8 @@ void neg_op(Tensor *in, Tensor *out) {
 }
 
 void abs_op(Tensor *in, Tensor *out) {
+  DEBUG_PRINT("abs_op: Performing absolute value\n");
+
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     return;
