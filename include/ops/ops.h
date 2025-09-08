@@ -16,6 +16,8 @@ typedef struct {
   UnaryOpFn softmax;
   UnaryOpFn abs;
   UnaryOpFn neg;
+  UnaryOpFn tanh;
+  UnaryOpFn sigmoid;
 } UniaryOps;
 
 typedef struct {

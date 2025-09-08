@@ -18,8 +18,8 @@ else:
 # Define the dataset
 class XorSet(Dataset):
     def __init__(self):
-        self.x = [Tensor((1, 2), [0, 0]), Tensor((1, 2), [0,1]), Tensor((1, 2), [1, 0]), Tensor((1, 2), [1,1])]
-        self.y = [Tensor((1,), [0]), Tensor((1,), [1]), Tensor((1,), [1]), Tensor((1,), [0])]
+        self.x = [Tensor((1, 2), [[0, 0]]), Tensor((1, 2), [[0,1]]), Tensor((1, 2), [[1, 0]]), Tensor((1, 2), [[1,1]])]
+        self.y = [Tensor((1,1), [[0]]), Tensor((1,1), [[1]]), Tensor((1,1), [[1]]), Tensor((1,1), [[0]])]
 
 
     def __getitem__(self, idx):
@@ -33,17 +33,18 @@ xorset = XorSet()
 
 # Here we define the model
 model = nn.Sequential(
-    nn.Linear(2, 4, bias=False),
+    nn.Linear(2, 2, bias=False),
     Tanh(),
-    nn.Linear(4, 1, bias=False),
+    nn.Linear(4, 2, bias=False),
+    Tanh(),
+    nn.Linear(2, 1, bias=False),
     Sigmoid()
 )
 
 # Here we define the optimizer
-optimizer = optim.SGD(model.params, 0.01)
-print(model.params)
+optimizer = optim.SGD(model.params, 0.1)
 # Here we do the loop
-for i in range(10):
+for i in range(1000):
     for input, truth in xorset:
         optimizer.zero_grad()
 
@@ -55,11 +56,18 @@ for i in range(10):
 
         optimizer.step()
 
-        print(model.params)
+    if (i+1) % 10 == 0:
+        print(f"Epoch {i+1} -> Loss: {loss}")
 
-    truth = model(Tensor((1,2), [1, 0]))
+for input, _ in xorset:
+    pred = model(input)
 
+    pred.realize()
 
-    truth.realize()
+    if pred.data[0, 0] > 0.5:
+        num = 1
+    else:
+        num = 0
 
-    print(truth)
+    print(Tensor((1,1), [[num]]))
+
