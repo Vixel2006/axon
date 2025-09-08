@@ -234,6 +234,7 @@ void neg_op(Tensor *in, Tensor *out) {
 }
 
 void abs_op(Tensor *in, Tensor *out) {
+
   DEBUG_PRINT("[IDRAK_DEBUG] abs_op: Performing absolute value\n");
 
   reconfigure_unary_output(in, out);

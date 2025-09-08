@@ -450,6 +450,12 @@ if tensor_lib:
     def c_neg(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.neg_op(in_tensor_ptr, out_tensor_ptr)
 
+    def c_tanh(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.tanh_op(in_tensor_ptr, out_tensor_ptr)
+
+    def c_sigmoid(in_tensor_ptr, out_tensor_ptr):
+        tensor_lib.sigmoid_op(in_tensor_ptr, out_tensor_ptr)
+
     # Reduction operations wrappers
     def c_sum(in_tensor_ptr, out_tensor_ptr, axis, keepdim):
         tensor_lib.sum_op(in_tensor_ptr, out_tensor_ptr, axis, keepdim)

@@ -307,4 +307,12 @@ class Tensor(CTensor):
     def numel(self):
         return Tensor.safe_c_numel(self._c_tensor.contents.shape, self.ndim)
 
+    def item(self):
+        if self.ndim == 0:
+            return self.data.item()
+        elif self.shape == (1,):
+            return self.data[0]
+        else:
+            raise ValueError("only one element tensors can be converted to Python scalars")
+
     
