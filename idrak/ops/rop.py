@@ -45,7 +45,7 @@ class Sum(ROp):
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
-        if extras is None: # This means it was a full reduction
+        if extras is None:
             c_sum_full_grad_op(out_ptr, prev_ptrs, n_prev, extras)
         else:
             c_sum_grad_op(out_ptr, prev_ptrs, n_prev, extras)
@@ -63,7 +63,7 @@ class Mean(ROp):
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
-        if extras is None: # This means it was a full reduction
+        if extras is None:
             c_mean_full_grad_op(out_ptr, prev_ptrs, n_prev, extras)
         else:
             c_mean_grad_op(out_ptr, prev_ptrs, n_prev, extras)

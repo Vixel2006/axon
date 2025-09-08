@@ -16,6 +16,7 @@ class Sequential(Module):
     def forward(self, x):
         for layer in self.layers:
             x = layer(x)
+        x.realize()
         return x
     
     @property
