@@ -18,3 +18,22 @@ class Sequential(Module):
             x = layer(x)
         return x
     
+    @property
+    def params(self):
+        """Override the params property to handle the layers list"""
+        params = []
+        for layer in self.layers:
+            if isinstance(layer, Module):
+                params.extend(layer.params)
+        return params
+    
+    @property
+    def buffers(self):
+        """Override the buffers property to handle the layers list"""
+        buffers = []
+        for layer in self.layers:
+            if isinstance(layer, Module):
+                buffers.extend(layer.buffers)
+        return buffers
+
+

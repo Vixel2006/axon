@@ -305,6 +305,4 @@ class Tensor(CTensor):
     def numel(self):
         return Tensor.safe_c_numel(self._c_tensor.contents.shape, self.ndim)
 
-    def __del__(self):
-        if self._c_tensor:
-            c_free_tensor(self._c_tensor)
+    
