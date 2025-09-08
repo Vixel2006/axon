@@ -1,7 +1,7 @@
 #include "optimizers/optimizers.h"
 #include "utils.h"
 #include <immintrin.h>
-#include <stdio.h>
+
 #define SIMD_WIDTH 8
 
 void sgd(Tensor **params, int num_params, float lr) {

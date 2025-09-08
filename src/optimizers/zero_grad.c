@@ -1,8 +1,11 @@
 #include "optimizers/optimizers.h"
-#include <stdio.h>
+#include "utils.h"
 #include <string.h>
 
 void zero_grad(Tensor **parameters, int num_parameters) {
+  DEBUG_PRINT("[IDRAK_DEBUG] zero_grad: Zeroing gradients for %d parameters\n",
+              num_parameters);
+
   for (int i = 0; i < num_parameters; ++i) {
     Tensor *t = parameters[i];
 
@@ -43,6 +46,9 @@ void zero_grad(Tensor **parameters, int num_parameters) {
     size_t size = numel(t->shape, t->ndim);
     if (size > 0) { // Only memset if there are elements
       memset(t->grad->ptr, 0, size * sizeof(float));
+      DEBUG_PRINT("[IDRAK_DEBUG] zero_grad: Zeroed gradient for parameter %d "
+                  "(size=%zu)\n",
+                  i, size);
     }
   }
 }

@@ -1,11 +1,14 @@
 #include "ops/ops.h"
+#include "utils.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
-#include <stdio.h>
 #include <string.h>
 
 static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
+  DEBUG_PRINT(
+      "reconfigure_scalar_output: Reconfiguring output tensor for scalar op\n");
+
   if (out->shape) {
     free(out->shape);
     out->shape = NULL;
@@ -51,6 +54,8 @@ static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
 }
 
 void add_scalar_op(Tensor *a, float b, Tensor *out) {
+  DEBUG_PRINT("add_scalar_op: Performing scalar addition (scalar=%.2f)\n", b);
+
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
     return;
@@ -92,6 +97,9 @@ void add_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void sub_scalar_op(Tensor *a, float b, Tensor *out) {
+  DEBUG_PRINT("sub_scalar_op: Performing scalar subtraction (scalar=%.2f)\n",
+              b);
+
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
     return;
@@ -133,6 +141,10 @@ void sub_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
+  DEBUG_PRINT(
+      "rsub_scalar_op: Performing reverse scalar subtraction (scalar=%.2f)\n",
+      a);
+
   reconfigure_scalar_output(b, out);
   if (!out->data->ptr) {
     return;
@@ -175,6 +187,9 @@ void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
 }
 
 void mul_scalar_op(Tensor *a, float b, Tensor *out) {
+  DEBUG_PRINT("mul_scalar_op: Performing scalar multiplication (scalar=%.2f)\n",
+              b);
+
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
     return;
@@ -216,6 +231,8 @@ void mul_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void div_scalar_op(Tensor *a, float b, Tensor *out) {
+  DEBUG_PRINT("div_scalar_op: Performing scalar division (scalar=%.2f)\n", b);
+
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
     return;
@@ -274,6 +291,9 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
+  DEBUG_PRINT(
+      "rdiv_scalar_op: Performing reverse scalar division (scalar=%.2f)\n", b);
+
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
     return;
@@ -332,6 +352,8 @@ void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void pow_scalar_op(Tensor *a, float b, Tensor *out) {
+  DEBUG_PRINT("pow_scalar_op: Performing scalar power (exponent=%.2f)\n", b);
+
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
     return;

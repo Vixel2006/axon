@@ -1,10 +1,14 @@
-#include <stdio.h>
+#include "utils.h"
 #include <stdlib.h>
 
 #include "ops/ops.h"
 #include "ops/ops_utils.h"
 
 static void cleanup_tensor_for_view(Tensor *out) {
+  DEBUG_PRINT("[IDRAK_DEBUG] cleanup_tensor_for_view: Cleaning up tensor %p "
+              "for view operation\n",
+              (void *)out);
+
   if (out->data) {
     if (out->data->ref_counter <= 1) {
       free(out->data->ptr);
@@ -18,8 +22,7 @@ static void cleanup_tensor_for_view(Tensor *out) {
     if (out->grad->ref_counter <= 1) {
       free(out->grad->ptr);
       free(out->grad);
-    }
-    else {
+    } else {
       out->grad->ref_counter--;
     }
   }
@@ -34,6 +37,9 @@ static void cleanup_tensor_for_view(Tensor *out) {
 }
 
 void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
+  DEBUG_PRINT("[IDRAK_DEBUG] view_op: Creating view from Tensor %p (ndim=%d)\n",
+              (void *)in, ndim);
+
   cleanup_tensor_for_view(out);
 
   out->ndim = ndim;
@@ -79,6 +85,10 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
 }
 
 void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] unsqueeze_op: Unsqueezing Tensor %p at dimension %d\n",
+      (void *)in, dim);
+
   if (dim < 0 || dim > in->ndim)
     return;
 
@@ -130,6 +140,9 @@ void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
 }
 
 void squeeze_op(Tensor *in, Tensor *out, int dim) {
+  DEBUG_PRINT("[IDRAK_DEBUG] squeeze_op: Squeezing Tensor %p at dimension %d\n",
+              (void *)in, dim);
+
   if (dim < 0 || dim >= in->ndim || in->shape[dim] != 1)
     return;
 
@@ -169,6 +182,10 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
 }
 
 void transpose_op(Tensor *in, Tensor *out, int N, int M) {
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] transpose_op: Transposing Tensor %p (dims %d, %d)\n",
+      (void *)in, N, M);
+
   if (N < 0 || N >= in->ndim || M < 0 || M >= in->ndim)
     return;
 
@@ -211,6 +228,8 @@ void transpose_op(Tensor *in, Tensor *out, int N, int M) {
 }
 
 void expand_op(Tensor *in, Tensor *out, const int *shape) {
+  DEBUG_PRINT("[IDRAK_DEBUG] expand_op: Expanding Tensor %p\n", (void *)in);
+
   cleanup_tensor_for_view(out);
 
   out->ndim = in->ndim;
@@ -247,6 +266,9 @@ void expand_op(Tensor *in, Tensor *out, const int *shape) {
 }
 
 void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
+  DEBUG_PRINT("[IDRAK_DEBUG] broadcast_op: Broadcasting Tensor %p to ndim=%d\n",
+              (void *)in, ndim);
+
   cleanup_tensor_for_view(out);
 
   out->ndim = ndim;
@@ -294,6 +316,10 @@ void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
 // Zero-copy concat: Creates a view that references multiple tensors
 // Note: This requires a special SharedPtr that can handle multiple data sources
 void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] concat_op: Concatenating %d tensors along axis %d\n",
+      num_tensors, axis);
+
   cleanup_tensor_for_view(out);
 
   int ndim = in[0]->ndim;
@@ -351,6 +377,9 @@ void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
 
 // Zero-copy stack: Creates a view with adjusted strides
 void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
+  DEBUG_PRINT("[IDRAK_DEBUG] stack_op: Stacking %d tensors along axis %d\n",
+              num_tensors, axis);
+
   cleanup_tensor_for_view(out);
 
   out->ndim = in[0]->ndim + 1;

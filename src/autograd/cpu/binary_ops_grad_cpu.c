@@ -1,12 +1,11 @@
+#include "utils.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
-#include <stdio.h>
 #include <string.h>
 
 #include "autograd/autograd.h"
 #include "ops/ops.h"
-#include "utils.h"
 
 static void _matmul_float_arrays(const float *A, const float *B, float *C,
                                  int M, int K, int N) {
@@ -22,6 +21,8 @@ static void _matmul_float_arrays(const float *A, const float *B, float *C,
 }
 
 void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT("[IDRAK_DEBUG] add_grad_op: Computing gradient for addition\n");
+
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
   int *shape = out->shape;
@@ -136,6 +137,9 @@ void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] sub_grad_op: Computing gradient for subtraction\n");
+
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
   int *shape = out->shape;
@@ -250,6 +254,9 @@ void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT("[IDRAK_DEBUG] rsub_grad_op: Computing gradient for reverse "
+              "subtraction\n");
+
   Tensor *a = prev[0];
   float b = *((float *)extras);
 
@@ -291,6 +298,9 @@ void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] mul_grad_op: Computing gradient for multiplication\n");
+
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
   int *shape = out->shape;
@@ -414,6 +424,9 @@ void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void pow_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] pow_grad_op: Computing gradient for power operation\n");
+
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
   int *shape = out->shape;
@@ -487,6 +500,8 @@ void pow_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT("[IDRAK_DEBUG] div_grad_op: Computing gradient for division\n");
+
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
   int *shape = out->shape;
@@ -616,6 +631,9 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] rdiv_grad_op: Computing gradient for reverse division\n");
+
   Tensor *a = prev[0];
   float b = *((float *)extras);
 
@@ -664,6 +682,9 @@ void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT("[IDRAK_DEBUG] matmul_grad_op: Computing gradient for matrix "
+              "multiplication\n");
+
   Tensor *a = prev[0];
   Tensor *b = prev[1];
 
@@ -732,6 +753,9 @@ typedef struct {
 } BackwardConvExtras;
 
 void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] conv2d_grad_op: Computing gradient for 2D convolution\n");
+
   Tensor *in = prev[0];
   Tensor *kernel = prev[1];
 
@@ -839,6 +863,9 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void dot_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] dot_grad_op: Computing gradient for dot product\n");
+
   Tensor *a = prev[0];
   Tensor *b = prev[1];
 
