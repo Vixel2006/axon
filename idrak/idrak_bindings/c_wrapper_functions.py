@@ -565,11 +565,17 @@ if tensor_lib:
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
         tensor_lib.zero_grad(in_param_ptrs, num_params)
 
+    def c_set_debug_mode(enable):
+        tensor_lib.idrak_set_debug_mode(ctypes.c_int(enable))
+
 else:
 
     def c_numel(shape, ndim):
         print("C backend not available: numel()")
         return 0
+
+    def c_set_debug_mode(enable):
+        print("C backend not available: set_debug_mode()")
 
     def c_compute_strides(shape, ndim):
         print("C backend not available: compute_strides()")

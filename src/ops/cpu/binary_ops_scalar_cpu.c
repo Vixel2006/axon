@@ -6,8 +6,8 @@
 #include <string.h>
 
 static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
-  DEBUG_PRINT(
-      "reconfigure_scalar_output: Reconfiguring output tensor for scalar op\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] reconfigure_scalar_output: Reconfiguring output "
+              "tensor for scalar op\n");
 
   if (out->shape) {
     free(out->shape);
@@ -54,7 +54,9 @@ static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
 }
 
 void add_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT("add_scalar_op: Performing scalar addition (scalar=%.2f)\n", b);
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] add_scalar_op: Performing scalar addition (scalar=%.2f)\n",
+      b);
 
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
@@ -97,7 +99,8 @@ void add_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void sub_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT("sub_scalar_op: Performing scalar subtraction (scalar=%.2f)\n",
+  DEBUG_PRINT("[IDRAK_DEBUG] sub_scalar_op: Performing scalar subtraction "
+              "(scalar=%.2f)\n",
               b);
 
   reconfigure_scalar_output(a, out);
@@ -141,9 +144,9 @@ void sub_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
-  DEBUG_PRINT(
-      "rsub_scalar_op: Performing reverse scalar subtraction (scalar=%.2f)\n",
-      a);
+  DEBUG_PRINT("[IDRAK_DEBUG] rsub_scalar_op: Performing reverse scalar "
+              "subtraction (scalar=%.2f)\n",
+              a);
 
   reconfigure_scalar_output(b, out);
   if (!out->data->ptr) {
@@ -187,7 +190,8 @@ void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
 }
 
 void mul_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT("mul_scalar_op: Performing scalar multiplication (scalar=%.2f)\n",
+  DEBUG_PRINT("[IDRAK_DEBUG] mul_scalar_op: Performing scalar multiplication "
+              "(scalar=%.2f)\n",
               b);
 
   reconfigure_scalar_output(a, out);
@@ -231,7 +235,9 @@ void mul_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void div_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT("div_scalar_op: Performing scalar division (scalar=%.2f)\n", b);
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] div_scalar_op: Performing scalar division (scalar=%.2f)\n",
+      b);
 
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
@@ -291,8 +297,9 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT(
-      "rdiv_scalar_op: Performing reverse scalar division (scalar=%.2f)\n", b);
+  DEBUG_PRINT("[IDRAK_DEBUG] rdiv_scalar_op: Performing reverse scalar "
+              "division (scalar=%.2f)\n",
+              b);
 
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
@@ -352,7 +359,9 @@ void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void pow_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT("pow_scalar_op: Performing scalar power (exponent=%.2f)\n", b);
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] pow_scalar_op: Performing scalar power (exponent=%.2f)\n",
+      b);
 
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
@@ -391,135 +400,4 @@ void pow_scalar_op(Tensor *a, float b, Tensor *out) {
     }
   }
   out->requires_grad = a->requires_grad;
-}
-
-int main() {
-  // Define tensor shape
-  int shape[] = {2, 2};
-  int ndim = 2;
-
-  // Initialize a tensor
-  Tensor *a = malloc_tensor_shape(shape, ndim, false);
-
-  // Set some values
-  a->data->ptr[0] = 1.0f;
-  a->data->ptr[1] = 2.0f;
-  a->data->ptr[2] = 3.0f;
-  a->data->ptr[3] = 4.0f;
-
-  float scalar_val = 10.0f;
-
-  // Create output tensor.
-  // The initial shape and ndim of 'out' will be reconfigured by the scalar ops.
-  // It's good practice to initialize it to a valid, even if small, state.
-  int initial_out_shape[] = {1}; // Example: a 1D tensor of size 1
-  int initial_out_ndim = 1;
-  Tensor *out = malloc_tensor_shape(initial_out_shape, initial_out_ndim, false);
-
-  printf("Input Tensor 'a':\n");
-  for (size_t i = 0; i < numel(a->shape, a->ndim); ++i) {
-    printf("%f ", a->data->ptr[i]);
-  }
-  printf("\n");
-
-  printf("Scalar value 'b': %f\n\n", scalar_val);
-
-  // --- Test add_scalar_op ---
-  printf("Testing add_scalar_op (a + b):\n");
-  add_scalar_op(a, scalar_val, out);
-  size_t out_size_add = numel(out->shape, out->ndim);
-  if (out && out->data && out->data->ptr) {
-    for (size_t i = 0; i < out_size_add; ++i) {
-      printf("%f ", out->data->ptr[i]);
-    }
-    printf("\n\n");
-  } else {
-    printf("Error: Output tensor is not valid after add_scalar_op.\n\n");
-  }
-
-  // --- Test sub_scalar_op ---
-  printf("Testing sub_scalar_op (a - b):\n");
-  sub_scalar_op(a, scalar_val, out);
-  size_t out_size_sub = numel(out->shape, out->ndim);
-  if (out && out->data && out->data->ptr) {
-    for (size_t i = 0; i < out_size_sub; ++i) {
-      printf("%f ", out->data->ptr[i]);
-    }
-    printf("\n\n");
-  } else {
-    printf("Error: Output tensor is not valid after sub_scalar_op.\n\n");
-  }
-
-  // --- Test rsub_scalar_op ---
-  printf("Testing rsub_scalar_op (b - a):\n");
-  rsub_scalar_op(scalar_val, a, out);
-  size_t out_size_rsub = numel(out->shape, out->ndim);
-  if (out && out->data && out->data->ptr) {
-    for (size_t i = 0; i < out_size_rsub; ++i) {
-      printf("%f ", out->data->ptr[i]);
-    }
-    printf("\n\n");
-  } else {
-    printf("Error: Output tensor is not valid after rsub_scalar_op.\n\n");
-  }
-
-  // --- Test mul_scalar_op ---
-  printf("Testing mul_scalar_op (a * b):\n");
-  mul_scalar_op(a, scalar_val, out);
-  size_t out_size_mul = numel(out->shape, out->ndim);
-  if (out && out->data && out->data->ptr) {
-    for (size_t i = 0; i < out_size_mul; ++i) {
-      printf("%f ", out->data->ptr[i]);
-    }
-    printf("\n\n");
-  } else {
-    printf("Error: Output tensor is not valid after mul_scalar_op.\n\n");
-  }
-
-  // --- Test div_scalar_op ---
-  printf("Testing div_scalar_op (a / b):\n");
-  div_scalar_op(a, scalar_val, out);
-  size_t out_size_div = numel(out->shape, out->ndim);
-  if (out && out->data && out->data->ptr) {
-    for (size_t i = 0; i < out_size_div; ++i) {
-      printf("%f ", out->data->ptr[i]);
-    }
-    printf("\n\n");
-  } else {
-    printf("Error: Output tensor is not valid after div_scalar_op.\n\n");
-  }
-
-  // --- Test rdiv_scalar_op ---
-  printf("Testing rdiv_scalar_op (b / a):\n");
-  rdiv_scalar_op(
-      a, scalar_val,
-      out); // Note: parameters are (tensor, scalar) for rdiv_scalar_op
-  size_t out_size_rdiv = numel(out->shape, out->ndim);
-  if (out && out->data && out->data->ptr) {
-    for (size_t i = 0; i < out_size_rdiv; ++i) {
-      printf("%f ", out->data->ptr[i]);
-    }
-    printf("\n\n");
-  } else {
-    printf("Error: Output tensor is not valid after rdiv_scalar_op.\n\n");
-  }
-
-  // --- Test pow_scalar_op ---
-  printf("Testing pow_scalar_op (a ^ b):\n");
-  pow_scalar_op(a, 2.0f, out); // Use 2.0f as exponent for testing
-  size_t out_size_pow = numel(out->shape, out->ndim);
-  if (out && out->data && out->data->ptr) {
-    for (size_t i = 0; i < out_size_pow; ++i) {
-      printf("%f ", out->data->ptr[i]);
-    }
-    printf("\n\n");
-  } else {
-    printf("Error: Output tensor is not valid after pow_scalar_op.\n\n");
-  }
-
-  // Free tensors
-  free_tensor(&a);
-  free_tensor(&out);
-
-  return 0;
 }

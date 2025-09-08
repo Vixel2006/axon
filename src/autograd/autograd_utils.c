@@ -2,7 +2,7 @@
 #include "utils.h"
 
 int get_reduced_dim(int *in_shape, int *out_shape, int in_ndim, int out_ndim) {
-  DEBUG_PRINT("get_reduced_dim: Calculating reduced dimension\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] get_reduced_dim: Calculating reduced dimension\n");
 
   int reduced_dim = -1;
   for (int i = 0; i < in_ndim; ++i) {
@@ -16,8 +16,8 @@ int get_reduced_dim(int *in_shape, int *out_shape, int in_ndim, int out_ndim) {
 }
 
 int get_num_reduction_batches(int *in_shape, int in_ndim, int reduced_dim) {
-  DEBUG_PRINT(
-      "get_num_reduction_batches: Calculating number of reduction batches\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] get_num_reduction_batches: Calculating number of "
+              "reduction batches\n");
 
   int num_batches = 1;
   for (int i = 0; i < in_ndim; ++i) {
