@@ -9,7 +9,8 @@
 #include "ops/ops.h"
 
 void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  DEBUG_PRINT("sum_op: Performing sum reduction along axis %d (keepdim=%d)\n",
+  DEBUG_PRINT("[IDRAK_DEBUG] sum_op: Performing sum reduction along axis %d "
+              "(keepdim=%d)\n",
               axis, keepdim);
 
   if (out->shape) {
@@ -206,7 +207,8 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  DEBUG_PRINT("mean_op: Performing mean reduction along axis %d (keepdim=%d)\n",
+  DEBUG_PRINT("[IDRAK_DEBUG] mean_op: Performing mean reduction along axis %d "
+              "(keepdim=%d)\n",
               axis, keepdim);
 
   if (out->shape) {
@@ -388,7 +390,8 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  DEBUG_PRINT("max_op: Performing max reduction along axis %d (keepdim=%d)\n",
+  DEBUG_PRINT("[IDRAK_DEBUG] max_op: Performing max reduction along axis %d "
+              "(keepdim=%d)\n",
               axis, keepdim);
 
   if (out->shape) {
@@ -577,7 +580,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void sum_full_op(Tensor *a, Tensor *out) {
-  DEBUG_PRINT("sum_full_op: Performing full sum reduction\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] sum_full_op: Performing full sum reduction\n");
 
   if (out && out->shape) {
     free(out->shape);
@@ -680,7 +683,7 @@ void sum_full_op(Tensor *a, Tensor *out) {
 }
 
 void mean_full_op(Tensor *a, Tensor *out) {
-  DEBUG_PRINT("mean_full_op: Performing full mean reduction\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] mean_full_op: Performing full mean reduction\n");
 
   sum_full_op(a, out);
 
@@ -704,7 +707,7 @@ void mean_full_op(Tensor *a, Tensor *out) {
 }
 
 void max_full_op(Tensor *a, Tensor *out) {
-  DEBUG_PRINT("max_full_op: Performing full max reduction\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] max_full_op: Performing full max reduction\n");
 
   if (out && out->shape) {
     free(out->shape);

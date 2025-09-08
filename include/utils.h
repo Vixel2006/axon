@@ -4,20 +4,18 @@
 #include "tensor.h"
 #include <stdio.h>
 
-// Define DEBUG to enable debug prints
-#define DEBUG 1
+extern int _idrak_debug_enabled;
 
-#ifdef DEBUG
 #define DEBUG_PRINT(fmt, ...) \
     do { \
-        fprintf(stderr, fmt, ##__VA_ARGS__); \
+        if (_idrak_debug_enabled) { \
+            fprintf(stderr, fmt, ##__VA_ARGS__); \
+        } \
     } while (0)
-#else
-#define DEBUG_PRINT(fmt, ...) do {} while (0)
-#endif
 
-
-  int get_num_batches(const int *shape, int ndim);
+int get_num_batches(const int *shape, int ndim);
 int get_flat_index(const Tensor *t, const int *indices);
+void idrak_set_debug_mode(int enable);
 
 #endif
+

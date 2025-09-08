@@ -133,8 +133,10 @@ class MatMul(BOp):
         K = a.shape[-1]
         M = b.shape[-1]
 
-        if K != b.shape[-2]:
-            raise RuntimeError("Can't do this shit")
+        if a.shape[-1] != b.shape[-2] and a.ndim > 2:
+            print(a.shape, b.shape)
+            raise RuntimeError("can't do matmul")
+
         c_matmul(a._c_tensor, b._c_tensor, out._c_tensor, N=N, K=K, P=M)
 
         return out
