@@ -34,20 +34,21 @@ model = nn.Sequential(
 optimizer = optim.SGD(model.params, 0.01)
 
 # Here we do the loop
-for i in range(10):
+for i in range(100):
     for input, truth in xorset:
         optimizer.zero_grad()
 
         pred = model(input)
 
+        loss = metrics.bce(pred, truth)
 
-        pred.backward()
+        loss.backward()
 
         optimizer.step()
 
-truth = model(Tensor((1,2), [1, 0]))
+    truth = model(Tensor((1,2), [1, 0]))
 
 
-truth.realize()
+    truth.realize()
 
-print(truth)
+    print(truth)

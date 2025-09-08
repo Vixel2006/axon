@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from idrak.core.tensor import Tensor
-from typing import Any
+from typing import Any, Iterable
 
 class Module(ABC):
     @abstractmethod
@@ -12,22 +12,20 @@ class Module(ABC):
 
     @property
     def params(self):
-        params_list = []
-        for _, value in self.__dict__.items():
-            if isinstance(value, Tensor):
-                if value.requires_grad:
-                    params_list.append(value)
-            elif isinstance(value, Module):
-                params_list.extend(value.params)
-        return params_list
+        params = []
+        for elem in self.__dict__.values():
+            if isinstance(elem, Tensor) and elem.requires_grad:
+                params.append(elem)
+            elif isinstance(elem, Module):
+                params.extend(elem.params)
+        return params
 
     @property
     def buffers(self):
-        buffers_list = []
-        for _, value in self.__dict__.items():
-            if isinstance(value, Tensor):
-                if not value.requires_grad:
-                    buffers_list.append(value)
-            elif isinstance(value, Module):
-                buffers_list.extend(value.buffers)
-        return buffers_list
+        buffers = []
+        for elem in self.__dict__.values():
+            if isinstance(elem, Tensor) and not elem.requires_grad:
+                buffers.append(elem)
+            elif isinstance(elem, Module):
+                buffers.extend(elem.buffers)
+        return buffers
