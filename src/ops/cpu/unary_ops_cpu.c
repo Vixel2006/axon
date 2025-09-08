@@ -10,8 +10,8 @@
 #endif
 
 static void reconfigure_unary_output(Tensor *in, Tensor *out) {
-  DEBUG_PRINT(
-      "reconfigure_unary_output: Reconfiguring output tensor for unary op\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] reconfigure_unary_output: Reconfiguring output "
+              "tensor for unary op\n");
 
   if (out->shape) {
     free(out->shape);
@@ -57,7 +57,7 @@ static void reconfigure_unary_output(Tensor *in, Tensor *out) {
 }
 
 void relu_op(Tensor *in, Tensor *out) {
-  DEBUG_PRINT("relu_op: Performing ReLU activation\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] relu_op: Performing ReLU activation\n");
 
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
@@ -101,7 +101,7 @@ void relu_op(Tensor *in, Tensor *out) {
 }
 
 void log_op(Tensor *in, Tensor *out) {
-  DEBUG_PRINT("log_op: Performing natural logarithm\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] log_op: Performing natural logarithm\n");
 
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
@@ -143,7 +143,7 @@ void log_op(Tensor *in, Tensor *out) {
 }
 
 void exp_op(Tensor *in, Tensor *out) {
-  DEBUG_PRINT("exp_op: Performing exponential\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] exp_op: Performing exponential\n");
 
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
@@ -185,11 +185,11 @@ void exp_op(Tensor *in, Tensor *out) {
 }
 
 void softmax_op(Tensor *in, Tensor *out) {
-  DEBUG_PRINT("softmax_op: Performing softmax activation\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] softmax_op: Performing softmax activation\n");
 }
 
 void neg_op(Tensor *in, Tensor *out) {
-  DEBUG_PRINT("neg_op: Performing negation\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] neg_op: Performing negation\n");
 
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
@@ -234,7 +234,7 @@ void neg_op(Tensor *in, Tensor *out) {
 }
 
 void abs_op(Tensor *in, Tensor *out) {
-  DEBUG_PRINT("abs_op: Performing absolute value\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] abs_op: Performing absolute value\n");
 
   reconfigure_unary_output(in, out);
   if (!out->data->ptr) {

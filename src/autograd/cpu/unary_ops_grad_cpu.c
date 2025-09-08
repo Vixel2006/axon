@@ -6,7 +6,7 @@
 #include "autograd/autograd.h"
 
 void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("relu_grad_op: Computing gradient for ReLU\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] relu_grad_op: Computing gradient for ReLU\n");
 
   Tensor *a = prev[0];
 
@@ -55,7 +55,8 @@ void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("log_grad_op: Computing gradient for natural logarithm\n");
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] log_grad_op: Computing gradient for natural logarithm\n");
 
   Tensor *a = prev[0];
 
@@ -103,7 +104,8 @@ void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("exp_grad_op: Computing gradient for exponential\n");
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] exp_grad_op: Computing gradient for exponential\n");
 
   Tensor *a = prev[0];
 
@@ -152,7 +154,7 @@ void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 void softmax_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {}
 
 void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("neg_grad_op: Computing gradient for negation\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] neg_grad_op: Computing gradient for negation\n");
 
   Tensor *a = prev[0];
 
@@ -201,7 +203,8 @@ void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void abs_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("abs_grad_op: Computing gradient for absolute value\n");
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] abs_grad_op: Computing gradient for absolute value\n");
 
   Tensor *a = prev[0];
   int size = numel(a->shape, a->ndim);

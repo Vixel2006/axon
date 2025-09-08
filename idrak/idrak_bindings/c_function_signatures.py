@@ -542,3 +542,6 @@ if tensor_lib:
         ctypes.c_int,
     ]
     tensor_lib.zero_grad.restype = None
+
+    tensor_lib.idrak_set_debug_mode.argtypes = [ctypes.c_int]
+    tensor_lib.idrak_set_debug_mode.restype = None
