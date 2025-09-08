@@ -1,6 +1,8 @@
 from idrak.nn.module import Module
-from idrak.functions import exp
 from idrak.core.tensor import Tensor
+from idrak.ops.uop import UOp
+from idrak.functions import relu, exp
+import ctypes
 
 class ReLU(Module):
     def forward(self, x: Tensor) -> Tensor:
@@ -13,3 +15,5 @@ class Tanh(Module):
 class Sigmoid(Module):
     def forward(self, x: Tensor) -> Tensor:
         return 1 / (1 + exp(-x))
+
+

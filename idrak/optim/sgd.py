@@ -1,6 +1,7 @@
 from .optimizer import Optimizer
 from idrak.idrak_bindings.c_wrapper_functions import c_sgd, c_zero_grad
 from idrak.core.tensor import Tensor
+from idrak.metrics import bce
 
 class SGD(Optimizer):
     def __init__(self, params: list[Tensor], lr: float):
