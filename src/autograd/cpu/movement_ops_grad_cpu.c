@@ -11,7 +11,8 @@ typedef struct {
 } concatExtras;
 
 void stack_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("stack_grad_op: Computing gradient for stack operation\n");
+  DEBUG_PRINT(
+      "[IDRAK_DEBUG] stack_grad_op: Computing gradient for stack operation\n");
 
   stackExtras *stack_extras = (stackExtras *)extras;
   int axis = stack_extras->axis;
@@ -60,7 +61,8 @@ void stack_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void concat_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("concat_grad_op: Computing gradient for concatenate operation\n");
+  DEBUG_PRINT("[IDRAK_DEBUG] concat_grad_op: Computing gradient for "
+              "concatenate operation\n");
 
   concatExtras *concat_extras = (concatExtras *)extras;
   int axis = concat_extras->axis;

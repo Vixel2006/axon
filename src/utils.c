@@ -1,5 +1,11 @@
 #include "utils.h"
 
+int _idrak_debug_enabled = 0;
+
+void idrak_set_debug_mode(int enable) {
+    _idrak_debug_enabled = enable;
+}
+
 int get_num_batches(const int *shape, int ndim) {
   int batch_nums = 1;
   for (int i = 0; i < ndim - 2; ++i) {

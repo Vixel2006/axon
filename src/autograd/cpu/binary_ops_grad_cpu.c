@@ -687,52 +687,56 @@ void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
   Tensor *b = prev[1];
 
+  // Get dimensions
   int N = a->shape[a->ndim - 2];
   int K = a->shape[a->ndim - 1];
   int M = b->shape[b->ndim - 1];
 
-  int a_strides = a->strides[a->ndim - 2];
-  int a_k_strides = a->strides[a->ndim - 1];
-  int b_strides = b->strides[b->ndim - 2];
-  int b_m_strides = b->strides[b->ndim - 1];
-  int out_strides = out->strides[out->ndim - 2];
-  int out_m_strides = out->strides[out->ndim - 1];
+  // Calculate proper batch strides (stride for the first dimension)
+  int batch_nums = (a->ndim > 2) ? a->shape[0] : 1;
+  int a_batch_stride = (a->ndim > 2) ? a->strides[0] : 0;
+  int b_batch_stride = (b->ndim > 2) ? b->strides[0] : 0;
+  int out_batch_stride = (out->ndim > 2) ? out->strides[0] : 0;
 
-  if (a->requires_grad) {
-    int batch_nums = get_num_batches(a->shape, a->ndim);
+  // Get matrix strides (last two dimensions)
+  int a_row_stride = a->strides[a->ndim - 2];
+  int a_col_stride = a->strides[a->ndim - 1];
+  int b_row_stride = b->strides[b->ndim - 2];
+  int b_col_stride = b->strides[b->ndim - 1];
+  int out_row_stride = out->strides[out->ndim - 2];
+  int out_col_stride = out->strides[out->ndim - 1];
 
+  if (a->requires_grad && a->grad && a->grad->ptr) {
     for (int batch_idx = 0; batch_idx < batch_nums; ++batch_idx) {
       for (int i = 0; i < N; ++i) {
         for (int j = 0; j < K; ++j) {
           float sum = 0.0f;
           for (int m = 0; m < M; ++m) {
-            sum += out->grad->ptr[batch_idx * out_strides * M +
-                                  i * out_strides + m * out_m_strides] *
-                   b->data->ptr[batch_idx * b_strides * M + j * b_strides +
-                                m * b_m_strides];
+            sum += out->grad->ptr[batch_idx * out_batch_stride +
+                                  i * out_row_stride + m * out_col_stride] *
+                   b->data->ptr[batch_idx * b_batch_stride + j * b_row_stride +
+                                m * b_col_stride];
           }
-          a->grad->ptr[batch_idx * a_strides * K + i * a_strides +
-                       j * a_k_strides] += sum;
+          a->grad->ptr[batch_idx * a_batch_stride + i * a_row_stride +
+                       j * a_col_stride] += sum;
         }
       }
     }
   }
 
-  if (b->requires_grad) {
-    int batch_nums = get_num_batches(b->shape, b->ndim);
-
+  if (b->requires_grad && b->grad && b->grad->ptr) {
     for (int batch_idx = 0; batch_idx < batch_nums; ++batch_idx) {
       for (int i = 0; i < K; ++i) {
         for (int j = 0; j < M; ++j) {
           float sum = 0.0f;
           for (int n = 0; n < N; ++n) {
-            sum += a->data->ptr[batch_idx * a_strides * K + n * a_strides +
-                                i * a_k_strides] *
-                   out->grad->ptr[batch_idx * out_strides * M +
-                                  n * out_strides + j * out_m_strides];
+            sum += a->data->ptr[batch_idx * a_batch_stride + n * a_row_stride +
+                                i * a_col_stride] *
+                   out->grad->ptr[batch_idx * out_batch_stride +
+                                  n * out_row_stride + j * out_col_stride];
           }
-          b->grad->ptr[batch_idx * b_strides * M + i * b_strides +
-                       j * b_m_strides] += sum;
+          b->grad->ptr[batch_idx * b_batch_stride + i * b_row_stride +
+                       j * b_col_stride] += sum;
         }
       }
     }

@@ -221,6 +221,8 @@ class Tensor(CTensor):
     def __truediv__(self, other: Tensor | float) -> Tensor: return Div.create_node(self, other)
     def __rsub__(self, other: float) -> Tensor: return RSub.create_node(self, other)
     def __rtruediv__(self, other: float) -> Tensor: return RDiv.create_node(self, other)
+    def __radd__(self, other: float) -> Tensor: return Add.create_node(self, other)
+    def __rmul__(self, other: float) -> Tensor: return Mul.create_node(self, other)
     def dot(self, other: Tensor) -> Tensor: return Dot.create_node(self, other)
 
     # ============ Unary Operations ==============
