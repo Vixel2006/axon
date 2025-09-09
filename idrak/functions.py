@@ -60,11 +60,13 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: ret
 
 if __name__ == "__main__":
     a = Tensor((2,2), [[1,2], [3,4]])
-    b = Tensor((2,2), [[1,2],[3,4]])
+    b = Tensor((1,2), [[1,2]])
 
-    d = a @ b
+    d = a + b
 
     d.backward()
+
+    #d.backward()
 
     print(a);print(d)
     print(a.grad);print(b.grad)

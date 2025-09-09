@@ -42,10 +42,10 @@ class Tensor(CTensor):
                 if self._c_tensor.contents.ndim == 0:
                     self._shape = ()
                 else:
-                    self._shape = [
+                    self._shape = tuple(
                         self._c_tensor.contents.shape[i]
                         for i in range(self._c_tensor.contents.ndim)
-                    ]
+                    )
             else:
                 self._shape = None
             return

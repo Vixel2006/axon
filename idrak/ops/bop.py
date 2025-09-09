@@ -37,13 +37,39 @@ class BOp(LazyOp):
     def create_ctx_struct(a: "Tensor", b: "Tensor" | float) -> Any:
         if not isinstance(b, CTensor):
             return ctypes.c_float(b)
+
     @staticmethod
-    def calc_out_shape(a: "Tensor", b: "Tensor"): return a.shape
+    def compute_broadcasted_shape(shape1: tuple[int, ...], shape2: tuple[int, ...]) -> tuple[int, ...]:
+        # Pad the shorter shape with 1s at the beginning
+        max_ndim = max(len(shape1), len(shape2))
+        padded_shape1 = (1,) * (max_ndim - len(shape1)) + shape1
+        padded_shape2 = (1,) * (max_ndim - len(shape2)) + shape2
+
+        result_shape = []
+        for dim1, dim2 in zip(padded_shape1, padded_shape2):
+            if dim1 == dim2:
+                result_shape.append(dim1)
+            elif dim1 == 1:
+                result_shape.append(dim2)
+            elif dim2 == 1:
+                result_shape.append(dim1)
+            else:
+                raise ValueError(f"Shapes are not broadcastable: {shape1} and {shape2}")
+        return tuple(result_shape)
+
+    @staticmethod
+    def calc_out_shape(a: "Tensor", b: "Tensor"):
+        if isinstance(b, CTensor):
+            return BOp.compute_broadcasted_shape(a.shape, b.shape)
+        return a.shape
 
 class Add(BOp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
         if isinstance(b, CTensor):
+            # Explicitly broadcast a and b to the shape of out
+            a = a.broadcast(out.shape)
+            b = b.broadcast(out.shape)
             c_add(a._c_tensor, b._c_tensor, out._c_tensor)
         else:
             scalar = ctypes.c_float(b)
@@ -57,6 +83,11 @@ class Sub(BOp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor" | float, b: "Tensor" | float) -> "Tensor": 
         if isinstance(b, CTensor):
+            # Explicitly broadcast a and b to the shape of out
+            a = a.broadcast(out.shape)
+            b = b.broadcast(out.shape)
+            a.realize()
+            b.realize()
             c_sub(a._c_tensor, b._c_tensor, out._c_tensor)
         else:
             scalar = ctypes.c_float(b)
@@ -80,6 +111,11 @@ class Mul(BOp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
         if isinstance(b, CTensor):
+            # Explicitly broadcast a and b to the shape of out
+            a = a.broadcast(out.shape)
+            b = b.broadcast(out.shape)
+            a.realize()
+            b.realize()
             c_mul(a._c_tensor, b._c_tensor, out._c_tensor)
         else:
             scalar = ctypes.c_float(b)
@@ -93,6 +129,11 @@ class Div(BOp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
         if isinstance(b, CTensor):
+            # Explicitly broadcast a and b to the shape of out
+            a = a.broadcast(out.shape)
+            b = b.broadcast(out.shape)
+            a.realize()
+            b.realize()
             c_div(a._c_tensor, b._c_tensor, out._c_tensor)
         else:
             scalar = ctypes.c_float(b)
@@ -128,17 +169,87 @@ class Pow(BOp):
 
 class MatMul(BOp):
     @staticmethod
+    def calc_out_shape(a: "Tensor", b: "Tensor"):
+        # Get the effective shapes for broadcasting batch dimensions
+        a_effective_shape = a.shape[:-2] if a.ndim >= 2 else ()
+        b_effective_shape = b.shape[:-2] if b.ndim >= 2 else ()
+
+        # Get the matrix dimensions
+        a_K = a.shape[-1]
+        b_K = b.shape[-2] if b.ndim >= 2 else b.shape[-1] # If b is 1D, it's K
+
+        if a_K != b_K:
+            raise ValueError(f"Matrix multiplication dimensions are incompatible: {a.shape} and {b.shape}")
+
+        # Calculate the broadcasted batch shape
+        max_ndim_batch = max(len(a_effective_shape), len(b_effective_shape))
+        padded_a_batch_shape = (1,) * (max_ndim_batch - len(a_effective_shape)) + a_effective_shape
+        padded_b_batch_shape = (1,) * (max_ndim_batch - len(b_effective_shape)) + b_effective_shape
+
+        result_batch_shape = []
+        for dim1, dim2 in zip(padded_a_batch_shape, padded_b_batch_shape):
+            if dim1 == dim2:
+                result_batch_shape.append(dim1)
+            elif dim1 == 1:
+                result_batch_shape.append(dim2)
+            elif dim2 == 1:
+                result_batch_shape.append(dim1)
+            else:
+                raise ValueError(f"Batch shapes are not broadcastable: {a.shape} and {b.shape}")
+
+        # Determine N and M for the output
+        a_N = a.shape[-2] if a.ndim >= 2 else 1
+        b_M = b.shape[-1] if b.ndim >= 2 else 1
+
+        # Special handling for 1D inputs resulting in 1D or scalar output
+        if a.ndim == 1 and b.ndim == 1:
+            return (1,) # Dot product
+        elif a.ndim == 1: # a is (K,), b is (..., K, M) -> (..., M)
+            return tuple(result_batch_shape) + (b_M,)
+        elif b.ndim == 1: # a is (..., N, K), b is (K,) -> (..., N)
+            return tuple(result_batch_shape) + (a_N,)
+        else: # Both are >= 2D
+            return tuple(result_batch_shape) + (a_N, b_M)
+
+    @staticmethod
     def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
-        N = a.shape[-2]
-        K = a.shape[-1]
-        M = b.shape[-1]
+        if isinstance(b, CTensor):
+            # Determine the target shapes for broadcasting a and b
+            # The batch dimensions of a and b should be broadcasted to the batch dimensions of out
+            # The last two dimensions of a and b should remain as they are for matmul
+            
+            out_batch_shape = out.shape[:-2] if out.ndim >= 2 else ()
 
-        if a.shape[-1] != b.shape[-2] and a.ndim > 2:
-            print(a.shape, b.shape)
-            raise RuntimeError("can't do matmul")
+            # Construct target shapes for a and b for broadcasting
+            # If a or b was originally 1D, we need to promote it to 2D for broadcasting
+            a_target_shape = out_batch_shape
+            if a.ndim == 1:
+                a_target_shape += (1, a.shape[0])
+            else:
+                a_target_shape += a.shape[-2:]
 
-        c_matmul(a._c_tensor, b._c_tensor, out._c_tensor, N=N, K=K, P=M)
+            b_target_shape = out_batch_shape
+            if b.ndim == 1:
+                b_target_shape += (b.shape[0], 1)
+            else:
+                b_target_shape += b.shape[-2:]
 
+            a_broadcasted = a.broadcast(a_target_shape)
+            b_broadcasted = b.broadcast(b_target_shape)
+
+            a_broadcasted.realize()
+            b_broadcasted.realize()
+
+            N = a_broadcasted.shape[-2]
+            K = a_broadcasted.shape[-1]
+            M = b_broadcasted.shape[-1]
+
+            if a_broadcasted.shape[-1] != b_broadcasted.shape[-2]:
+                raise RuntimeError(f"Matrix multiplication dimensions are incompatible after broadcasting: {a_broadcasted.shape} and {b_broadcasted.shape}")
+
+            c_matmul(a_broadcasted._c_tensor, b_broadcasted._c_tensor, out._c_tensor, N=N, K=K, P=M)
+        else:
+            raise TypeError("MatMul does not support scalar multiplication.")
         return out
 
     @staticmethod
