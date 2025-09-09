@@ -9,7 +9,7 @@
 #include "ops/ops.h"
 
 void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  DEBUG_PRINT("[IDRAK_DEBUG] sum_op: Performing sum reduction along axis %d "
+  IDRAK_DEBUG("OP   ", "sum_op: Performing sum reduction along axis %d "
               "(keepdim=%d)\n",
               axis, keepdim);
 
@@ -32,10 +32,11 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   // 2. Build output shape (drop axis unless keepdim=true)
   out->shape = (int *)malloc(out->ndim * sizeof(int));
   if (!out->shape) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->shape\n");
+    IDRAK_ERROR("sum_op: Failed to allocate memory for out->shape.\n");
     free_tensor(&out);
     return;
   }
+
 
   int j = 0;
   for (int i = 0; i < a->ndim; ++i) {
@@ -50,7 +51,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides && out->ndim > 0) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->strides\n");
+    IDRAK_ERROR("sum_op: Failed to allocate memory for out->strides.\n");
     free(out->shape);
     free_tensor(&out);
     return;
@@ -62,7 +63,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   }
   out->data->ptr = (float *)malloc(out_total_size * sizeof(float));
   if (!out->data->ptr) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
+    IDRAK_ERROR("sum_op: Failed to allocate memory for out->data->ptr.\n");
     free(out->shape);
     free(out->strides);
     free_tensor(&out);
@@ -87,7 +88,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   // Temp buffer for computing output coordinates
   int *out_coords = (int *)malloc(out->ndim * sizeof(int));
   if (!out_coords) {
-    fprintf(stderr, "Error: Failed to allocate memory for out_coords\n");
+    IDRAK_ERROR("sum_op: Failed to allocate memory for out_coords.\n");
     free_tensor(&out);
     return;
   }
@@ -207,7 +208,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  DEBUG_PRINT("[IDRAK_DEBUG] mean_op: Performing mean reduction along axis %d "
+  IDRAK_DEBUG("OP   ", "mean_op: Performing mean reduction along axis %d "
               "(keepdim=%d)\n",
               axis, keepdim);
 
@@ -228,10 +229,11 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
   out->shape = (int *)malloc(out->ndim * sizeof(int));
   if (!out->shape) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->shape\n");
+    IDRAK_ERROR("mean_op: Failed to allocate memory for out->shape.\n");
     free_tensor(&out);
     return;
   }
+
 
   int j = 0;
   for (int i = 0; i < a->ndim; ++i) {
@@ -246,7 +248,7 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides && out->ndim > 0) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->strides\n");
+    IDRAK_ERROR("mean_op: Failed to allocate memory for out->strides.\n");
     free(out->shape);
     free_tensor(&out);
     return;
@@ -258,7 +260,7 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   }
   out->data->ptr = (float *)malloc(out_total_size * sizeof(float));
   if (!out->data->ptr) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
+    IDRAK_ERROR("mean_op: Failed to allocate memory for out->data->ptr.\n");
     free(out->shape);
     free(out->strides);
     free_tensor(&out);
@@ -281,7 +283,7 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
   int *out_coords = (int *)malloc(out->ndim * sizeof(int));
   if (!out_coords) {
-    fprintf(stderr, "Error: Failed to allocate memory for out_coords\n");
+    IDRAK_ERROR("mean_op: Failed to allocate memory for out_coords.\n");
     free_tensor(&out);
     return;
   }
@@ -390,9 +392,7 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  DEBUG_PRINT("[IDRAK_DEBUG] max_op: Performing max reduction along axis %d "
-              "(keepdim=%d)\n",
-              axis, keepdim);
+  IDRAK_DEBUG("OP   ", "max_op: Performing max reduction along axis %d (keepdim=%d)\n", axis, keepdim);
 
   if (out->shape) {
     free(out->shape);
@@ -411,10 +411,11 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
   out->shape = (int *)malloc(out->ndim * sizeof(int));
   if (!out->shape) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->shape\n");
+    IDRAK_ERROR("max_op: Failed to allocate memory for out->shape.\n");
     free_tensor(&out);
     return;
   }
+
 
   int j = 0;
   for (int i = 0; i < a->ndim; ++i) {
@@ -429,7 +430,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides && out->ndim > 0) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->strides\n");
+    IDRAK_ERROR("max_op: Failed to allocate memory for out->strides.\n");
     free(out->shape);
     free_tensor(&out);
     return;
@@ -441,7 +442,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   }
   out->data->ptr = (float *)malloc(out_total_size * sizeof(float));
   if (!out->data->ptr) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
+    IDRAK_ERROR("max_op: Failed to allocate memory for out->data->ptr.\n");
     free(out->shape);
     free(out->strides);
     free_tensor(&out);
@@ -466,7 +467,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 
   int *out_coords = (int *)malloc(out->ndim * sizeof(int));
   if (!out_coords) {
-    fprintf(stderr, "Error: Failed to allocate memory for out_coords\n");
+    IDRAK_ERROR("max_op: Failed to allocate memory for out_coords.\n");
     free_tensor(&out);
     return;
   }
@@ -580,7 +581,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void sum_full_op(Tensor *a, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] sum_full_op: Performing full sum reduction\n");
+  IDRAK_DEBUG("OP   ", "sum_full_op: Performing full sum reduction\n");
 
   if (out && out->shape) {
     free(out->shape);
@@ -601,9 +602,10 @@ void sum_full_op(Tensor *a, Tensor *out) {
 
   out->data->ptr = (float *)malloc(sizeof(float));
   if (!out->data->ptr) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
+    IDRAK_ERROR("sum_full_op: Failed to allocate memory for out->data->ptr.\n");
     return;
   }
+
 
   size_t total_elements = 1;
   for (int i = 0; i < a->ndim; ++i) {
@@ -647,7 +649,7 @@ void sum_full_op(Tensor *a, Tensor *out) {
   } else {
     int *coords = (int *)malloc(a->ndim * sizeof(int));
     if (!coords) {
-      fprintf(stderr, "Error: Failed to allocate memory for coords\n");
+      IDRAK_ERROR("sum_full_op: Failed to allocate memory for coords.\n");
       free(out->data->ptr);
       out->data->ptr = NULL;
       return;
@@ -683,14 +685,15 @@ void sum_full_op(Tensor *a, Tensor *out) {
 }
 
 void mean_full_op(Tensor *a, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] mean_full_op: Performing full mean reduction\n");
+  IDRAK_DEBUG("OP   ", "mean_full_op: Performing full mean reduction\n");
 
   sum_full_op(a, out);
 
   if (out && out->data && out->data->ptr == NULL) {
-    fprintf(stderr, "Error: sum_full_op failed, cannot compute mean.\n");
+    IDRAK_ERROR("mean_full_op: sum_full_op failed, cannot compute mean.\n");
     return;
   }
+
 
   size_t total_elements = 1;
   for (int i = 0; i < a->ndim; ++i) {
@@ -707,7 +710,7 @@ void mean_full_op(Tensor *a, Tensor *out) {
 }
 
 void max_full_op(Tensor *a, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] max_full_op: Performing full max reduction\n");
+  IDRAK_DEBUG("OP   ", "max_full_op: Performing full max reduction\n");
 
   if (out && out->shape) {
     free(out->shape);
@@ -782,7 +785,7 @@ void max_full_op(Tensor *a, Tensor *out) {
   } else {
     int *coords = (int *)malloc(a->ndim * sizeof(int));
     if (!coords) {
-      fprintf(stderr, "Error: Failed to allocate memory for coords\n");
+      IDRAK_ERROR("max_full_op: Failed to allocate memory for coords.\n");
       free(out->data->ptr);
       out->data->ptr = NULL;
       return;

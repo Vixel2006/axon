@@ -11,28 +11,28 @@
 #endif
 
 SharedPtr *malloc_shared_ptr(float *data, int size) {
-  DEBUG_PRINT("[IDRAK_DEBUG] SharedPtr: Allocating new SharedPtr of size %d "
-              "bytes for data storage.\n",
+  IDRAK_DEBUG("ALLOC",
+              "SharedPtr: Allocating new SharedPtr of size %d bytes for data "
+              "storage.\n",
               size * sizeof(float));
   SharedPtr *shared_ptr = malloc(sizeof(SharedPtr));
   if (!shared_ptr) {
-    DEBUG_PRINT(
-        "[IDRAK_DEBUG] malloc_shared_ptr: Failed to allocate SharedPtr\n");
+    IDRAK_ERROR("malloc_shared_ptr: Failed to allocate SharedPtr.\n");
     return NULL;
   }
 
   shared_ptr->ptr = malloc(size * sizeof(float));
   if (!shared_ptr->ptr) {
-    DEBUG_PRINT("[IDRAK_DEBUG] malloc_shared_ptr: Failed to allocate data for "
-                "SharedPtr\n");
+    IDRAK_ERROR("malloc_shared_ptr: Failed to allocate data for SharedPtr.\n");
     free(shared_ptr);
     return NULL;
   }
   memcpy(shared_ptr->ptr, data, size * sizeof(float));
 
   shared_ptr->ref_counter = 1;
-  DEBUG_PRINT("[IDRAK_DEBUG] SharedPtr: Successfully allocated at %p, data "
-              "pointer at %p. Initial ref_count: %d.\n",
+  IDRAK_DEBUG("ALLOC",
+              "SharedPtr: Successfully allocated at %p, data pointer at %p. "
+              "Initial ref_count: %d.\n",
               (void *)shared_ptr, (void *)shared_ptr->ptr,
               shared_ptr->ref_counter);
   return shared_ptr;
@@ -40,13 +40,13 @@ SharedPtr *malloc_shared_ptr(float *data, int size) {
 
 void free_shared_ptr(SharedPtr **ptr) {
   if (ptr && *ptr) {
-    DEBUG_PRINT("[IDRAK_DEBUG] free_shared_ptr: Decrementing ref_counter for "
-                "SharedPtr at %p "
+    IDRAK_DEBUG("FREE ",
+                "free_shared_ptr: Decrementing ref_counter for SharedPtr at %p "
                 "(current: %d)\n",
                 (void *)*ptr, (*ptr)->ref_counter);
     if (--(*ptr)->ref_counter == 0) {
-      DEBUG_PRINT("[IDRAK_DEBUG] free_shared_ptr: Ref_counter is 0. Freeing "
-                  "data at %p and "
+      IDRAK_DEBUG("FREE ",
+                  "free_shared_ptr: Ref_counter is 0. Freeing data at %p and "
                   "SharedPtr at %p\n",
                   (void *)(*ptr)->ptr, (void *)*ptr);
       if ((*ptr)->ptr)
@@ -54,8 +54,8 @@ void free_shared_ptr(SharedPtr **ptr) {
       free(*ptr);
       *ptr = NULL;
     } else {
-      DEBUG_PRINT("[IDRAK_DEBUG] free_shared_ptr: SharedPtr at %p still has %d "
-                  "references\n",
+      IDRAK_DEBUG("FREE ",
+                  "free_shared_ptr: SharedPtr at %p still has %d references\n",
                   (void *)*ptr, (*ptr)->ref_counter);
     }
   }
@@ -111,34 +111,35 @@ void set_ones_grad(Tensor *t) {
 }
 
 Tensor *malloc_tensor_empty() {
-  DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_empty: Allocating empty Tensor\n");
+  IDRAK_DEBUG("ALLOC", "malloc_tensor_empty: Allocating empty Tensor\n");
   Tensor *t = malloc(sizeof(Tensor));
   if (!t) {
-    DEBUG_PRINT(
-        "[IDRAK_DEBUG] malloc_tensor_empty: Failed to allocate Tensor\n");
+    IDRAK_ERROR("malloc_tensor_empty: Failed to allocate Tensor.\n");
     return NULL;
   }
 
   memset(t, 0, sizeof(Tensor));
   t->data = NULL;
   t->grad = NULL;
-  DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_empty: Successfully allocated empty "
-              "Tensor at %p\n",
-              (void *)t);
+  IDRAK_DEBUG(
+      "ALLOC",
+      "malloc_tensor_empty: Successfully allocated empty Tensor at %p\n",
+      (void *)t);
   return t;
 }
 
 Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
-  DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Allocating Tensor with "
-              "ndim=%d, requires_grad=%d\n",
-              ndim, requires_grad);
+  IDRAK_DEBUG(
+      "ALLOC",
+      "malloc_tensor_shape: Allocating Tensor with ndim=%d, requires_grad=%d\n",
+      ndim, requires_grad);
   if (ndim < 0 || (ndim > 0 && !shape))
     return NULL;
 
   Tensor *t = malloc(sizeof(Tensor));
   if (!t) {
-    DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Failed to allocate Tensor "
-                "struct\n");
+    IDRAK_ERROR("malloc_tensor_shape: Failed to allocate Tensor "
+                "struct.\n");
     return NULL;
   }
 
@@ -148,13 +149,12 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
   t->requires_grad = requires_grad;
 
   if (ndim == 0) {
-    DEBUG_PRINT(
-        "[IDRAK_DEBUG] malloc_tensor_shape: Allocating scalar tensor\n");
+    IDRAK_DEBUG("ALLOC", "malloc_tensor_shape: Allocating scalar tensor\n");
     float zero_val = 0.0f;
     t->data = malloc_shared_ptr(&zero_val, 1);
     if (!t->data) {
-      DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Failed to allocate data "
-                  "for scalar tensor\n");
+      IDRAK_ERROR("malloc_tensor_shape: Failed to allocate data "
+                  "for scalar tensor.\n");
       free_tensor(&t);
       return NULL;
     }
@@ -163,22 +163,22 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
       float zero_grad_val = 0.0f;
       t->grad = malloc_shared_ptr(&zero_grad_val, 1);
       if (!t->grad) {
-        DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Failed to allocate "
-                    "grad for scalar tensor\n");
+        IDRAK_ERROR("malloc_tensor_shape: Failed to allocate "
+                    "grad for scalar tensor.\n");
         free_tensor(&t);
         return NULL;
       }
     }
-    DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Successfully allocated "
-                "scalar tensor at %p\n",
-                (void *)t);
+    IDRAK_DEBUG(
+        "ALLOC",
+        "malloc_tensor_shape: Successfully allocated scalar tensor at %p\n",
+        (void *)t);
     return t;
   }
 
   t->shape = malloc(ndim * sizeof(int));
   if (!t->shape) {
-    DEBUG_PRINT(
-        "[IDRAK_DEBUG] malloc_tensor_shape: Failed to allocate shape array\n");
+    IDRAK_ERROR("malloc_tensor_shape: Failed to allocate shape array.\n");
     free_tensor(&t);
     return NULL;
   }
@@ -186,33 +186,30 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
 
   int size = numel(shape, ndim);
   if (size <= 0) {
-    DEBUG_PRINT(
-        "[IDRAK_DEBUG] malloc_tensor_shape: Invalid size (%d) for tensor\n",
-        size);
+    IDRAK_ERROR("malloc_tensor_shape: Invalid size (%d) for tensor.\n", size);
     free_tensor(&t);
     return NULL;
   }
 
   t->strides = compute_strides(t->shape, ndim);
   if (!t->strides) {
-    DEBUG_PRINT(
-        "[IDRAK_DEBUG] malloc_tensor_shape: Failed to compute strides\n");
+    IDRAK_ERROR("malloc_tensor_shape: Failed to compute strides.\n");
     free_tensor(&t);
     return NULL;
   }
 
   float *initial_data = calloc(size, sizeof(float)); // Declare initial_data
   if (!initial_data) {
-    DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Failed to allocate "
-                "initial_data buffer\n");
+    IDRAK_ERROR("malloc_tensor_shape: Failed to allocate "
+                "initial_data buffer.\n");
     free_tensor(&t);
     return NULL;
   }
   t->data = malloc_shared_ptr(initial_data, size);
   free(initial_data); // Free the temporary buffer
   if (!t->data) {
-    DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Failed to create SharedPtr "
-                "for data\n");
+    IDRAK_ERROR("malloc_tensor_shape: Failed to create SharedPtr "
+                "for data.\n");
     free_tensor(&t);
     return NULL;
   }
@@ -220,39 +217,40 @@ Tensor *malloc_tensor_shape(const int *shape, int ndim, bool requires_grad) {
   if (requires_grad) {
     float *initial_grad = calloc(size, sizeof(float)); // Declare initial_grad
     if (!initial_grad) {
-      DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Failed to allocate "
-                  "initial_grad buffer\n");
+      IDRAK_ERROR("malloc_tensor_shape: Failed to allocate "
+                  "initial_grad buffer.\n");
       free_tensor(&t);
       return NULL;
     }
     t->grad = malloc_shared_ptr(initial_grad, size);
     free(initial_grad);
     if (!t->grad) {
-      DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Failed to create "
-                  "SharedPtr for grad\n");
+      IDRAK_ERROR("malloc_tensor_shape: Failed to create "
+                  "SharedPtr for grad.\n");
       free_tensor(&t);
       return NULL;
     }
   }
-  DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_shape: Successfully allocated "
-              "Tensor at %p with size %d\n",
-              (void *)t, size);
+  IDRAK_DEBUG(
+      "ALLOC",
+      "malloc_tensor_shape: Successfully allocated Tensor at %p with size %d\n",
+      (void *)t, size);
   return t;
 }
 
 Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
                            SharedPtr *data_shared_ptr, bool requires_grad,
                            SharedPtr *grad_shared_ptr) {
-  DEBUG_PRINT("[IDRAK_DEBUG] Tensor: Allocating new Tensor structure. ndim: "
-              "%d, requires_grad: %d.\n",
-              ndim, requires_grad);
+  IDRAK_DEBUG(
+      "ALLOC",
+      "Tensor: Allocating new Tensor structure. ndim: %d, requires_grad: %d.\n",
+      ndim, requires_grad);
   if (ndim < 0 || (ndim > 0 && (!shape || !data_shared_ptr)))
     return NULL;
 
   Tensor *t = malloc(sizeof(Tensor));
   if (!t) {
-    DEBUG_PRINT(
-        "[IDRAK_DEBUG] malloc_tensor_full: Failed to allocate Tensor struct\n");
+    IDRAK_ERROR("malloc_tensor_full: Failed to allocate Tensor struct.\n");
     return NULL;
   }
 
@@ -271,17 +269,14 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
   } else {
     size = numel(shape, ndim);
     if (size <= 0) {
-      DEBUG_PRINT(
-          "[IDRAK_DEBUG] malloc_tensor_full: Invalid size (%d) for tensor\n",
-          size);
+      IDRAK_ERROR("malloc_tensor_full: Invalid size (%d) for tensor.\n", size);
       free(t);
       return NULL;
     }
 
     t->shape = malloc(ndim * sizeof(int));
     if (!t->shape) {
-      DEBUG_PRINT(
-          "[IDRAK_DEBUG] malloc_tensor_full: Failed to allocate shape array\n");
+      IDRAK_ERROR("malloc_tensor_full: Failed to allocate shape array.\n");
       free(t);
       return NULL;
     }
@@ -289,8 +284,8 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
 
     t->strides = malloc(ndim * sizeof(int));
     if (!t->strides) {
-      DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_full: Failed to allocate "
-                  "strides array\n");
+      IDRAK_ERROR("malloc_tensor_full: Failed to allocate "
+                  "strides array.\n");
       free(t->shape);
       free(t);
       return NULL;
@@ -301,8 +296,8 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
     } else {
       int *default_strides = compute_strides(shape, ndim);
       if (!default_strides) {
-        DEBUG_PRINT("[IDRAK_DEBUG] malloc_tensor_full: Failed to compute "
-                    "default strides\n");
+        IDRAK_ERROR("malloc_tensor_full: Failed to compute "
+                    "default strides.\n");
         free(t->strides);
         free(t->shape);
         free(t);
@@ -315,52 +310,55 @@ Tensor *malloc_tensor_full(const int *shape, int ndim, const int *strides,
 
   if (data_shared_ptr) {
     t->data = data_shared_ptr;
-    DEBUG_PRINT(
-        "[IDRAK_DEBUG] Tensor: Referencing existing data SharedPtr at %p.\n",
-        (void *)data_shared_ptr);
+    data_shared_ptr->ref_counter++; // Increment ref_counter
+    IDRAK_DEBUG("DEBUG",
+                "Tensor: Referencing existing data SharedPtr at %p. "
+                "Incremented ref_counter to %d.\n",
+                (void *)data_shared_ptr, data_shared_ptr->ref_counter);
   }
 
   if (requires_grad && grad_shared_ptr) {
     t->grad = grad_shared_ptr;
-    DEBUG_PRINT(
-        "[IDRAK_DEBUG] Tensor: Referencing existing grad SharedPtr at %p.\n",
-        (void *)grad_shared_ptr);
+    grad_shared_ptr->ref_counter++; // Increment ref_counter
+    IDRAK_DEBUG("DEBUG",
+                "Tensor: Referencing existing grad SharedPtr at %p. "
+                "Incremented ref_counter to %d.\n",
+                (void *)grad_shared_ptr, grad_shared_ptr->ref_counter);
   }
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] Tensor: Successfully allocated Tensor structure at %p.\n",
-      (void *)t);
+  IDRAK_DEBUG("ALLOC",
+              "Tensor: Successfully allocated Tensor structure at %p.\n",
+              (void *)t);
   return t;
 }
 
 void free_tensor(Tensor **t) {
   if (t && *t) {
-    DEBUG_PRINT("[IDRAK_DEBUG] free_tensor: Freeing Tensor at %p\n",
-                (void *)*t);
+    IDRAK_DEBUG("FREE ", "free_tensor: Freeing Tensor at %p\n", (void *)*t);
     if ((*t)->data) {
-      DEBUG_PRINT("[IDRAK_DEBUG] free_tensor: Freeing data SharedPtr for "
-                  "Tensor at %p\n",
+      IDRAK_DEBUG("FREE ",
+                  "free_tensor: Freeing data SharedPtr for Tensor at %p\n",
                   (void *)*t);
       free_shared_ptr(&(*t)->data);
     }
     if ((*t)->grad) {
-      DEBUG_PRINT("[IDRAK_DEBUG] free_tensor: Freeing grad SharedPtr for "
-                  "Tensor at %p\n",
+      IDRAK_DEBUG("FREE ",
+                  "free_tensor: Freeing grad SharedPtr for Tensor at %p\n",
                   (void *)*t);
       free_shared_ptr(&(*t)->grad);
     }
     if ((*t)->shape) {
-      DEBUG_PRINT(
-          "[IDRAK_DEBUG] free_tensor: Freeing shape array for Tensor at %p\n",
-          (void *)*t);
+      IDRAK_DEBUG("FREE ",
+                  "free_tensor: Freeing shape array for Tensor at %p\n",
+                  (void *)*t);
       free((*t)->shape);
     }
     if ((*t)->strides) {
-      DEBUG_PRINT(
-          "[IDRAK_DEBUG] free_tensor: Freeing strides array for Tensor at %p\n",
-          (void *)*t);
+      IDRAK_DEBUG("FREE ",
+                  "free_tensor: Freeing strides array for Tensor at %p\n",
+                  (void *)*t);
       free((*t)->strides);
     }
-    DEBUG_PRINT("[IDRAK_DEBUG] free_tensor: Tensor at %p successfully freed\n",
+    IDRAK_DEBUG("FREE ", "free_tensor: Tensor at %p successfully freed\n",
                 (void *)*t);
     free(*t);
     *t = NULL;
@@ -368,28 +366,28 @@ void free_tensor(Tensor **t) {
 }
 
 Tensor *zeros(const int *shape, int ndim, bool requires_grad) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] zeros: Creating zero tensor (ndim=%d, requires_grad=%d)\n",
-      ndim, requires_grad);
+  IDRAK_DEBUG("DEBUG",
+              "zeros: Creating zero tensor (ndim=%d, requires_grad=%d)\n", ndim,
+              requires_grad);
   Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
   if (!t) {
-    DEBUG_PRINT("[IDRAK_DEBUG] zeros: Failed to create zero tensor\n");
+    IDRAK_ERROR("zeros: Failed to create zero tensor.\n");
     return NULL;
   }
 
   // malloc_tensor_shape already sets data to 0, so nothing more to do here.
-  DEBUG_PRINT("[IDRAK_DEBUG] zeros: Successfully created zero tensor at %p\n",
+  IDRAK_DEBUG("DEBUG", "zeros: Successfully created zero tensor at %p\n",
               (void *)t);
   return t;
 }
 
 Tensor *ones(const int *shape, int ndim, bool requires_grad) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] ones: Creating ones tensor (ndim=%d, requires_grad=%d)\n",
-      ndim, requires_grad);
+  IDRAK_DEBUG("DEBUG",
+              "ones: Creating ones tensor (ndim=%d, requires_grad=%d)\n", ndim,
+              requires_grad);
   Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
   if (!t) {
-    DEBUG_PRINT("[IDRAK_DEBUG] ones: Failed to create ones tensor\n");
+    IDRAK_ERROR("ones: Failed to create ones tensor.\n");
     return NULL;
   }
 
@@ -397,25 +395,23 @@ Tensor *ones(const int *shape, int ndim, bool requires_grad) {
   for (int i = 0; i < size; ++i) {
     t->data->ptr[i] = 1.0f;
   }
-  DEBUG_PRINT("[IDRAK_DEBUG] ones: Successfully created ones tensor at %p\n",
+  IDRAK_DEBUG("DEBUG", "ones: Successfully created ones tensor at %p\n",
               (void *)t);
   return t;
 }
 
 Tensor *uniform(const int *shape, int ndim, float low, float high,
                 bool requires_grad) {
-  DEBUG_PRINT("[IDRAK_DEBUG] uniform: Creating uniform tensor (ndim=%d, "
-              "low=%.2f, high=%.2f, requires_grad=%d)\n",
+  IDRAK_DEBUG("DEBUG",
+              "uniform: Creating uniform tensor (ndim=%d, low=%.2f, high=%.2f, "
+              "requires_grad=%d)\n",
               ndim, low, high, requires_grad);
   Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
   if (!t) {
-    DEBUG_PRINT("[IDRAK_DEBUG] uniform: Failed to create uniform tensor\n");
+    IDRAK_ERROR("uniform: Failed to create uniform tensor.\n");
     return NULL;
   }
 
-  // Seed the random number generator if not already seeded.
-  // This is a simple approach; in a real application, seeding should be
-  // done once.
   static bool seeded = false;
   if (!seeded) {
     srand(time(NULL));
@@ -426,19 +422,19 @@ Tensor *uniform(const int *shape, int ndim, float low, float high,
   for (int i = 0; i < size; ++i) {
     t->data->ptr[i] = low + (float)rand() / (RAND_MAX / (high - low));
   }
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] uniform: Successfully created uniform tensor at %p\n",
-      (void *)t);
+  IDRAK_DEBUG("DEBUG", "uniform: Successfully created uniform tensor at %p\n",
+              (void *)t);
   return t;
 }
 
 Tensor *randn(const int *shape, int ndim, int seed, bool requires_grad) {
-  DEBUG_PRINT("[IDRAK_DEBUG] randn: Creating random normal tensor (ndim=%d, "
-              "seed=%d, requires_grad=%d)\n",
+  IDRAK_DEBUG("DEBUG",
+              "randn: Creating random normal tensor (ndim=%d, seed=%d, "
+              "requires_grad=%d)\n",
               ndim, seed, requires_grad);
   Tensor *t = malloc_tensor_shape(shape, ndim, requires_grad);
   if (!t) {
-    DEBUG_PRINT("[IDRAK_DEBUG] randn: Failed to create random normal tensor\n");
+    IDRAK_ERROR("randn: Failed to create random normal tensor.\n");
     return NULL;
   }
 
@@ -457,8 +453,8 @@ Tensor *randn(const int *shape, int ndim, int seed, bool requires_grad) {
       t->data->ptr[i + 1] = z2;
     }
   }
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] randn: Successfully created random normal tensor at %p\n",
-      (void *)t);
+  IDRAK_DEBUG("DEBUG",
+              "randn: Successfully created random normal tensor at %p\n",
+              (void *)t);
   return t;
 }

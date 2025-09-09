@@ -86,8 +86,6 @@ class Sub(BOp):
             # Explicitly broadcast a and b to the shape of out
             a = a.broadcast(out.shape)
             b = b.broadcast(out.shape)
-            a.realize()
-            b.realize()
             c_sub(a._c_tensor, b._c_tensor, out._c_tensor)
         else:
             scalar = ctypes.c_float(b)
@@ -114,8 +112,6 @@ class Mul(BOp):
             # Explicitly broadcast a and b to the shape of out
             a = a.broadcast(out.shape)
             b = b.broadcast(out.shape)
-            a.realize()
-            b.realize()
             c_mul(a._c_tensor, b._c_tensor, out._c_tensor)
         else:
             scalar = ctypes.c_float(b)
@@ -132,8 +128,6 @@ class Div(BOp):
             # Explicitly broadcast a and b to the shape of out
             a = a.broadcast(out.shape)
             b = b.broadcast(out.shape)
-            a.realize()
-            b.realize()
             c_div(a._c_tensor, b._c_tensor, out._c_tensor)
         else:
             scalar = ctypes.c_float(b)
@@ -236,9 +230,6 @@ class MatMul(BOp):
 
             a_broadcasted = a.broadcast(a_target_shape)
             b_broadcasted = b.broadcast(b_target_shape)
-
-            a_broadcasted.realize()
-            b_broadcasted.realize()
 
             N = a_broadcasted.shape[-2]
             K = a_broadcasted.shape[-1]
