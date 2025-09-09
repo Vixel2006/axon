@@ -14,8 +14,7 @@ class Linear(Module):
             self.B = Tensor((1, out_features))
 
     def forward(self, x):
-        w = self.W.transpose(n=0,m=1)
-        out = x @ w
+        out = x @ self.W.transpose(-2, -1)
 
         if self.bias:
             out += self.B

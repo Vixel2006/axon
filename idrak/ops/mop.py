@@ -28,6 +28,13 @@ class View(LazyOp):
             )
         return tuple(shape)
 
+    @staticmethod
+    def create_node(a: "Tensor", shape: tuple[int, ...]) -> "Tensor":
+        from idrak.core.tensor import Tensor
+        out_shape = View.calc_out_shape(a, shape)
+        out = Tensor(out_shape, requires_grad=a.requires_grad)
+        View.forward(out, a, shape)
+        return out
     
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", shape: tuple[int, ...]) -> "Tensor":
@@ -46,12 +53,33 @@ class Unsqueeze(LazyOp):
         return tuple(new_shape)
 
     @staticmethod
+    def create_node(a: "Tensor", dim: int) -> "Tensor":
+        from idrak.core.tensor import Tensor
+        out_shape = Unsqueeze.calc_out_shape(a, dim)
+        out = Tensor(out_shape, requires_grad=a.requires_grad)
+        Unsqueeze.forward(out, a, dim)
+        return out
+
+    @staticmethod
     def forward(out: "Tensor", a: "Tensor", dim: int) -> "Tensor": 
         c_unsqueeze(a._c_tensor, out._c_tensor, dim)
         return out
 
 
 class Squeeze(LazyOp):
+    @staticmethod
+    def create_node(a: "Tensor", dim: int) -> "Tensor":
+        from idrak.core.tensor import Tensor
+        new_shape = list(a.shape)
+        if dim < 0:
+            dim = a.ndim + dim
+        if new_shape[dim] == 1:
+            new_shape.pop(dim)
+        out_shape = tuple(new_shape)
+        out = Tensor(out_shape, requires_grad=a.requires_grad)
+        Squeeze.forward(out, a, dim)
+        return out
+
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", dim: int) -> "Tensor": 
         c_squeeze(a._c_tensor, out._c_tensor, dim)
@@ -60,11 +88,34 @@ class Squeeze(LazyOp):
 
 class Transpose(LazyOp):
     @staticmethod
+    def create_node(a: "Tensor", n: int, m: int) -> "Tensor":
+        from idrak.core.tensor import Tensor
+        new_shape = list(a.shape)
+
+        if n < 0:
+            n = a.ndim + n
+        if m < 0:
+            m = a.ndim + m
+
+        new_shape[n], new_shape[m] = new_shape[m], new_shape[n]
+        out_shape = tuple(new_shape)
+        out = Tensor(out_shape, requires_grad=a.requires_grad)
+        Transpose.forward(out, a, n, m)
+        return out
+
+    @staticmethod
     def forward(out: "Tensor", a: "Tensor", n: int, m: int) -> "Tensor":
         c_transpose(a._c_tensor, out._c_tensor, n, m)
         return out
 
 class Expand(LazyOp):
+    @staticmethod
+    def create_node(a: "Tensor", shape: tuple[int, ...]) -> "Tensor":
+        from idrak.core.tensor import Tensor
+        out = Tensor(shape, requires_grad=a.requires_grad)
+        Expand.forward(out, a, shape)
+        return out
+
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", shape: tuple[int, ...]) -> "Tensor":
         c_expand(a._c_tensor, out._c_tensor, shape)
@@ -72,6 +123,13 @@ class Expand(LazyOp):
 
 
 class Broadcast(LazyOp):
+    @staticmethod
+    def create_node(a: "Tensor", shape: tuple[int, ...], ndim: int) -> "Tensor":
+        from idrak.core.tensor import Tensor
+        out = Tensor(shape, requires_grad=a.requires_grad)
+        Broadcast.forward(out, a, shape, ndim)
+        return out
+
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", shape: tuple[int, ...], ndim: int) -> "Tensor":
         c_broadcast(a._c_tensor, out._c_tensor, ndim, shape)
@@ -99,6 +157,15 @@ class Concat(LazyOp):
             
         return tuple(shape)
 
+    @staticmethod
+    def create_node(a: list["Tensor"], axis: int) -> "Tensor":
+        from idrak.core.tensor import Tensor
+        out_shape = Concat.calc_out_shape(a, axis)
+        # Determine requires_grad for concat: if any input requires grad, output requires grad
+        requires_grad = any(t.requires_grad for t in a)
+        out = Tensor(out_shape, a[0].dtype, requires_grad=requires_grad)
+        Concat.forward(out, a, axis)
+        return out
     
     @staticmethod
     def forward(out: "Tensor", a: list["Tensor"], axis: int) -> "Tensor":
@@ -114,6 +181,8 @@ class Concat(LazyOp):
 class Stack(LazyOp):
     @staticmethod
     def create_ctx_struct(a: list["Tensor"], axis: int):
+        if axis < 0:
+            axis = a[0].ndim + axis + 1
         extras = StackExtras(axis=axis)
 
         ctx = ctypes.pointer(extras)
@@ -123,6 +192,8 @@ class Stack(LazyOp):
     @staticmethod
     def calc_out_shape(a: list["Tensor"], axis: int) -> tuple[int, ...]:
         from idrak.core.tensor import Tensor
+        if axis < 0:
+            axis = a[0].ndim + axis + 1
 
         shape = [0 for _ in range(len(a[0].shape) + 1)]
 
@@ -136,9 +207,23 @@ class Stack(LazyOp):
         
         return tuple(shape)
 
+    @staticmethod
+    def create_node(a: list["Tensor"], axis: int) -> "Tensor":
+        from idrak.core.tensor import Tensor
+        if axis < 0:
+            axis = a[0].ndim + axis + 1
+        out_shape = Stack.calc_out_shape(a, axis)
+        # Determine requires_grad for stack: if any input requires grad, output requires grad
+        requires_grad = any(t.requires_grad for t in a)
+        out = Tensor(out_shape, a[0].dtype, requires_grad=requires_grad)
+        Stack.forward(out, a, axis)
+        return out
+
     
     @staticmethod
     def forward(out: "Tensor", a: list["Tensor"], axis: int) -> "Tensor":
+        if axis < 0:
+            axis = a[0].ndim + axis + 1
         inputs = []
         for t in a:
             inputs.append(t._c_tensor)
