@@ -10,12 +10,15 @@ void sgd(Tensor **params, int num_params, float lr) {
   for (int i = 0; i < num_params; ++i) {
     if (!params[i] || !params[i]->requires_grad || !params[i]->grad ||
         !params[i]->grad->ptr || !params[i]->data || !params[i]->data->ptr) {
+      IDRAK_WARNING("sgd: Skipping parameter %d due to invalid tensor, missing grad, or missing data.\n", i);
       continue;
     }
 
     int num_elements = numel(params[i]->shape, params[i]->ndim);
-    if (num_elements == 0)
+    if (num_elements == 0) {
+      IDRAK_WARNING("sgd: Skipping parameter %d due to zero elements.\n", i);
       continue;
+    }
 
     // --- Contiguous Path ---
     if (is_contiguous(params[i])) {
@@ -44,8 +47,10 @@ void sgd(Tensor **params, int num_params, float lr) {
     else {
       // Use separate index calculations for data and grad
       int *indices = (int *)calloc(params[i]->ndim, sizeof(int));
-      if (!indices)
+      if (!indices) {
+        IDRAK_ERROR("sgd: Failed to allocate memory for indices for parameter %d.\n", i);
         continue;
+      }
 
       for (int k = 0; k < num_elements; ++k) {
         size_t data_idx = get_flat_index(params[i], indices);

@@ -6,7 +6,7 @@
 #include <string.h>
 
 static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] reconfigure_scalar_output: Reconfiguring output "
+  IDRAK_DEBUG("OP   ", "reconfigure_scalar_output: Reconfiguring output "
               "tensor for scalar op\n");
 
   if (out->shape) {
@@ -25,7 +25,7 @@ static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
   out->ndim = in_tensor->ndim;
   out->shape = (int *)malloc(out->ndim * sizeof(int));
   if (!out->shape) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->shape\n");
+    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for out->shape.\n");
     return;
   }
   memcpy(out->shape, in_tensor->shape, out->ndim * sizeof(int));
@@ -33,7 +33,7 @@ static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides &&
       out->ndim > 0) { // compute_strides can return NULL if ndim=0 or error
-    fprintf(stderr, "Error: Failed to allocate memory for out->strides\n");
+    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for out->strides.\n");
     free(out->shape);
     out->shape = NULL;
     return;
@@ -42,7 +42,7 @@ static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
   size_t out_total_size = numel(out->shape, out->ndim);
   out->data->ptr = (float *)malloc(out_total_size * sizeof(float));
   if (!out->data->ptr) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
+    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for out->data->ptr.\n");
     free(out->shape);
     out->shape = NULL;
     if (out->strides) {
@@ -54,9 +54,9 @@ static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
 }
 
 void add_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] add_scalar_op: Performing scalar addition (scalar=%.2f)\n",
-      b);
+  IDRAK_DEBUG("OP   ", "add_scalar_op: Performing scalar addition (scalar=%.2f)\n",
+              b);
+
 
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
@@ -99,7 +99,7 @@ void add_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void sub_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] sub_scalar_op: Performing scalar subtraction "
+  IDRAK_DEBUG("OP   ", "sub_scalar_op: Performing scalar subtraction "
               "(scalar=%.2f)\n",
               b);
 
@@ -144,16 +144,24 @@ void sub_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] rsub_scalar_op: Performing reverse scalar "
+  IDRAK_DEBUG("OP   ", "rsub_scalar_op: Performing reverse scalar "
               "subtraction (scalar=%.2f)\n",
               a);
 
+  // Error checking for null tensors
+  if (!b || !out) {
+    IDRAK_ERROR("rsub_scalar_op ERROR: Input or output tensor is NULL! b=%p, out=%p\n", (void*)b, (void*)out);
+    return;
+  }
+
   reconfigure_scalar_output(b, out);
   if (!out->data->ptr) {
+    IDRAK_ERROR("rsub_scalar_op ERROR: Output tensor data pointer is NULL after reconfiguration.\n");
     return;
   }
 
   int size = numel(b->shape, b->ndim);
+
 
   if (!is_contiguous(b) || !is_contiguous(out)) {
     for (int idx = 0; idx < size; ++idx) {
@@ -190,7 +198,7 @@ void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
 }
 
 void mul_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] mul_scalar_op: Performing scalar multiplication "
+  IDRAK_DEBUG("OP   ", "mul_scalar_op: Performing scalar multiplication "
               "(scalar=%.2f)\n",
               b);
 
@@ -235,8 +243,8 @@ void mul_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void div_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] div_scalar_op: Performing scalar division (scalar=%.2f)\n",
+  IDRAK_DEBUG("OP   ",
+      "div_scalar_op: Performing scalar division (scalar=%.2f)\n",
       b);
 
   reconfigure_scalar_output(a, out);
@@ -260,10 +268,9 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
       }
 
       if (b == 0.0f) {
-        fprintf(stderr,
-                "Warning: Division by zero in div_scalar_op at index %d. "
-                "Result will be +/-INF or NaN.\n",
-                idx);
+        IDRAK_WARNING("Division by zero in div_scalar_op at index %d. "
+                      "Result will be +/-INF or NaN.\n",
+                      idx);
         out->data->ptr[offset_out] =
             a->data->ptr[offset_a] / b; // Will result in INF/NaN
       } else {
@@ -274,7 +281,7 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
     if (b == 0.0f) {
-      fprintf(stderr, "Warning: Division by zero in div_scalar_op (SIMD path). "
+      IDRAK_WARNING("Division by zero in div_scalar_op (SIMD path). "
                       "Results will be +/-INF or NaN.\n");
     }
 
@@ -297,7 +304,7 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] rdiv_scalar_op: Performing reverse scalar "
+  IDRAK_DEBUG("OP   ", "rdiv_scalar_op: Performing reverse scalar "
               "division (scalar=%.2f)\n",
               b);
 
@@ -322,10 +329,9 @@ void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
       }
 
       if (a->data->ptr[offset_a] == 0.0f) {
-        fprintf(stderr,
-                "Warning: Division by zero in rdiv_scalar_op at index %d. "
-                "Result will be +/-INF or NaN.\n",
-                idx);
+        IDRAK_WARNING("Division by zero in rdiv_scalar_op at index %d. "
+                      "Result will be +/-INF or NaN.\n",
+                      idx);
         out->data->ptr[offset_out] =
             b / a->data->ptr[offset_a]; // Will result in INF/NaN
       } else {
@@ -344,10 +350,9 @@ void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
 
     for (; i < size; ++i) {
       if (a->data->ptr[i] == 0.0f) {
-        fprintf(stderr,
-                "Warning: Division by zero in rdiv_scalar_op at index %d. "
-                "Result will be +/-INF or NaN.\n",
-                i);
+        IDRAK_WARNING("Division by zero in rdiv_scalar_op at index %d. "
+                      "Result will be +/-INF or NaN.\n",
+                      i);
         out->data->ptr[i] = b / a->data->ptr[i];
       } else {
         out->data->ptr[i] = b / a->data->ptr[i];
@@ -359,8 +364,8 @@ void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
 }
 
 void pow_scalar_op(Tensor *a, float b, Tensor *out) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] pow_scalar_op: Performing scalar power (exponent=%.2f)\n",
+  IDRAK_DEBUG("OP   ",
+      "pow_scalar_op: Performing scalar power (exponent=%.2f)\n",
       b);
 
   reconfigure_scalar_output(a, out);

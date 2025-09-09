@@ -11,9 +11,8 @@
 void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
           int num_params, int time_step, float learning_rate, float beta1,
           float beta2, float epsilon) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] adam: Running Adam optimizer (time_step=%d, lr=%.4f)\n",
-      time_step, learning_rate);
+  IDRAK_DEBUG("DEBUG", "adam: Running Adam optimizer (time_step=%d, lr=%.4f)\n", time_step, learning_rate);
+
 
   __m256 learning_rate_vec = _mm256_set1_ps(learning_rate);
   __m256 beta1_vec = _mm256_set1_ps(beta1);
@@ -28,7 +27,7 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
   __m256 bias_correction_beta2_vec = _mm256_set1_ps(1.0f - beta2_pow_t);
 
   for (int i = 0; i < num_params; ++i) {
-    DEBUG_PRINT("[IDRAK_DEBUG] adam: Updating parameter %d\n", i);
+    IDRAK_DEBUG("DEBUG", "adam: Updating parameter %d\n", i);
     int num_elements = numel(params[i]->shape, params[i]->ndim);
 
     float *current_m_estimates = m_estimates[i]->data->ptr;
@@ -49,9 +48,7 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
             _mm256_mul_ps(beta1_vec, m_vec),
             _mm256_mul_ps(one_minus_beta1_vec, current_param_grad_vec));
         _mm256_storeu_ps(current_m_estimates + j, m_vec);
-        DEBUG_PRINT(
-            "[IDRAK_DEBUG] adam: SIMD - Updated m_estimates[%d] for param %d\n",
-            j, i);
+        IDRAK_DEBUG("DEBUG", "adam: SIMD - Updated m_estimates[%d] for param %d\n", j, i);
 
         __m256 grad_squared_vec =
             _mm256_mul_ps(current_param_grad_vec, current_param_grad_vec);
@@ -59,9 +56,7 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
             _mm256_add_ps(_mm256_mul_ps(beta2_vec, v_vec),
                           _mm256_mul_ps(one_minus_beta2_vec, grad_squared_vec));
         _mm256_storeu_ps(current_v_estimates + j, v_vec);
-        DEBUG_PRINT(
-            "[IDRAK_DEBUG] adam: SIMD - Updated v_estimates[%d] for param %d\n",
-            j, i);
+        IDRAK_DEBUG("DEBUG", "adam: SIMD - Updated v_estimates[%d] for param %d\n", j, i);
 
         __m256 m_hat_vec = _mm256_div_ps(m_vec, bias_correction_beta1_vec);
 
@@ -75,24 +70,18 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
         current_param_data_vec =
             _mm256_sub_ps(current_param_data_vec, update_term_vec);
         _mm256_storeu_ps(param_data + j, current_param_data_vec);
-        DEBUG_PRINT(
-            "[IDRAK_DEBUG] adam: SIMD - Updated param_data[%d] for param %d\n",
-            j, i);
+        IDRAK_DEBUG("DEBUG", "adam: SIMD - Updated param_data[%d] for param %d\n", j, i);
       }
 
       for (; j < num_elements; ++j) {
         current_m_estimates[j] =
             beta1 * current_m_estimates[j] + (1.0f - beta1) * param_grad[j];
-        DEBUG_PRINT("[IDRAK_DEBUG] adam: Scalar - Updated m_estimates[%d] for "
-                    "param %d\n",
-                    j, i);
+        IDRAK_DEBUG("DEBUG", "adam: Scalar - Updated m_estimates[%d] for param %d\n", j, i);
 
         current_v_estimates[j] =
             beta2 * current_v_estimates[j] +
             (1.0f - beta2) * (param_grad[j] * param_grad[j]);
-        DEBUG_PRINT("[IDRAK_DEBUG] adam: Scalar - Updated v_estimates[%d] for "
-                    "param %d\n",
-                    j, i);
+        IDRAK_DEBUG("DEBUG", "adam: Scalar - Updated v_estimates[%d] for param %d\n", j, i);
 
         float m_hat = current_m_estimates[j] / (1.0f - beta1_pow_t);
 
@@ -101,14 +90,12 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
         float update_term = learning_rate * m_hat / (sqrtf(v_hat) + epsilon);
 
         param_data[j] -= update_term;
-        DEBUG_PRINT("[IDRAK_DEBUG] adam: Scalar - Updated param_data[%d] for "
-                    "param %d\n",
-                    j, i);
+        IDRAK_DEBUG("DEBUG", "adam: Scalar - Updated param_data[%d] for param %d\n", j, i);
       }
     } else {
       int *current_indices = (int *)calloc(params[i]->ndim, sizeof(int));
       if (!current_indices) {
-        DEBUG_PRINT("[IDRAK_DEBUG] adam: Failed to allocate current_indices "
+        IDRAK_ERROR("adam: Failed to allocate current_indices "
                     "for param %d\n",
                     i);
         continue;
@@ -120,17 +107,13 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
         current_m_estimates[flat_idx] =
             beta1 * current_m_estimates[flat_idx] +
             (1.0f - beta1) * params[i]->grad->ptr[flat_idx];
-        DEBUG_PRINT("[IDRAK_DEBUG] adam: Non-contiguous - Updated "
-                    "m_estimates[%d] for param %d\n",
-                    flat_idx, i);
+        IDRAK_DEBUG("DEBUG", "adam: Non-contiguous - Updated m_estimates[%d] for param %d\n", flat_idx, i);
 
         current_v_estimates[flat_idx] =
             beta2 * current_v_estimates[flat_idx] +
             (1.0f - beta2) * (params[i]->grad->ptr[flat_idx] *
                               params[i]->grad->ptr[flat_idx]);
-        DEBUG_PRINT("[IDRAK_DEBUG] adam: Non-contiguous - Updated "
-                    "v_estimates[%d] for param %d\n",
-                    flat_idx, i);
+        IDRAK_DEBUG("DEBUG", "adam: Non-contiguous - Updated v_estimates[%d] for param %d\n", flat_idx, i);
 
         float m_hat = current_m_estimates[flat_idx] / (1.0f - beta1_pow_t);
 
@@ -139,9 +122,7 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
         float update_term = learning_rate * m_hat / (sqrtf(v_hat) + epsilon);
 
         params[i]->data->ptr[flat_idx] -= update_term;
-        DEBUG_PRINT("[IDRAK_DEBUG] adam: Non-contiguous - Updated "
-                    "param_data[%d] for param %d\n",
-                    flat_idx, i);
+        IDRAK_DEBUG("DEBUG", "adam: Non-contiguous - Updated param_data[%d] for param %d\n", flat_idx, i);
 
         for (int dim = params[i]->ndim - 1; dim >= 0; --dim) {
           current_indices[dim]++;
@@ -158,5 +139,5 @@ void adam(Tensor **params, Tensor **m_estimates, Tensor **v_estimates,
       free(current_indices);
     }
   }
-  DEBUG_PRINT("[IDRAK_DEBUG] adam: Adam optimization complete\n");
+  IDRAK_DEBUG("DEBUG", "adam: Adam optimization complete\n");
 }

@@ -5,47 +5,39 @@
 #include "ops/ops_utils.h"
 
 static void cleanup_tensor_for_view(Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] cleanup_tensor_for_view: Cleaning up tensor %p "
+  IDRAK_DEBUG("OP   ",
+              "cleanup_tensor_for_view: Cleaning up tensor %p "
               "for view operation\n",
               (void *)out);
 
-  if (out->data) {
-    if (out->data->ref_counter <= 1) {
-      free(out->data->ptr);
-      free(out->data);
-    } else {
-      out->data->ref_counter--;
-    }
-  }
-
-  if (out->grad) {
-    if (out->grad->ref_counter <= 1) {
-      free(out->grad->ptr);
-      free(out->grad);
-    } else {
-      out->grad->ref_counter--;
-    }
-  }
-
   if (out->strides) {
     free(out->strides);
+    out->strides = NULL;
   }
 
   if (out->shape) {
     free(out->shape);
+    out->shape = NULL;
   }
+
+  out->data = NULL;
+  out->grad = NULL;
 }
 
 void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
-  DEBUG_PRINT("[IDRAK_DEBUG] view_op: Creating view from Tensor %p (ndim=%d)\n",
+  IDRAK_DEBUG("OP   ", "view_op: Creating view from Tensor %p (ndim=%d)\n",
               (void *)in, ndim);
+  IDRAK_DEBUG("OP   ", "view_op: Input shape: ");
+  print_shape(in->shape, in->ndim);
 
   cleanup_tensor_for_view(out);
 
   out->ndim = ndim;
   out->shape = malloc(ndim * sizeof(int));
-  if (!out->shape)
+  if (!out->shape) {
+    IDRAK_ERROR("view_op: Failed to allocate memory for shape array.\n");
     return;
+  }
 
   for (int i = 0; i < ndim; ++i) {
     out->shape[i] = shape[i];
@@ -54,6 +46,7 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
   if (ndim > 0) {
     out->strides = malloc(ndim * sizeof(int));
     if (!out->strides) {
+      IDRAK_ERROR("view_op: Failed to allocate memory for strides array.\n");
       free(out->shape);
       out->shape = NULL;
       return;
@@ -80,24 +73,34 @@ void view_op(Tensor *in, Tensor *out, int *shape, int ndim) {
     out->grad = NULL;
   }
 
+  IDRAK_DEBUG("OP   ", "view_op: Output shape: ");
+  print_shape(out->shape, out->ndim);
+
   out->requires_grad = in->requires_grad;
   out->grad_fn = NULL;
 }
 
 void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] unsqueeze_op: Unsqueezing Tensor %p at dimension %d\n",
-      (void *)in, dim);
+  IDRAK_DEBUG("OP   ", "unsqueeze_op: Unsqueezing Tensor %p at dimension %d\n",
+              (void *)in, dim);
+  IDRAK_DEBUG("OP   ", "unsqueeze_op: Input shape: ");
+  print_shape(in->shape, in->ndim);
 
-  if (dim < 0 || dim > in->ndim)
+  if (dim < 0 || dim > in->ndim) {
+    IDRAK_ERROR("unsqueeze_op: Invalid dimension %d for unsqueeze operation "
+                "(ndim=%d).\n",
+                dim, in->ndim);
     return;
+  }
 
   cleanup_tensor_for_view(out);
 
   out->ndim = in->ndim + 1;
   out->shape = malloc(out->ndim * sizeof(int));
-  if (!out->shape)
+  if (!out->shape) {
+    IDRAK_ERROR("unsqueeze_op: Failed to allocate memory for shape array.\n");
     return;
+  }
 
   for (int i = 0; i < out->ndim; ++i) {
     if (i < dim)
@@ -110,6 +113,7 @@ void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
 
   out->strides = malloc(out->ndim * sizeof(int));
   if (!out->strides) {
+    IDRAK_ERROR("unsqueeze_op: Failed to allocate memory for strides array.\n");
     free(out->shape);
     return;
   }
@@ -135,16 +139,25 @@ void unsqueeze_op(Tensor *in, Tensor *out, int dim) {
     in->grad->ref_counter++;
   }
 
+  IDRAK_DEBUG("OP   ", "unsqueeze_op: Output shape: ");
+  print_shape(out->shape, out->ndim);
+
   out->requires_grad = in->requires_grad;
   out->grad_fn = NULL;
 }
 
 void squeeze_op(Tensor *in, Tensor *out, int dim) {
-  DEBUG_PRINT("[IDRAK_DEBUG] squeeze_op: Squeezing Tensor %p at dimension %d\n",
+  IDRAK_DEBUG("OP   ", "squeeze_op: Squeezing Tensor %p at dimension %d\n",
               (void *)in, dim);
+  IDRAK_DEBUG("OP   ", "squeeze_op: Input shape: ");
+  print_shape(in->shape, in->ndim);
 
-  if (dim < 0 || dim >= in->ndim || in->shape[dim] != 1)
+  if (dim < 0 || dim >= in->ndim || in->shape[dim] != 1) {
+    IDRAK_ERROR("squeeze_op: Invalid dimension %d for squeeze operation "
+                "(ndim=%d, shape[%d]=%d). Dimension must be 1.\n",
+                dim, in->ndim, dim, in->shape[dim]);
     return;
+  }
 
   cleanup_tensor_for_view(out);
 
@@ -156,6 +169,8 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
     out->shape = malloc(out->ndim * sizeof(int));
     out->strides = malloc(out->ndim * sizeof(int));
     if (!out->shape || !out->strides) {
+      IDRAK_ERROR("squeeze_op: Failed to allocate memory for shape or strides "
+                  "array.\n");
       free(out->shape);
       free(out->strides);
       return;
@@ -177,26 +192,45 @@ void squeeze_op(Tensor *in, Tensor *out, int dim) {
     in->grad->ref_counter++;
   }
 
+  IDRAK_DEBUG("OP   ", "squeeze_op: Output shape: ");
+  print_shape(out->shape, out->ndim);
+
   out->requires_grad = in->requires_grad;
   out->grad_fn = NULL;
 }
 
 void transpose_op(Tensor *in, Tensor *out, int N, int M) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] transpose_op: Transposing Tensor %p (dims %d, %d)\n",
-      (void *)in, N, M);
-
-  if (N < 0 || N >= in->ndim || M < 0 || M >= in->ndim)
+  if (!in || !out) {
+    IDRAK_ERROR("transpose_op: Input or output tensor is NULL.\n");
     return;
+  }
+
+  IDRAK_DEBUG("OP   ", "transpose_op: Transposing Tensor %p (dims %d, %d)\n",
+              (void *)in, N, M);
+  IDRAK_DEBUG("OP   ", "transpose_op: Input shape: ");
+  print_shape(in->shape, in->ndim);
+
+  if (N < 0 || N >= in->ndim || M < 0 || M >= in->ndim || N == M) {
+    IDRAK_ERROR(
+        "transpose_op: Invalid dimensions N=%d or M=%d for transpose operation "
+        "(ndim=%d). N and M must be within bounds and different.\n",
+        N, M, in->ndim);
+    return;
+  }
 
   cleanup_tensor_for_view(out);
-
   out->ndim = in->ndim;
   out->shape = malloc(out->ndim * sizeof(int));
   out->strides = malloc(out->ndim * sizeof(int));
+
   if (!out->shape || !out->strides) {
+    IDRAK_ERROR("transpose_op: Failed to allocate memory for shape or strides "
+                "array.\n");
     free(out->shape);
     free(out->strides);
+    out->shape = NULL;
+    out->strides = NULL;
+    out->ndim = 0;
     return;
   }
 
@@ -223,12 +257,17 @@ void transpose_op(Tensor *in, Tensor *out, int N, int M) {
     in->grad->ref_counter++;
   }
 
+  IDRAK_DEBUG("OP   ", "transpose_op: Output shape: ");
+  print_shape(out->shape, out->ndim);
+
   out->requires_grad = in->requires_grad;
   out->grad_fn = NULL;
 }
 
 void expand_op(Tensor *in, Tensor *out, const int *shape) {
-  DEBUG_PRINT("[IDRAK_DEBUG] expand_op: Expanding Tensor %p\n", (void *)in);
+  IDRAK_DEBUG("OP   ", "expand_op: Expanding Tensor %p\n", (void *)in);
+  IDRAK_DEBUG("OP   ", "expand_op: Input shape: ");
+  print_shape(in->shape, in->ndim);
 
   cleanup_tensor_for_view(out);
 
@@ -236,6 +275,8 @@ void expand_op(Tensor *in, Tensor *out, const int *shape) {
   out->shape = malloc(out->ndim * sizeof(int));
   out->strides = malloc(out->ndim * sizeof(int));
   if (!out->shape || !out->strides) {
+    IDRAK_ERROR(
+        "expand_op: Failed to allocate memory for shape or strides array.\n");
     free(out->shape);
     free(out->strides);
     return;
@@ -243,6 +284,9 @@ void expand_op(Tensor *in, Tensor *out, const int *shape) {
 
   for (int i = 0; i < in->ndim; ++i) {
     if (in->shape[i] != 1 && in->shape[i] != shape[i]) {
+      IDRAK_ERROR("expand_op: Cannot expand dimension %d from %d to %d. "
+                  "Dimension must be 1 or match target size.\n",
+                  i, in->shape[i], shape[i]);
       free(out->shape);
       free(out->strides);
       return;
@@ -261,13 +305,26 @@ void expand_op(Tensor *in, Tensor *out, const int *shape) {
     in->grad->ref_counter++;
   }
 
+  IDRAK_DEBUG("OP   ", "expand_op: Output shape: ");
+  print_shape(out->shape, out->ndim);
+
   out->requires_grad = in->requires_grad;
   out->grad_fn = NULL;
 }
 
 void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
-  DEBUG_PRINT("[IDRAK_DEBUG] broadcast_op: Broadcasting Tensor %p to ndim=%d\n",
+  IDRAK_DEBUG("OP   ", "broadcast_op: Broadcasting Tensor %p to ndim=%d\n",
               (void *)in, ndim);
+  IDRAK_DEBUG("OP   ", "broadcast_op: Input shape: ");
+  print_shape(in->shape, in->ndim);
+
+  // Error checking for null tensors
+  if (!in || !out || !shape) {
+    IDRAK_ERROR("broadcast_op ERROR: Input tensor, output tensor, or shape "
+                "array is NULL! in=%p, out=%p, shape=%p\n",
+                (void *)in, (void *)out, (void *)shape);
+    return;
+  }
 
   cleanup_tensor_for_view(out);
 
@@ -275,6 +332,8 @@ void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
   out->shape = malloc(ndim * sizeof(int));
   out->strides = malloc(ndim * sizeof(int));
   if (!out->shape || !out->strides) {
+    IDRAK_ERROR("broadcast_op: Failed to allocate memory for shape or strides "
+                "array.\n");
     free(out->shape);
     free(out->strides);
     return;
@@ -289,6 +348,9 @@ void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
       } else if (in->shape[in_dim] == 1) {
         out->strides[i] = 0;
       } else {
+        IDRAK_ERROR("broadcast_op: Cannot broadcast dimension %d from %d to "
+                    "%d. Dimension must be 1 or match target size.\n",
+                    in_dim, in->shape[in_dim], shape[i]);
         free(out->shape);
         free(out->strides);
         return;
@@ -309,6 +371,9 @@ void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
     in->grad->ref_counter++;
   }
 
+  IDRAK_DEBUG("OP   ", "broadcast_op: Output shape: ");
+  print_shape(out->shape, out->ndim);
+
   out->requires_grad = in->requires_grad;
   out->grad_fn = NULL;
 }
@@ -316,17 +381,22 @@ void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
 // Zero-copy concat: Creates a view that references multiple tensors
 // Note: This requires a special SharedPtr that can handle multiple data sources
 void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] concat_op: Concatenating %d tensors along axis %d\n",
-      num_tensors, axis);
+  IDRAK_DEBUG("OP   ", "concat_op: Concatenating %d tensors along axis %d\n",
+              num_tensors, axis);
+  for (int i = 0; i < num_tensors; ++i) {
+    IDRAK_DEBUG("OP   ", "concat_op: Input tensor %d shape: ", i);
+    print_shape(in[i]->shape, in[i]->ndim);
+  }
 
   cleanup_tensor_for_view(out);
 
   int ndim = in[0]->ndim;
   out->ndim = ndim;
   out->shape = malloc(out->ndim * sizeof(int));
-  if (!out->shape)
+  if (!out->shape) {
+    IDRAK_ERROR("concat_op: Failed to allocate memory for shape array.\n");
     return;
+  }
 
   // Calculate output shape
   for (int dim = 0; dim < out->ndim; ++dim) {
@@ -342,6 +412,7 @@ void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
 
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides) {
+    IDRAK_ERROR("concat_op: Failed to allocate memory for strides array.\n");
     free(out->shape);
     return;
   }
@@ -368,6 +439,9 @@ void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
     in[0]->grad->ref_counter++;
   }
 
+  IDRAK_DEBUG("OP   ", "concat_op: Output shape: ");
+  print_shape(out->shape, out->ndim);
+
   out->requires_grad = false;
   for (int i = 0; i < num_tensors; ++i) {
     out->requires_grad = out->requires_grad || in[i]->requires_grad;
@@ -377,15 +451,21 @@ void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
 
 // Zero-copy stack: Creates a view with adjusted strides
 void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
-  DEBUG_PRINT("[IDRAK_DEBUG] stack_op: Stacking %d tensors along axis %d\n",
+  IDRAK_DEBUG("OP   ", "stack_op: Stacking %d tensors along axis %d\n",
               num_tensors, axis);
+  for (int i = 0; i < num_tensors; ++i) {
+    IDRAK_DEBUG("OP   ", "stack_op: Input tensor %d shape: ", i);
+    print_shape(in[i]->shape, in[i]->ndim);
+  }
 
   cleanup_tensor_for_view(out);
 
   out->ndim = in[0]->ndim + 1;
   out->shape = malloc(out->ndim * sizeof(int));
-  if (!out->shape)
+  if (!out->shape) {
+    IDRAK_ERROR("stack_op: Failed to allocate memory for shape array.\n");
     return;
+  }
 
   // Calculate output shape
   for (int i = 0; i < out->ndim; ++i) {
@@ -400,12 +480,11 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
 
   out->strides = malloc(out->ndim * sizeof(int));
   if (!out->strides) {
+    IDRAK_ERROR("stack_op: Failed to allocate memory for strides array.\n");
     free(out->shape);
     return;
   }
 
-  // Compute strides for the stacked view
-  // This creates a virtual view where each tensor appears at regular intervals
   int tensor_size = numel(in[0]->shape, in[0]->ndim);
 
   for (int i = 0; i < out->ndim; ++i) {
@@ -418,7 +497,6 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
     }
   }
 
-  // Share data from first tensor (in practice, you'd need custom handling)
   if (in[0]->data) {
     out->data = in[0]->data;
     in[0]->data->ref_counter++;
@@ -428,6 +506,9 @@ void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
     out->grad = in[0]->grad;
     in[0]->grad->ref_counter++;
   }
+
+  IDRAK_DEBUG("OP   ", "stack_op: Output shape: ");
+  print_shape(out->shape, out->ndim);
 
   out->requires_grad = false;
   for (int i = 0; i < num_tensors; ++i) {

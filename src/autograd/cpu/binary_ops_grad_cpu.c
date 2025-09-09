@@ -21,7 +21,59 @@ static void _matmul_float_arrays(const float *A, const float *B, float *C,
 }
 
 void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] add_grad_op: Computing gradient for addition\n");
+  IDRAK_DEBUG("GRAD ", "add_grad_op: Computing gradient for addition\n");
+
+  // Error checking for null tensors
+  if (!out || !out->grad || !prev) {
+    IDRAK_ERROR(
+        "add_grad_op ERROR: Output tensor, output gradient, or previous "
+        "tensors array is NULL! out=%p, out->grad=%p, prev=%p\n",
+        (void *)out, (void *)out->grad, (void *)prev);
+    return;
+  }
+
+  if (n_prev != 1 && n_prev != 2) {
+    IDRAK_ERROR("add_grad_op ERROR: Invalid number of previous tensors: %d. "
+                "Expected 1 or 2.\n",
+                n_prev);
+    return;
+  }
+
+  if (n_prev == 2) {
+    if (!prev[0] || !prev[1]) {
+      IDRAK_ERROR("add_grad_op ERROR: One or both previous tensors are NULL "
+                  "when n_prev is 2! prev[0]=%p, prev[1]=%p\n",
+                  (void *)prev[0], (void *)prev[1]);
+      return;
+    }
+    if (prev[0]->requires_grad && !prev[0]->grad) {
+      IDRAK_ERROR("add_grad_op ERROR: Previous tensor 0 requires grad but its "
+                  "grad is NULL!\n");
+      return;
+    }
+    if (prev[1]->requires_grad && !prev[1]->grad) {
+      IDRAK_ERROR("add_grad_op ERROR: Previous tensor 1 requires grad but its "
+                  "grad is NULL!\n");
+      return;
+    }
+  } else if (n_prev == 1) {
+    if (!prev[0]) {
+      IDRAK_ERROR("add_grad_op ERROR: Previous tensor is NULL when n_prev is "
+                  "1! prev[0]=%p\n",
+                  (void *)prev[0]);
+      return;
+    }
+    if (prev[0]->requires_grad && !prev[0]->grad) {
+      IDRAK_ERROR("add_grad_op ERROR: Previous tensor 0 requires grad but its "
+                  "grad is NULL!\n");
+      return;
+    }
+    if (!extras) {
+      IDRAK_ERROR("add_grad_op ERROR: Extras is NULL when n_prev is 1 (scalar "
+                  "addition)!\n");
+      return;
+    }
+  }
 
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -137,8 +189,8 @@ void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] sub_grad_op: Computing gradient for subtraction\n");
+  IDRAK_DEBUG("GRAD ",
+      "sub_grad_op: Computing gradient for subtraction\n");
 
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -254,8 +306,35 @@ void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] rsub_grad_op: Computing gradient for reverse "
+  IDRAK_DEBUG("GRAD ", "rsub_grad_op: Computing gradient for reverse "
               "subtraction\n");
+
+  // Error checking for null tensors and invalid n_prev
+  if (!out || !out->grad || !prev) {
+    IDRAK_ERROR(
+        "rsub_grad_op ERROR: Output tensor, output gradient, or previous "
+        "tensors array is NULL! out=%p, out->grad=%p, prev=%p\n",
+        (void *)out, (void *)out->grad, (void *)prev);
+    return;
+  }
+
+  if (n_prev != 1) {
+    IDRAK_ERROR("rsub_grad_op ERROR: Invalid number of previous tensors: %d. "
+                "Expected 1.\n",
+                n_prev);
+    return;
+  }
+
+  if (!prev[0]) {
+    IDRAK_ERROR("rsub_grad_op ERROR: Previous tensor is NULL! prev[0]=%p\n",
+                (void *)prev[0]);
+    return;
+  }
+
+  if (!extras) {
+    IDRAK_ERROR("rsub_grad_op ERROR: Extras is NULL (scalar value missing)!\n");
+    return;
+  }
 
   Tensor *a = prev[0];
   float b = *((float *)extras);
@@ -298,8 +377,8 @@ void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] mul_grad_op: Computing gradient for multiplication\n");
+  IDRAK_DEBUG("GRAD ",
+      "mul_grad_op: Computing gradient for multiplication\n");
 
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -424,8 +503,8 @@ void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void pow_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] pow_grad_op: Computing gradient for power operation\n");
+  IDRAK_DEBUG("GRAD ",
+      "pow_grad_op: Computing gradient for power operation\n");
 
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -500,13 +579,79 @@ void pow_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] div_grad_op: Computing gradient for division\n");
+  IDRAK_DEBUG("GRAD ", "div_grad_op: Computing gradient for division\n");
+
+  // Basic null pointer checks
+  if (!out || !prev) {
+    IDRAK_ERROR("div_grad_op ERROR: Output tensor or previous tensors array "
+                "is NULL! out=%p, prev=%p\n",
+                (void *)out, (void *)prev);
+    return;
+  }
+
+  if (!out->grad || !out->grad->ptr) {
+    IDRAK_ERROR("div_grad_op ERROR: Output gradient is NULL! out->grad=%p\n",
+                (void *)out->grad);
+    return;
+  }
+
+  if (n_prev != 2 && n_prev != 1) {
+    IDRAK_ERROR("div_grad_op ERROR: Invalid number of previous tensors: %d. "
+                "Expected 1 or 2.\n",
+                n_prev);
+    return;
+  }
+
+  if (n_prev == 2) {
+    if (!prev[0] || !prev[1]) {
+      IDRAK_ERROR("div_grad_op ERROR: One or both previous tensors are NULL! "
+                  "prev[0]=%p, prev[1]=%p\n",
+                  (void *)prev[0], (void *)prev[1]);
+      return;
+    }
+    if (!prev[0]->data || !prev[0]->data->ptr || !prev[1]->data ||
+        !prev[1]->data->ptr) {
+      IDRAK_ERROR("div_grad_op ERROR: One or both previous tensors' data are "
+                  "NULL!\n");
+      return;
+    }
+    if (prev[0]->requires_grad && (!prev[0]->grad || !prev[0]->grad->ptr)) {
+      IDRAK_ERROR("div_grad_op ERROR: Previous tensor 0 requires grad but its "
+                  "grad is NULL!\n");
+      return;
+    }
+    if (prev[1]->requires_grad && (!prev[1]->grad || !prev[1]->grad->ptr)) {
+      IDRAK_ERROR("div_grad_op ERROR: Previous tensor 1 requires grad but its "
+                  "grad is NULL!\n");
+      return;
+    }
+  } else if (n_prev == 1) {
+    if (!prev[0]) {
+      IDRAK_ERROR("div_grad_op ERROR: Previous tensor is NULL! prev[0]=%p\n",
+                  (void *)prev[0]);
+      return;
+    }
+    if (!extras) {
+      IDRAK_ERROR("div_grad_op ERROR: Extras is NULL (scalar value missing)!\n");
+      return;
+    }
+    if (!prev[0]->data || !prev[0]->data->ptr) {
+      IDRAK_ERROR("div_grad_op ERROR: Previous tensor's data is NULL!\n");
+      return;
+    }
+    if (prev[0]->requires_grad && (!prev[0]->grad || !prev[0]->grad->ptr)) {
+      IDRAK_ERROR("div_grad_op ERROR: Previous tensor requires grad but its "
+                  "grad is NULL!\n");
+      return;
+    }
+  }
 
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
   int *shape = out->shape;
 
   if (n_prev == 2) {
+
     Tensor *a = prev[0];
     Tensor *b = prev[1];
 
@@ -548,9 +693,15 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
             b_offset += coord * b_strides[d];
             out_offset += coord * out_strides[d];
           }
-          b->grad->ptr[b_offset] -=
-              out->grad->ptr[out_offset] * a->data->ptr[a_offset] /
-              (b->data->ptr[b_offset] * b->data->ptr[b_offset]);
+          float b_val = b->data->ptr[b_offset];
+          if (b_val != 0.0f) { // Add check for division by zero
+            b->grad->ptr[b_offset] -=
+                out->grad->ptr[out_offset] * a->data->ptr[a_offset] /
+                (b_val * b_val);
+          } else {
+            // Handle division by zero: set gradient to 0 to prevent crash.
+            b->grad->ptr[b_offset] = 0.0f;
+          }
         }
       }
     } else {
@@ -566,7 +717,12 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         }
 
         for (; i < size; ++i) {
-          a->grad->ptr[i] += out->grad->ptr[i] / b->data->ptr[i];
+          float b_val = b->data->ptr[i];
+          if (b_val != 0.0f) {
+            a->grad->ptr[i] += out->grad->ptr[i] / b_val;
+          } else {
+            a->grad->ptr[i] = 0.0f;
+          }
         }
       }
 
@@ -578,14 +734,26 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           __m256 b_data = _mm256_loadu_ps(b->data->ptr + i);
           __m256 dout = _mm256_loadu_ps(out->grad->ptr + i);
           __m256 b_squared = _mm256_mul_ps(b_data, b_data);
+
+          // Handle division by zero for b_squared
+          __m256 zero = _mm256_setzero_ps();
+          __m256 b_squared_is_zero = _mm256_cmp_ps(b_squared, zero, _CMP_EQ_OQ);
+          // Replace zero b_squared values with a small epsilon to avoid division by zero
+          b_squared = _mm256_blendv_ps(b_squared, _mm256_set1_ps(1e-8f), b_squared_is_zero);
+
           __m256 db =
               _mm256_fnmadd_ps(_mm256_div_ps(a_data, b_squared), dout, b_grad);
           _mm256_storeu_ps(b->grad->ptr + i, db);
         }
 
         for (; i < size; ++i) {
-          b->grad->ptr[i] -= out->grad->ptr[i] * a->data->ptr[i] /
-                             (b->data->ptr[i] * b->data->ptr[i]);
+          float b_val = b->data->ptr[i];
+          if (b_val != 0.0f) {
+            b->grad->ptr[i] -= out->grad->ptr[i] * a->data->ptr[i] /
+                               (b_val * b_val);
+          } else {
+            b->grad->ptr[i] = 0.0f;
+          }
         }
       }
     }
@@ -631,8 +799,8 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] rdiv_grad_op: Computing gradient for reverse division\n");
+  IDRAK_DEBUG("GRAD ",
+      "rdiv_grad_op: Computing gradient for reverse division\n");
 
   Tensor *a = prev[0];
   float b = *((float *)extras);
@@ -682,24 +850,116 @@ void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] matmul_grad_op: Computing gradient for matrix "
+  IDRAK_DEBUG("GRAD ", "matmul_grad_op: Computing gradient for matrix "
               "multiplication\n");
+
+  // Basic null pointer checks
+  if (!out || !prev) {
+    IDRAK_ERROR("matmul_grad_op ERROR: Output tensor or previous tensors array "
+                "is NULL! out=%p, prev=%p\n",
+                (void *)out, (void *)prev);
+    return;
+  }
+
+  if (!out->grad || !out->grad->ptr) {
+    IDRAK_ERROR("matmul_grad_op ERROR: Output gradient is NULL! out->grad=%p\n",
+                (void *)out->grad);
+    return;
+  }
+
+  if (n_prev != 2) {
+    IDRAK_ERROR("matmul_grad_op ERROR: Invalid number of previous tensors: %d. "
+                "Expected 2.\n",
+                n_prev);
+    return;
+  }
+
+  if (!prev[0] || !prev[1]) {
+    IDRAK_ERROR("matmul_grad_op ERROR: One or both previous tensors are NULL! "
+                "prev[0]=%p, prev[1]=%p\n",
+                (void *)prev[0], (void *)prev[1]);
+    return;
+  }
 
   Tensor *a = prev[0];
   Tensor *b = prev[1];
 
-  // Get dimensions
-  int N = a->shape[a->ndim - 2];
-  int K = a->shape[a->ndim - 1];
-  int M = b->shape[b->ndim - 1];
+  // Validate tensor dimensions BEFORE accessing shape arrays
+  if (a->ndim < 2 || b->ndim < 2 || out->ndim < 2) {
+    IDRAK_ERROR("matmul_grad_op ERROR: All tensors must have at least 2 "
+                "dimensions! a->ndim=%d, b->ndim=%d, out->ndim=%d\n",
+                a->ndim, b->ndim, out->ndim);
+    return;
+  }
 
-  // Calculate proper batch strides (stride for the first dimension)
-  int batch_nums = (a->ndim > 2) ? a->shape[0] : 1;
-  int a_batch_stride = (a->ndim > 2) ? a->strides[0] : 0;
-  int b_batch_stride = (b->ndim > 2) ? b->strides[0] : 0;
-  int out_batch_stride = (out->ndim > 2) ? out->strides[0] : 0;
+  // Validate shape arrays exist
+  if (!a->shape || !b->shape || !out->shape) {
+    IDRAK_ERROR("matmul_grad_op ERROR: One or more shape arrays are NULL!\n");
+    return;
+  }
 
-  // Get matrix strides (last two dimensions)
+  // Validate strides arrays exist
+  if (!a->strides || !b->strides || !out->strides) {
+    IDRAK_ERROR("matmul_grad_op ERROR: One or more stride arrays are NULL!\n");
+    return;
+  }
+
+  // Validate data arrays exist
+  if (!a->data || !a->data->ptr || !b->data || !b->data->ptr) {
+    IDRAK_ERROR("matmul_grad_op ERROR: One or more data arrays are NULL!\n");
+    return;
+  }
+
+  // Now safe to access dimensions
+  int N = a->shape[a->ndim - 2]; // rows of a
+  int K = a->shape[a->ndim - 1]; // cols of a / rows of b
+  int M = b->shape[b->ndim - 1]; // cols of b
+
+  // Dimension compatibility checks
+  if (a->shape[a->ndim - 1] != b->shape[b->ndim - 2]) {
+    IDRAK_ERROR(
+        "matmul_grad_op ERROR: Dimension mismatch for matrix multiplication! "
+        "a->shape[last]=%d, b->shape[second_last]=%d\n",
+        a->shape[a->ndim - 1], b->shape[b->ndim - 2]);
+    return;
+  }
+
+  // Validate output dimensions match expected result
+  if (out->shape[out->ndim - 2] != N || out->shape[out->ndim - 1] != M) {
+    IDRAK_ERROR(
+        "matmul_grad_op ERROR: Output dimensions don't match expected result! "
+        "Expected (%d, %d), got (%d, %d)\n",
+        N, M, out->shape[out->ndim - 2], out->shape[out->ndim - 1]);
+    return;
+  }
+
+  // Calculate batch dimensions - use the maximum batch dimensions among all
+  // tensors
+  int max_ndim = (a->ndim > b->ndim) ? a->ndim : b->ndim;
+  max_ndim = (max_ndim > out->ndim) ? max_ndim : out->ndim;
+
+  // Calculate total batch size (product of all batch dimensions)
+  int batch_size = 1;
+  for (int i = 0; i < max_ndim - 2; ++i) {
+    int a_dim = (i < a->ndim - 2) ? a->shape[i] : 1;
+    int b_dim = (i < b->ndim - 2) ? b->shape[i] : 1;
+    int out_dim = (i < out->ndim - 2) ? out->shape[i] : 1;
+
+    // Verify broadcasting compatibility
+    if ((a_dim != 1 && b_dim != 1 && a_dim != b_dim) ||
+        (a_dim != 1 && out_dim != 1 && a_dim != out_dim) ||
+        (b_dim != 1 && out_dim != 1 && b_dim != out_dim)) {
+      IDRAK_ERROR(
+          "matmul_grad_op ERROR: Incompatible batch dimensions at index %d: "
+          "a=%d, b=%d, out=%d\n",
+          i, a_dim, b_dim, out_dim);
+      return;
+    }
+
+    batch_size *= out_dim;
+  }
+
+  // Calculate strides for matrix operations (last two dimensions)
   int a_row_stride = a->strides[a->ndim - 2];
   int a_col_stride = a->strides[a->ndim - 1];
   int b_row_stride = b->strides[b->ndim - 2];
@@ -707,41 +967,121 @@ void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int out_row_stride = out->strides[out->ndim - 2];
   int out_col_stride = out->strides[out->ndim - 1];
 
-  if (a->requires_grad && a->grad && a->grad->ptr) {
-    for (int batch_idx = 0; batch_idx < batch_nums; ++batch_idx) {
+  // Calculate total matrix sizes for batch indexing
+  int a_matrix_size = N * K;
+  int b_matrix_size = K * M;
+  int out_matrix_size = N * M;
+
+  // Compute gradient for tensor a: grad_a += out_grad @ b^T
+  if (a->requires_grad) {
+    if (!a->grad || !a->grad->ptr) {
+      IDRAK_ERROR("matmul_grad_op ERROR: Tensor 'a' requires grad but its grad "
+                  "is NULL!\n");
+      return;
+    }
+
+    for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
+      // Calculate batch offsets with proper broadcasting
+      int a_batch_offset = 0;
+      int b_batch_offset = 0;
+      int out_batch_offset = 0;
+
+      int temp_batch_idx = batch_idx;
+      for (int dim = max_ndim - 3; dim >= 0; --dim) {
+        int a_dim = (dim < a->ndim - 2) ? a->shape[dim] : 1;
+        int b_dim = (dim < b->ndim - 2) ? b->shape[dim] : 1;
+        int out_dim = (dim < out->ndim - 2) ? out->shape[dim] : 1;
+
+        int coord = temp_batch_idx % out_dim;
+        temp_batch_idx /= out_dim;
+
+        if (dim < a->ndim - 2 && a_dim > 1) {
+          a_batch_offset += coord * a->strides[dim];
+        }
+        if (dim < b->ndim - 2 && b_dim > 1) {
+          b_batch_offset += coord * b->strides[dim];
+        }
+        if (dim < out->ndim - 2) {
+          out_batch_offset += coord * out->strides[dim];
+        }
+      }
+
+      // Compute grad_a[i,j] += sum_k(out_grad[i,k] * b[j,k])
       for (int i = 0; i < N; ++i) {
         for (int j = 0; j < K; ++j) {
           float sum = 0.0f;
-          for (int m = 0; m < M; ++m) {
-            sum += out->grad->ptr[batch_idx * out_batch_stride +
-                                  i * out_row_stride + m * out_col_stride] *
-                   b->data->ptr[batch_idx * b_batch_stride + j * b_row_stride +
-                                m * b_col_stride];
+          for (int k = 0; k < M; ++k) {
+            float out_grad_val =
+                out->grad->ptr[out_batch_offset + i * out_row_stride +
+                               k * out_col_stride];
+            float b_val =
+                b->data
+                    ->ptr[b_batch_offset + j * b_row_stride + k * b_col_stride];
+            sum += out_grad_val * b_val;
           }
-          a->grad->ptr[batch_idx * a_batch_stride + i * a_row_stride +
-                       j * a_col_stride] += sum;
+          a->grad->ptr[a_batch_offset + i * a_row_stride + j * a_col_stride] +=
+              sum;
         }
       }
     }
   }
 
-  if (b->requires_grad && b->grad && b->grad->ptr) {
-    for (int batch_idx = 0; batch_idx < batch_nums; ++batch_idx) {
+  // Compute gradient for tensor b: grad_b += a^T @ out_grad
+  if (b->requires_grad) {
+    if (!b->grad || !b->grad->ptr) {
+      IDRAK_ERROR("matmul_grad_op ERROR: Tensor 'b' requires grad but its grad "
+                  "is NULL!\n");
+      return;
+    }
+
+    for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
+      // Calculate batch offsets with proper broadcasting
+      int a_batch_offset = 0;
+      int b_batch_offset = 0;
+      int out_batch_offset = 0;
+
+      int temp_batch_idx = batch_idx;
+      for (int dim = max_ndim - 3; dim >= 0; --dim) {
+        int a_dim = (dim < a->ndim - 2) ? a->shape[dim] : 1;
+        int b_dim = (dim < b->ndim - 2) ? b->shape[dim] : 1;
+        int out_dim = (dim < out->ndim - 2) ? out->shape[dim] : 1;
+
+        int coord = temp_batch_idx % out_dim;
+        temp_batch_idx /= out_dim;
+
+        if (dim < a->ndim - 2 && a_dim > 1) {
+          a_batch_offset += coord * a->strides[dim];
+        }
+        if (dim < b->ndim - 2 && b_dim > 1) {
+          b_batch_offset += coord * b->strides[dim];
+        }
+        if (dim < out->ndim - 2) {
+          out_batch_offset += coord * out->strides[dim];
+        }
+      }
+
+      // Compute grad_b[i,j] += sum_k(a[k,i] * out_grad[k,j])
       for (int i = 0; i < K; ++i) {
         for (int j = 0; j < M; ++j) {
           float sum = 0.0f;
-          for (int n = 0; n < N; ++n) {
-            sum += a->data->ptr[batch_idx * a_batch_stride + n * a_row_stride +
-                                i * a_col_stride] *
-                   out->grad->ptr[batch_idx * out_batch_stride +
-                                  n * out_row_stride + j * out_col_stride];
+          for (int k = 0; k < N; ++k) {
+            float a_val =
+                a->data
+                    ->ptr[a_batch_offset + k * a_row_stride + i * a_col_stride];
+            float out_grad_val =
+                out->grad->ptr[out_batch_offset + k * out_row_stride +
+                               j * out_col_stride];
+            sum += a_val * out_grad_val;
           }
-          b->grad->ptr[batch_idx * b_batch_stride + i * b_row_stride +
-                       j * b_col_stride] += sum;
+          b->grad->ptr[b_batch_offset + i * b_row_stride + j * b_col_stride] +=
+              sum;
         }
       }
     }
   }
+
+  IDRAK_DEBUG("GRAD ", "matmul_grad_op: Gradient computation completed "
+              "successfully\n");
 }
 
 typedef struct {
@@ -757,8 +1097,8 @@ typedef struct {
 } BackwardConvExtras;
 
 void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] conv2d_grad_op: Computing gradient for 2D convolution\n");
+  IDRAK_DEBUG("GRAD ",
+      "conv2d_grad_op: Computing gradient for 2D convolution\n");
 
   Tensor *in = prev[0];
   Tensor *kernel = prev[1];
@@ -867,8 +1207,8 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void dot_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] dot_grad_op: Computing gradient for dot product\n");
+  IDRAK_DEBUG("GRAD ",
+      "dot_grad_op: Computing gradient for dot product\n");
 
   Tensor *a = prev[0];
   Tensor *b = prev[1];

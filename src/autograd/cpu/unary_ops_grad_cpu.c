@@ -6,7 +6,7 @@
 #include "autograd/autograd.h"
 
 void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] relu_grad_op: Computing gradient for ReLU\n");
+  IDRAK_DEBUG("GRAD ", "relu_grad_op: Computing gradient for ReLU\n");
 
   Tensor *a = prev[0];
 
@@ -55,10 +55,31 @@ void relu_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] log_grad_op: Computing gradient for natural logarithm\n");
+  IDRAK_DEBUG("GRAD ",
+      "log_grad_op: Computing gradient for natural logarithm\n");
+
+  // Error checking for null tensors and invalid n_prev
+  if (!out || !out->grad || !prev) {
+    IDRAK_ERROR("log_grad_op ERROR: Output tensor, output gradient, or previous tensors array is NULL! out=%p, out->grad=%p, prev=%p\n", (void*)out, (void*)out->grad, (void*)prev);
+    return;
+  }
+
+  if (n_prev != 1) {
+    IDRAK_ERROR("log_grad_op ERROR: Invalid number of previous tensors: %d. Expected 1.\n", n_prev);
+    return;
+  }
+
+  if (!prev[0]) {
+    IDRAK_ERROR("log_grad_op ERROR: Previous tensor is NULL! prev[0]=%p\n", (void*)prev[0]);
+    return;
+  }
 
   Tensor *a = prev[0];
+
+  if (a->requires_grad && !a->grad) {
+    IDRAK_ERROR("log_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!\n");
+    return;
+  }
 
   int size = numel(a->shape, a->ndim);
   int ndim = out->ndim;
@@ -79,8 +100,15 @@ void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           a_offset += coord * a_strides[d];
           out_offset += coord * out_strides[d];
         }
-        a->grad->ptr[a_offset] +=
-            out->grad->ptr[out_offset] / a->data->ptr[a_offset];
+        if (a->data->ptr[a_offset] == 0.0f) {
+          IDRAK_ERROR("log_grad_op ERROR: Division by zero in gradient at index %d! Input to log was zero.\n", linear);
+          // Handle this error, e.g., set gradient to 0 or NaN
+          a->grad->ptr[a_offset] +=
+              0.0f; // Or NAN
+        } else {
+          a->grad->ptr[a_offset] +=
+              out->grad->ptr[out_offset] / a->data->ptr[a_offset];
+        }
       }
     }
   } else {
@@ -90,26 +118,63 @@ void log_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
       __m256 dout = _mm256_loadu_ps(out->grad->ptr + i);
       __m256 da = _mm256_loadu_ps(a->grad->ptr + i);
 
-      __m256 inv = _mm256_rcp_ps(va);
+      // Check for zero values in va to avoid division by zero
+      __m256 zero = _mm256_setzero_ps();
+      __m256 zero_mask = _mm256_cmp_ps(va, zero, _CMP_EQ_OQ);
+
+      // Replace zero values in va with a small epsilon to avoid Inf/NaN from rcp_ps
+      __m256 va_safe = _mm256_blendv_ps(va, _mm256_set1_ps(1e-8f), zero_mask);
+
+      __m256 inv = _mm256_rcp_ps(va_safe);
       __m256 contrib = _mm256_mul_ps(dout, inv);
+
+      // If va was originally zero, set contrib to zero for that lane
+      contrib = _mm256_blendv_ps(contrib, zero, zero_mask);
 
       da = _mm256_add_ps(da, contrib);
       _mm256_storeu_ps(a->grad->ptr + i, da);
     }
 
     for (; i < size; ++i) {
-      a->grad->ptr[i] += out->grad->ptr[i] / a->data->ptr[i];
+      if (a->data->ptr[i] == 0.0f) {
+        IDRAK_ERROR("log_grad_op ERROR: Division by zero in gradient at index %d! Input to log was zero.\n", i);
+        a->grad->ptr[i] += 0.0f; // Or NAN
+      } else {
+        a->grad->ptr[i] += out->grad->ptr[i] / a->data->ptr[i];
+      }
     }
   }
 }
 
 void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] exp_grad_op: Computing gradient for exponential\n");
+  IDRAK_DEBUG("GRAD ",
+      "exp_grad_op: Computing gradient for exponential\n");
+
+  // Error checking for null tensors and invalid n_prev
+  if (!out || !out->grad || !prev) {
+    IDRAK_ERROR("exp_grad_op ERROR: Output tensor, output gradient, or previous tensors array is NULL! out=%p, out->grad=%p, prev=%p\n", (void*)out, (void*)out->grad, (void*)prev);
+    return;
+  }
+
+  if (n_prev != 1) {
+    IDRAK_ERROR("exp_grad_op ERROR: Invalid number of previous tensors: %d. Expected 1.\n", n_prev);
+    return;
+  }
+
+  if (!prev[0]) {
+    IDRAK_ERROR("exp_grad_op ERROR: Previous tensor is NULL! prev[0]=%p\n", (void*)prev[0]);
+    return;
+  }
 
   Tensor *a = prev[0];
 
+  if (a->requires_grad && !a->grad) {
+    IDRAK_ERROR("exp_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!\n");
+    return;
+  }
+
   int size = numel(a->shape, a->ndim);
+
   int ndim = out->ndim;
   int *shape = out->shape;
 
@@ -154,13 +219,35 @@ void exp_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 void softmax_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {}
 
 void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] neg_grad_op: Computing gradient for negation\n");
+  IDRAK_DEBUG("GRAD ", "neg_grad_op: Computing gradient for negation\n");
+
+  // Error checking for null tensors and invalid n_prev
+  if (!out || !out->grad || !prev) {
+    IDRAK_ERROR("neg_grad_op ERROR: Output tensor, output gradient, or previous tensors array is NULL! out=%p, out->grad=%p, prev=%p\n", (void*)out, (void*)out->grad, (void*)prev);
+    return;
+  }
+
+  if (n_prev != 1) {
+    IDRAK_ERROR("neg_grad_op ERROR: Invalid number of previous tensors: %d. Expected 1.\n", n_prev);
+    return;
+  }
+
+  if (!prev[0]) {
+    IDRAK_ERROR("neg_grad_op ERROR: Previous tensor is NULL! prev[0]=%p\n", (void*)prev[0]);
+    return;
+  }
 
   Tensor *a = prev[0];
+
+  if (a->requires_grad && !a->grad) {
+    IDRAK_ERROR("neg_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!\n");
+    return;
+  }
 
   int size = numel(a->shape, a->ndim);
   int ndim = out->ndim;
   int *shape = out->shape;
+
 
   if (!is_contiguous(a) || !is_contiguous(out)) {
     if (a->requires_grad) {
@@ -204,8 +291,8 @@ void neg_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
 void abs_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] abs_grad_op: Computing gradient for absolute value\n");
+  IDRAK_DEBUG("GRAD ",
+      "abs_grad_op: Computing gradient for absolute value\n");
 
   Tensor *a = prev[0];
   int size = numel(a->shape, a->ndim);
