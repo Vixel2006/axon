@@ -1,11 +1,19 @@
+import sys
 from idrak.core.tensor import Tensor
 from idrak.data.dataset import Dataset
-from idrak.optim import SGD
+from idrak.optim import SGD, Adam
 import idrak.nn as nn
-from idrak.nn.activations import ReLU, Sigmoid, Softmax
+from idrak.nn.activations import Tanh, ReLU, Sigmoid, Softmax
+from idrak.idrak_bindings.c_wrapper_functions import c_set_debug_mode
 import idrak.metrics as metrics
 import numpy as np
 from mnist_datasets import MNISTLoader
+
+if "DEBUG=1" in sys.argv:
+    c_set_debug_mode(1)
+    sys.argv.remove("DEBUG=1")
+else:
+    c_set_debug_mode(0)
 
 # Define the dataset for the MNIST
 class MNIST(Dataset):
@@ -18,7 +26,9 @@ class MNIST(Dataset):
 
     def __getitem__(self, idx):
         image = Tensor(self.images[idx].shape, self.images[idx])
-        label = Tensor((*self.labels[idx].shape, 1), self.labels[idx])
+        # Convert label to one-hot encoding
+        one_hot_label = np.eye(10)[self.labels[idx]].reshape(*self.labels[idx].shape, 10)
+        label = Tensor(one_hot_label.shape, one_hot_label)
         return image, label
 
     def show(self, idx):
@@ -54,8 +64,8 @@ class DataLoader:
 
 # Define the configuration for the model
 class Config:
-    BATCH_SIZE = 32
-    EPOCHS = 20
+    BATCH_SIZE = 10
+    EPOCHS = 1
     LR = 0.01
     IMSIZE = (28, 28)
 
@@ -64,11 +74,12 @@ trainloader = DataLoader(trainset, Config.BATCH_SIZE)
 
 # Define the model
 model = nn.Sequential(
-    nn.Linear(784, 512),
+    nn.Linear(784, 512, bias=False),
     ReLU(),
-    nn.Linear(512, 128),
+    nn.Linear(512, 128, bias=False),
     ReLU(),
-    nn.Linear(128, 10)
+    nn.Linear(128, 10, bias=False),
+    Softmax()
 )
 
 # Define the optimizer
@@ -81,18 +92,14 @@ for epoch in range(Config.EPOCHS):
         pred = model(images)
 
         loss = metrics.bce(pred, labels)
-        pred.backward()
+
+        loss.backward()
+
 
         optim.step()
 
 
     print(f"Epoch [{epoch}/20]: Loss {loss}")
-
-
-
-
-
-
 
 
 

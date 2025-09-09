@@ -8,9 +8,16 @@
 #define SIMD_WIDTH 8
 
 void add_op(Tensor *a, Tensor *b, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] add_op: Performing element-wise addition\n");
+  IDRAK_DEBUG("OP   ", "add_op: Performing element-wise addition\n");
+
+  // Error checking for null tensors
+  if (!a || !b || !out) {
+    IDRAK_ERROR("add_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p\n", (void*)a, (void*)b, (void*)out);
+    return;
+  }
 
   int size = numel(out->shape, out->ndim);
+
 
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
@@ -55,7 +62,7 @@ void add_op(Tensor *a, Tensor *b, Tensor *out) {
 }
 
 void sub_op(Tensor *a, Tensor *b, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] sub_op: Performing element-wise subtraction\n");
+  IDRAK_DEBUG("OP   ", "sub_op: Performing element-wise subtraction\n");
 
   int size = numel(out->shape, out->ndim);
 
@@ -102,7 +109,7 @@ void sub_op(Tensor *a, Tensor *b, Tensor *out) {
 }
 
 void mul_op(Tensor *a, Tensor *b, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] mul_op: Performing element-wise multiplication\n");
+  IDRAK_DEBUG("OP   ", "mul_op: Performing element-wise multiplication\n");
 
   int size = numel(out->shape, out->ndim);
 
@@ -149,7 +156,7 @@ void mul_op(Tensor *a, Tensor *b, Tensor *out) {
 }
 
 void div_op(Tensor *a, Tensor *b, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] div_op: Performing element-wise division\n");
+  IDRAK_DEBUG("OP   ", "div_op: Performing element-wise division\n");
 
   int size = numel(out->shape, out->ndim);
 
@@ -196,9 +203,28 @@ void div_op(Tensor *a, Tensor *b, Tensor *out) {
 }
 
 void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
-  DEBUG_PRINT("[IDRAK_DEBUG] matmul_op: Performing matrix multiplication "
+  IDRAK_DEBUG("OP   ", "matmul_op: Performing matrix multiplication "
               "(N=%d, K=%d, P=%d)\n",
               N, K, P);
+
+  // Error checking for null tensors
+  if (!a || !b || !out) {
+    IDRAK_ERROR("matmul_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p\n", (void*)a, (void*)b, (void*)out);
+    return; // Or handle error appropriately
+  }
+
+  // Error checking for insufficient dimensions
+  if (a->ndim < 2 || b->ndim < 2) {
+    IDRAK_ERROR("matmul_op ERROR: Tensors must have at least 2 dimensions for matrix multiplication! a->ndim=%d, b->ndim=%d\n", a->ndim, b->ndim);
+    return;
+  }
+
+  // Error checking for dimension mismatch (inner dimensions)
+  if (a->shape[a->ndim - 1] != K || b->shape[b->ndim - 2] != K) {
+    IDRAK_ERROR("matmul_op ERROR: Dimension mismatch! a->shape[last]=%d, b->shape[second_last]=%d, K=%d\n", a->shape[a->ndim - 1], b->shape[b->ndim - 2], K);
+    return;
+  }
+
 
   // 1. Figure out how many "batch matmuls" we need.
   int num_batches = 1;
@@ -319,7 +345,7 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
 
 void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
                const int *stride, const int padding) {
-  DEBUG_PRINT("[IDRAK_DEBUG] conv2d_op: Performing 2D convolution\n");
+  IDRAK_DEBUG("OP   ", "conv2d_op: Performing 2D convolution\n");
 
   int Cin = kernel_size[0];
   int Cout = kernel_size[1];
@@ -383,7 +409,7 @@ void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
 }
 
 void dot_op(Tensor *a, Tensor *b, Tensor *out) {
-  DEBUG_PRINT("[IDRAK_DEBUG] dot_op: Performing dot product\n");
+  IDRAK_DEBUG("OP   ", "dot_op: Performing dot product\n");
 
   int size = numel(a->shape, a->ndim);
 

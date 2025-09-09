@@ -10,8 +10,8 @@
 void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras);
 
 void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] sum_grad_op: Computing gradient for sum reduction\n");
+  IDRAK_DEBUG("GRAD ",
+      "sum_grad_op: Computing gradient for sum reduction\n");
 
   Tensor *in = prev[0];
 
@@ -115,8 +115,8 @@ void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void mean_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] mean_grad_op: Computing gradient for mean reduction\n");
+  IDRAK_DEBUG("GRAD ",
+      "mean_grad_op: Computing gradient for mean reduction\n");
 
   Tensor *in = prev[0];
 
@@ -221,8 +221,8 @@ void mean_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] max_grad_op: Computing gradient for max reduction\n");
+  IDRAK_DEBUG("GRAD ",
+      "max_grad_op: Computing gradient for max reduction\n");
 
   Tensor *in = prev[0];
 
@@ -342,8 +342,7 @@ void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void sum_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] sum_full_grad_op: Computing gradient for full sum "
-              "reduction\n");
+  IDRAK_DEBUG("GRAD ", "sum_full_grad_op: Computing gradient for full sum reduction\n");
 
   Tensor *in = prev[0];
 
@@ -393,7 +392,7 @@ void sum_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] mean_full_grad_op: Computing gradient for full "
+  IDRAK_DEBUG("GRAD ", "mean_full_grad_op: Computing gradient for full "
               "mean reduction\n");
 
   Tensor *in = prev[0];
@@ -441,7 +440,7 @@ void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] max_full_grad_op: Computing gradient for full max "
+  IDRAK_DEBUG("GRAD ", "max_full_grad_op: Computing gradient for full max "
               "reduction\n");
   Tensor *in = prev[0];
 
