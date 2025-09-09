@@ -11,8 +11,15 @@ typedef struct {
 } concatExtras;
 
 void stack_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT(
-      "[IDRAK_DEBUG] stack_grad_op: Computing gradient for stack operation\n");
+  IDRAK_DEBUG("GRAD ",
+      "stack_grad_op: Computing gradient for stack operation\n");
+  IDRAK_DEBUG("GRAD ", "stack_grad_op: Output gradient (out) shape: ");
+  print_shape(out->shape, out->ndim);
+  for (int idx = 0; idx < n_prev; ++idx) {
+    IDRAK_DEBUG("GRAD ", "stack_grad_op: Input tensor %d (prev[%d]) shape: ", idx, idx);
+    print_shape(prev[idx]->shape, prev[idx]->ndim);
+  }
+
 
   stackExtras *stack_extras = (stackExtras *)extras;
   int axis = stack_extras->axis;
@@ -61,8 +68,14 @@ void stack_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void concat_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  DEBUG_PRINT("[IDRAK_DEBUG] concat_grad_op: Computing gradient for "
+  IDRAK_DEBUG("GRAD ", "concat_grad_op: Computing gradient for "
               "concatenate operation\n");
+  IDRAK_DEBUG("GRAD ", "concat_grad_op: Output gradient (out) shape: ");
+  print_shape(out->shape, out->ndim);
+  for (int i = 0; i < n_prev; ++i) {
+    IDRAK_DEBUG("GRAD ", "concat_grad_op: Input tensor %d (prev[%d]) shape: ", i, i);
+    print_shape(prev[i]->shape, prev[i]->ndim);
+  }
 
   concatExtras *concat_extras = (concatExtras *)extras;
   int axis = concat_extras->axis;
