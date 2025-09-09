@@ -35,14 +35,14 @@ xorset = XorSet()
 model = nn.Sequential(
     nn.Linear(2, 2, bias=False),
     Tanh(),
-    nn.Linear(4, 2, bias=False),
+    nn.Linear(2, 4, bias=False),
     Tanh(),
-    nn.Linear(2, 1, bias=False),
+    nn.Linear(4, 1, bias=False),
     Sigmoid()
 )
 
 # Here we define the optimizer
-optimizer = optim.SGD(model.params, 0.1)
+optimizer = optim.Adam(model.params, 0.1)
 # Here we do the loop
 for i in range(1000):
     for input, truth in xorset:

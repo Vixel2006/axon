@@ -10,7 +10,8 @@
 void add_op(Tensor *a, Tensor *b, Tensor *out) {
   DEBUG_PRINT("[IDRAK_DEBUG] add_op: Performing element-wise addition\n");
 
-  int size = numel(a->shape, a->ndim);
+  int size = numel(out->shape, out->ndim);
+
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
     int *shape = out->shape;
@@ -56,7 +57,8 @@ void add_op(Tensor *a, Tensor *b, Tensor *out) {
 void sub_op(Tensor *a, Tensor *b, Tensor *out) {
   DEBUG_PRINT("[IDRAK_DEBUG] sub_op: Performing element-wise subtraction\n");
 
-  int size = numel(a->shape, a->ndim);
+  int size = numel(out->shape, out->ndim);
+
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
     int *shape = out->shape;
@@ -102,7 +104,8 @@ void sub_op(Tensor *a, Tensor *b, Tensor *out) {
 void mul_op(Tensor *a, Tensor *b, Tensor *out) {
   DEBUG_PRINT("[IDRAK_DEBUG] mul_op: Performing element-wise multiplication\n");
 
-  int size = numel(a->shape, a->ndim);
+  int size = numel(out->shape, out->ndim);
+
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
     int *shape = out->shape;
@@ -148,7 +151,8 @@ void mul_op(Tensor *a, Tensor *b, Tensor *out) {
 void div_op(Tensor *a, Tensor *b, Tensor *out) {
   DEBUG_PRINT("[IDRAK_DEBUG] div_op: Performing element-wise division\n");
 
-  int size = numel(a->shape, b->ndim);
+  int size = numel(out->shape, out->ndim);
+
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
     int *shape = out->shape;
