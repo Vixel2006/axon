@@ -62,12 +62,12 @@ if __name__ == "__main__":
     a = Tensor((2,2), [[1,2], [3,4]])
     b = Tensor((1,2), [[1,2]])
 
-    d = a + b
+    d = max(a)
 
     d.backward()
 
     #d.backward()
 
     print(a);print(d)
-    print(a.grad);print(b.grad)
+    print(a.grad);print(d.grad)
 
