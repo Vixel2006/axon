@@ -99,11 +99,9 @@ class Node:
     def realize(self, graph):
         for node in graph:
             if node.forward_fn:
-                result_tensor = node.forward_fn(
-                    *node.forward_args, **node.forward_kwargs
+                node.forward_fn(
+                    node.out_tensor, *node.forward_args, **node.forward_kwargs
                 )
-
-                node.out_tensor._c_tensor = result_tensor._c_tensor
 
                 if node.out_tensor._c_tensor and node.out_tensor._c_tensor.contents:
                     if node.out_tensor._c_tensor.contents.ndim == 0:

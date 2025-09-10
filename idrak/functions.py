@@ -25,6 +25,16 @@ def stack(a: list[Tensor], axis: int = 0) -> Tensor: return Stack.create_node(a,
 
 # =========== Unary Operations =============
 def relu(a: Tensor) -> Tensor: return ReLU.create_node(a)
+def softmax(a: Tensor, dim: int = -1) -> Tensor:
+    e_x = exp(a - max(a, dim=dim, keepdim=True))
+    return e_x / sum(e_x, dim=dim, keepdim=True)
+
+def log_softmax(a: Tensor, dim: int = -1) -> Tensor:
+    # Subtract max for numerical stability
+    max_val = max(a, dim=dim, keepdim=True)
+    exp_a = exp(a - max_val)
+    sum_exp_a = sum(exp_a, dim=dim, keepdim=True)
+    return a - max_val - log(sum_exp_a)
 def log(a: Tensor) -> Tensor: return Log.create_node(a)
 def exp(a: Tensor) -> Tensor: return Exp.create_node(a)
 def abs(a: Tensor) -> Tensor: return Abs.create_node(a)
@@ -54,15 +64,16 @@ def div(a: Tensor | float, b: Tensor | float) -> Tensor:
 
 
 # ========= Reduction Operations ==========
-def sum(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Sum.create_node(a, dim=dim, keepdim=keepdim)
-def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(a, dim=dim, keepdim=keepdim)
-def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
+def sum(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Sum.create_node(a, dim=dim, keepdim=keepdim)
+def mean(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Mean.create_node(a, dim=dim, keepdim=keepdim)
+def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
 
 if __name__ == "__main__":
-    a = Tensor((2,2), [[1,2], [3,4]])
-    b = Tensor((1,2), [[1,2]])
+    a = Tensor((2,3), [[1,2,3], [3,4,2]])
+    b = Tensor((3,2), [[1,2], [3,4], [2,3]])
 
-    d = max(a)
+
+    d = dot(a, b)
 
     d.backward()
 

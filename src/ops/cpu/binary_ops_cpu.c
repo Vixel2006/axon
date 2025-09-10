@@ -58,8 +58,6 @@ void add_op(Tensor *a, Tensor *b, Tensor *out) {
       out->data->ptr[i] = a->data->ptr[i] + b->data->ptr[i];
     }
   }
-
-  out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
 }
 
 void sub_op(Tensor *a, Tensor *b, Tensor *out) {
@@ -105,8 +103,6 @@ void sub_op(Tensor *a, Tensor *b, Tensor *out) {
       out->data->ptr[i] = a->data->ptr[i] - b->data->ptr[i];
     }
   }
-
-  out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
 }
 
 void mul_op(Tensor *a, Tensor *b, Tensor *out) {
@@ -152,8 +148,6 @@ void mul_op(Tensor *a, Tensor *b, Tensor *out) {
       out->data->ptr[i] = a->data->ptr[i] * b->data->ptr[i];
     }
   }
-
-  out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
 }
 
 void div_op(Tensor *a, Tensor *b, Tensor *out) {
@@ -199,8 +193,6 @@ void div_op(Tensor *a, Tensor *b, Tensor *out) {
       out->data->ptr[i] = a->data->ptr[i] / b->data->ptr[i];
     }
   }
-
-  out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
 }
 
 void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
@@ -342,8 +334,6 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
       }
     }
   }
-
-  out->requires_grad = a->requires_grad || b->requires_grad;
 }
 
 void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
@@ -460,6 +450,4 @@ void dot_op(Tensor *a, Tensor *b, Tensor *out) {
     }
     out->data->ptr[0] = sum;
   }
-
-  out->requires_grad = a->requires_grad || b->requires_grad ? true : false;
 }

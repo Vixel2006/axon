@@ -29,7 +29,7 @@ class View(LazyOp):
         return tuple(shape)
 
     @staticmethod
-    def create_node(a: "Tensor", shape: tuple[int, ...]) -> "Tensor":
+    def create_node(a: "Tensor", shape: tuple[int, ...]):
         from idrak.core.tensor import Tensor
         out_shape = View.calc_out_shape(a, shape)
         out = Tensor(out_shape, requires_grad=a.requires_grad)
@@ -37,9 +37,8 @@ class View(LazyOp):
         return out
     
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", shape: tuple[int, ...]) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", shape: tuple[int, ...]):
         c_view(a._c_tensor, out._c_tensor, shape, len(shape))
-        return out
 
 class Unsqueeze(LazyOp):
     @staticmethod
@@ -61,9 +60,8 @@ class Unsqueeze(LazyOp):
         return out
 
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", dim: int) -> "Tensor": 
+    def forward(out: "Tensor", a: "Tensor", dim: int):
         c_unsqueeze(a._c_tensor, out._c_tensor, dim)
-        return out
 
 
 class Squeeze(LazyOp):
@@ -81,9 +79,8 @@ class Squeeze(LazyOp):
         return out
 
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", dim: int) -> "Tensor": 
+    def forward(out: "Tensor", a: "Tensor", dim: int):
         c_squeeze(a._c_tensor, out._c_tensor, dim)
-        return out
 
 
 class Transpose(LazyOp):
@@ -104,9 +101,8 @@ class Transpose(LazyOp):
         return out
 
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", n: int, m: int) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", n: int, m: int):
         c_transpose(a._c_tensor, out._c_tensor, n, m)
-        return out
 
 class Expand(LazyOp):
     @staticmethod
@@ -117,9 +113,8 @@ class Expand(LazyOp):
         return out
 
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", shape: tuple[int, ...]) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", shape: tuple[int, ...]):
         c_expand(a._c_tensor, out._c_tensor, shape)
-        return out
 
 
 class Broadcast(LazyOp):
@@ -131,9 +126,8 @@ class Broadcast(LazyOp):
         return out
 
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", shape: tuple[int, ...], ndim: int) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", shape: tuple[int, ...], ndim: int):
         c_broadcast(a._c_tensor, out._c_tensor, ndim, shape)
-        return out
 
 
 class Concat(LazyOp):
@@ -154,26 +148,24 @@ class Concat(LazyOp):
             for j in range(len(a[0].shape)):
                 if j != axis and a[i].shape[j] != shape[j]:
                     raise ValueError("Can't concat")
-            
         return tuple(shape)
 
     @staticmethod
-    def create_node(a: list["Tensor"], axis: int) -> "Tensor":
+    def create_node(a: list["Tensor"], axis: int):
         from idrak.core.tensor import Tensor
         out_shape = Concat.calc_out_shape(a, axis)
         # Determine requires_grad for concat: if any input requires grad, output requires grad
         requires_grad = any(t.requires_grad for t in a)
-        out = Tensor(out_shape, a[0].dtype, requires_grad=requires_grad)
+        out = Tensor(out_shape, requires_grad=requires_grad)
         Concat.forward(out, a, axis)
         return out
     
     @staticmethod
-    def forward(out: "Tensor", a: list["Tensor"], axis: int) -> "Tensor":
+    def forward(out: "Tensor", a: list["Tensor"], axis: int):
         inputs = []
         for t in a:
             inputs.append(t._c_tensor)
         c_concat(inputs, out._c_tensor, len(inputs), axis)
-        return out
 
     @staticmethod
     def backward(out: ctypes.POINTER(CTensor), a: ctypes.POINTER(ctypes.POINTER(Tensor)), n_prev: int, extras): c_concat_grad_op(out, a, n_prev, extras)
@@ -215,21 +207,19 @@ class Stack(LazyOp):
         out_shape = Stack.calc_out_shape(a, axis)
         # Determine requires_grad for stack: if any input requires grad, output requires grad
         requires_grad = any(t.requires_grad for t in a)
-        out = Tensor(out_shape, a[0].dtype, requires_grad=requires_grad)
+        out = Tensor(out_shape, requires_grad=requires_grad)
         Stack.forward(out, a, axis)
         return out
 
     
     @staticmethod
-    def forward(out: "Tensor", a: list["Tensor"], axis: int) -> "Tensor":
+    def forward(out: "Tensor", a: list["Tensor"], axis: int):
         if axis < 0:
             axis = a[0].ndim + axis + 1
         inputs = []
         for t in a:
             inputs.append(t._c_tensor)
         c_stack(inputs, out._c_tensor, len(inputs), axis)
-        return out
-
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), in_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_stack_grad_op(out_ptr, in_ptrs, n_prev, extras)

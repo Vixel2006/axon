@@ -9,88 +9,9 @@
 #include "utils.h"
 #endif
 
-static void reconfigure_unary_output(Tensor *in, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "reconfigure_unary_output: Reconfiguring output "
-                       "tensor for unary op\n");
-
-  if (out->shape) {
-    free(out->shape);
-    out->shape = NULL;
-  }
-  if (out->strides) {
-    free(out->strides);
-    out->strides = NULL;
-  }
-
-  if (out->data) {
-    free_shared_ptr(&out->data);
-    out->data = NULL;
-  }
-
-  out->ndim = in->ndim;
-  out->shape = (int *)malloc(out->ndim * sizeof(int));
-  if (!out->shape) {
-    IDRAK_ERROR("reconfigure_unary_output: Failed to allocate memory for "
-                "out->shape.\n");
-    return;
-  }
-  memcpy(out->shape, in->shape, out->ndim * sizeof(int));
-
-  out->strides = compute_strides(out->shape, out->ndim);
-  if (!out->strides && out->ndim > 0) {
-    IDRAK_ERROR("reconfigure_unary_output: Failed to allocate memory for "
-                "out->strides.\n");
-    free(out->shape);
-    out->shape = NULL;
-    return;
-  }
-
-  size_t out_total_size = numel(out->shape, out->ndim);
-  if (out_total_size <= 0) {
-    IDRAK_ERROR("reconfigure_unary_output: Invalid output size (%zu).\n",
-                out_total_size);
-    free(out->shape);
-    out->shape = NULL;
-    if (out->strides) {
-      free(out->strides);
-      out->strides = NULL;
-    }
-    return;
-  }
-
-  // Allocate new data buffer and create a new SharedPtr
-  float *new_data_ptr = (float *)malloc(out_total_size * sizeof(float));
-  if (!new_data_ptr) {
-    IDRAK_ERROR("reconfigure_unary_output: Failed to allocate memory for "
-                "new_data_ptr.\n");
-    free(out->shape);
-    out->shape = NULL;
-    if (out->strides) {
-      free(out->strides);
-      out->strides = NULL;
-    }
-    return;
-  }
-  out->data = malloc_shared_ptr(new_data_ptr, out_total_size);
-  free(new_data_ptr);
-
-  if (!out->data) {
-    IDRAK_ERROR("reconfigure_unary_output: Failed to create SharedPtr for "
-                "out->data.\n");
-    free(out->shape);
-    out->shape = NULL;
-    if (out->strides) {
-      free(out->strides);
-      out->strides = NULL;
-    }
-    return;
-  }
-}
-
 void relu_op(Tensor *in, Tensor *out) {
   IDRAK_DEBUG("OP   ", "relu_op: Performing ReLU activation\n");
 
-  reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     return;
   }
@@ -127,21 +48,17 @@ void relu_op(Tensor *in, Tensor *out) {
       out->data->ptr[i] = in->data->ptr[i] > 0.0f ? in->data->ptr[i] : 0.0f;
     }
   }
-
-  out->requires_grad = in->requires_grad;
 }
 
 void log_op(Tensor *in, Tensor *out) {
   IDRAK_DEBUG("OP   ", "log_op: Performing natural logarithm\n");
 
-  // Error checking for null tensors
   if (!in || !out) {
     IDRAK_ERROR("log_op ERROR: Input or output tensor is NULL! in=%p, out=%p\n",
                 (void *)in, (void *)out);
     return;
   }
 
-  reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     IDRAK_ERROR("log_op ERROR: Output tensor data pointer is NULL after "
                 "reconfiguration.\n");
@@ -150,14 +67,11 @@ void log_op(Tensor *in, Tensor *out) {
 
   int size = numel(in->shape, in->ndim);
 
-  // Check for invalid input values (<= 0)
   for (int i = 0; i < size; ++i) {
     if (in->data->ptr[i] < 0.0f) {
       IDRAK_ERROR("log_op ERROR: Input value at index %d is negative (%.4f)! "
                   "Logarithm of negative number is undefined.\n",
                   i, in->data->ptr[i]);
-      // Depending on desired behavior, you might want to return here or set
-      // output to NaN
     } else if (in->data->ptr[i] == 0.0f) {
       IDRAK_WARNING("log_op WARNING: Input value at index %d is zero. "
                     "Logarithm of zero is -INF.\n",
@@ -194,8 +108,6 @@ void log_op(Tensor *in, Tensor *out) {
       out->data->ptr[i] = logf(in->data->ptr[i]);
     }
   }
-
-  out->requires_grad = in->requires_grad ? true : false;
 }
 
 void exp_op(Tensor *in, Tensor *out) {
@@ -208,7 +120,6 @@ void exp_op(Tensor *in, Tensor *out) {
     return;
   }
 
-  reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     IDRAK_ERROR("exp_op ERROR: Output tensor data pointer is NULL after "
                 "reconfiguration.\n");
@@ -245,8 +156,6 @@ void exp_op(Tensor *in, Tensor *out) {
       out->data->ptr[i] = expf(in->data->ptr[i]);
     }
   }
-
-  out->requires_grad = in->requires_grad ? true : false;
 }
 
 void softmax_op(Tensor *in, Tensor *out) {
@@ -263,7 +172,6 @@ void neg_op(Tensor *in, Tensor *out) {
     return;
   }
 
-  reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     IDRAK_ERROR("neg_op ERROR: Output tensor data pointer is NULL after "
                 "reconfiguration.\n");
@@ -303,15 +211,12 @@ void neg_op(Tensor *in, Tensor *out) {
       out->data->ptr[i] = 0.0f - in->data->ptr[i];
     }
   }
-
-  out->requires_grad = in->requires_grad;
 }
 
 void abs_op(Tensor *in, Tensor *out) {
 
   IDRAK_DEBUG("OP   ", "abs_op: Performing absolute value\n");
 
-  reconfigure_unary_output(in, out);
   if (!out->data->ptr) {
     return;
   }
@@ -351,6 +256,4 @@ void abs_op(Tensor *in, Tensor *out) {
           in->data->ptr[i] >= 0 ? in->data->ptr[i] : 0.0f - in->data->ptr[i];
     }
   }
-
-  out->requires_grad = in->requires_grad;
 }
