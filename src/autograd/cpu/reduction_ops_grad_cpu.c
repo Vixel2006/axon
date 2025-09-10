@@ -10,8 +10,7 @@
 void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras);
 
 void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  IDRAK_DEBUG("GRAD ",
-      "sum_grad_op: Computing gradient for sum reduction\n");
+  IDRAK_DEBUG("GRAD ", "sum_grad_op: Computing gradient for sum reduction\n");
 
   Tensor *in = prev[0];
 
@@ -22,7 +21,6 @@ void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int reduced_dim = get_reduced_dim(in->shape, out->shape, in->ndim, out->ndim);
 
   if (reduced_dim == -1) {
-    // Handle case where no reduction happened (in and out have same shape)
     int size = numel(in->shape, in->ndim);
     if (!is_contiguous(in) || !is_contiguous(out)) {
       int *in_strides = in->strides;
@@ -115,8 +113,7 @@ void sum_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void mean_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  IDRAK_DEBUG("GRAD ",
-      "mean_grad_op: Computing gradient for mean reduction\n");
+  IDRAK_DEBUG("GRAD ", "mean_grad_op: Computing gradient for mean reduction\n");
 
   Tensor *in = prev[0];
 
@@ -127,7 +124,6 @@ void mean_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   int reduced_dim = get_reduced_dim(in->shape, out->shape, in->ndim, out->ndim);
 
   if (reduced_dim == -1) {
-    // Handle case where no reduction happened (in and out have same shape)
     int size = numel(in->shape, in->ndim);
     if (!is_contiguous(in) || !is_contiguous(out)) {
       int *in_strides = in->strides;
@@ -221,8 +217,7 @@ void mean_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  IDRAK_DEBUG("GRAD ",
-      "max_grad_op: Computing gradient for max reduction\n");
+  IDRAK_DEBUG("GRAD ", "max_grad_op: Computing gradient for max reduction\n");
 
   Tensor *in = prev[0];
 
@@ -342,7 +337,8 @@ void max_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void sum_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  IDRAK_DEBUG("GRAD ", "sum_full_grad_op: Computing gradient for full sum reduction\n");
+  IDRAK_DEBUG("GRAD ",
+              "sum_full_grad_op: Computing gradient for full sum reduction\n");
 
   Tensor *in = prev[0];
 
@@ -393,7 +389,7 @@ void sum_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
 void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   IDRAK_DEBUG("GRAD ", "mean_full_grad_op: Computing gradient for full "
-              "mean reduction\n");
+                       "mean reduction\n");
 
   Tensor *in = prev[0];
 
@@ -441,7 +437,7 @@ void mean_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
 void max_full_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   IDRAK_DEBUG("GRAD ", "max_full_grad_op: Computing gradient for full max "
-              "reduction\n");
+                       "reduction\n");
   Tensor *in = prev[0];
 
   if (!in->requires_grad) {

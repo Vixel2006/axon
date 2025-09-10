@@ -176,8 +176,7 @@ void add_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  IDRAK_DEBUG("GRAD ",
-      "sub_grad_op: Computing gradient for subtraction\n");
+  IDRAK_DEBUG("GRAD ", "sub_grad_op: Computing gradient for subtraction\n");
 
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -292,21 +291,9 @@ void sub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 }
 
-/**
- * @brief Backward pass for reverse subtraction (scalar - tensor).
- *
- * Computes gradients when the forward op was `b - a` (scalar minus tensor).
- *
- * @param out      Output tensor whose gradient is being propagated.
- * @param prev     Array containing the single tensor input.
- * @param n_prev   Should always be 1 for rsub.
- * @param extras   Pointer to scalar value `b` used in forward pass.
- *
- * @effects Subtracts `out->grad->ptr` from `a->grad->ptr`.
- */
 void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   IDRAK_DEBUG("GRAD ", "rsub_grad_op: Computing gradient for reverse "
-              "subtraction\n");
+                       "subtraction\n");
 
   // Error checking for null tensors and invalid n_prev
   if (!out || !out->grad || !prev) {
@@ -376,8 +363,7 @@ void rsub_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  IDRAK_DEBUG("GRAD ",
-      "mul_grad_op: Computing gradient for multiplication\n");
+  IDRAK_DEBUG("GRAD ", "mul_grad_op: Computing gradient for multiplication\n");
 
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -502,8 +488,7 @@ void mul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void pow_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  IDRAK_DEBUG("GRAD ",
-      "pow_grad_op: Computing gradient for power operation\n");
+  IDRAK_DEBUG("GRAD ", "pow_grad_op: Computing gradient for power operation\n");
 
   int size = numel(out->shape, out->ndim);
   int ndim = out->ndim;
@@ -516,7 +501,6 @@ void pow_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
     return;
 
   if (!is_contiguous(a) || !is_contiguous(out)) {
-    // Non-contiguous fallback
     int *a_strides = a->strides;
     int *out_strides = out->strides;
 
@@ -631,7 +615,8 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
       return;
     }
     if (!extras) {
-      IDRAK_ERROR("div_grad_op ERROR: Extras is NULL (scalar value missing)!\n");
+      IDRAK_ERROR(
+          "div_grad_op ERROR: Extras is NULL (scalar value missing)!\n");
       return;
     }
     if (!prev[0]->data || !prev[0]->data->ptr) {
@@ -694,9 +679,8 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           }
           float b_val = b->data->ptr[b_offset];
           if (b_val != 0.0f) { // Add check for division by zero
-            b->grad->ptr[b_offset] -=
-                out->grad->ptr[out_offset] * a->data->ptr[a_offset] /
-                (b_val * b_val);
+            b->grad->ptr[b_offset] -= out->grad->ptr[out_offset] *
+                                      a->data->ptr[a_offset] / (b_val * b_val);
           } else {
             // Handle division by zero: set gradient to 0 to prevent crash.
             b->grad->ptr[b_offset] = 0.0f;
@@ -737,8 +721,10 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
           // Handle division by zero for b_squared
           __m256 zero = _mm256_setzero_ps();
           __m256 b_squared_is_zero = _mm256_cmp_ps(b_squared, zero, _CMP_EQ_OQ);
-          // Replace zero b_squared values with a small epsilon to avoid division by zero
-          b_squared = _mm256_blendv_ps(b_squared, _mm256_set1_ps(1e-8f), b_squared_is_zero);
+          // Replace zero b_squared values with a small epsilon to avoid
+          // division by zero
+          b_squared = _mm256_blendv_ps(b_squared, _mm256_set1_ps(1e-8f),
+                                       b_squared_is_zero);
 
           __m256 db =
               _mm256_fnmadd_ps(_mm256_div_ps(a_data, b_squared), dout, b_grad);
@@ -748,8 +734,8 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
         for (; i < size; ++i) {
           float b_val = b->data->ptr[i];
           if (b_val != 0.0f) {
-            b->grad->ptr[i] -= out->grad->ptr[i] * a->data->ptr[i] /
-                               (b_val * b_val);
+            b->grad->ptr[i] -=
+                out->grad->ptr[i] * a->data->ptr[i] / (b_val * b_val);
           } else {
             b->grad->ptr[i] = 0.0f;
           }
@@ -799,7 +785,7 @@ void div_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
 void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   IDRAK_DEBUG("GRAD ",
-      "rdiv_grad_op: Computing gradient for reverse division\n");
+              "rdiv_grad_op: Computing gradient for reverse division\n");
 
   Tensor *a = prev[0];
   float b = *((float *)extras);
@@ -850,9 +836,7 @@ void rdiv_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 
 void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   IDRAK_DEBUG("GRAD ", "matmul_grad_op: Computing gradient for matrix "
-              "multiplication\n");
-
-  // Basic null pointer checks
+                       "multiplication\n");
   if (!out || !prev) {
     IDRAK_ERROR("matmul_grad_op ERROR: Output tensor or previous tensors array "
                 "is NULL! out=%p, prev=%p\n",
@@ -883,7 +867,6 @@ void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   Tensor *a = prev[0];
   Tensor *b = prev[1];
 
-  // Validate tensor dimensions BEFORE accessing shape arrays
   if (a->ndim < 2 || b->ndim < 2 || out->ndim < 2) {
     IDRAK_ERROR("matmul_grad_op ERROR: All tensors must have at least 2 "
                 "dimensions! a->ndim=%d, b->ndim=%d, out->ndim=%d\n",
@@ -1080,7 +1063,7 @@ void matmul_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   }
 
   IDRAK_DEBUG("GRAD ", "matmul_grad_op: Gradient computation completed "
-              "successfully\n");
+                       "successfully\n");
 }
 
 typedef struct {
@@ -1097,7 +1080,7 @@ typedef struct {
 
 void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
   IDRAK_DEBUG("GRAD ",
-      "conv2d_grad_op: Computing gradient for 2D convolution\n");
+              "conv2d_grad_op: Computing gradient for 2D convolution\n");
 
   Tensor *in = prev[0];
   Tensor *kernel = prev[1];
@@ -1206,8 +1189,7 @@ void conv2d_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
 }
 
 void dot_grad_op(Tensor *out, Tensor **prev, int n_prev, void *extras) {
-  IDRAK_DEBUG("GRAD ",
-      "dot_grad_op: Computing gradient for dot product\n");
+  IDRAK_DEBUG("GRAD ", "dot_grad_op: Computing gradient for dot product\n");
 
   Tensor *a = prev[0];
   Tensor *b = prev[1];
