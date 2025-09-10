@@ -12,12 +12,13 @@ void add_op(Tensor *a, Tensor *b, Tensor *out) {
 
   // Error checking for null tensors
   if (!a || !b || !out) {
-    IDRAK_ERROR("add_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p\n", (void*)a, (void*)b, (void*)out);
+    IDRAK_ERROR(
+        "add_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p\n",
+        (void *)a, (void *)b, (void *)out);
     return;
   }
 
   int size = numel(out->shape, out->ndim);
-
 
   if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
     int ndim = out->ndim;
@@ -203,28 +204,34 @@ void div_op(Tensor *a, Tensor *b, Tensor *out) {
 }
 
 void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
-  IDRAK_DEBUG("OP   ", "matmul_op: Performing matrix multiplication "
+  IDRAK_DEBUG("OP   ",
+              "matmul_op: Performing matrix multiplication "
               "(N=%d, K=%d, P=%d)\n",
               N, K, P);
 
   // Error checking for null tensors
   if (!a || !b || !out) {
-    IDRAK_ERROR("matmul_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p\n", (void*)a, (void*)b, (void*)out);
+    IDRAK_ERROR(
+        "matmul_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p\n",
+        (void *)a, (void *)b, (void *)out);
     return; // Or handle error appropriately
   }
 
   // Error checking for insufficient dimensions
   if (a->ndim < 2 || b->ndim < 2) {
-    IDRAK_ERROR("matmul_op ERROR: Tensors must have at least 2 dimensions for matrix multiplication! a->ndim=%d, b->ndim=%d\n", a->ndim, b->ndim);
+    IDRAK_ERROR("matmul_op ERROR: Tensors must have at least 2 dimensions for "
+                "matrix multiplication! a->ndim=%d, b->ndim=%d\n",
+                a->ndim, b->ndim);
     return;
   }
 
   // Error checking for dimension mismatch (inner dimensions)
   if (a->shape[a->ndim - 1] != K || b->shape[b->ndim - 2] != K) {
-    IDRAK_ERROR("matmul_op ERROR: Dimension mismatch! a->shape[last]=%d, b->shape[second_last]=%d, K=%d\n", a->shape[a->ndim - 1], b->shape[b->ndim - 2], K);
+    IDRAK_ERROR("matmul_op ERROR: Dimension mismatch! a->shape[last]=%d, "
+                "b->shape[second_last]=%d, K=%d\n",
+                a->shape[a->ndim - 1], b->shape[b->ndim - 2], K);
     return;
   }
-
 
   // 1. Figure out how many "batch matmuls" we need.
   int num_batches = 1;
@@ -247,10 +254,6 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
 
   int size = numel(out->shape, out->ndim);
 
-  // Check if we need to resize the data buffer
-  // (In a real implementation, you might want to check the current size)
-  // For now, we'll assume the output tensor was allocated with the correct size
-  // and just zero out the existing data
   for (int i = 0; i < size; ++i) {
     out->data->ptr[i] = 0.0f;
   }
