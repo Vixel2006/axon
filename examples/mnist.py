@@ -20,6 +20,8 @@ class MNIST(Dataset):
     def __init__(self, train=True):
         loader = MNISTLoader()
         self.images, self.labels = loader.load(train=train)
+        self.images = self.images[:64]
+        self.labels = self.labels[:64]
     
     def __len__(self):
         return len(self.labels)
@@ -47,6 +49,7 @@ testset = MNIST(train=False)
 # Define a naive dataloader
 class DataLoader:
     def __init__(self, dataset, batch_size):
+        self.curr = 0
         self.dataset = dataset
         self.batch_size = batch_size
 
@@ -64,8 +67,8 @@ class DataLoader:
 
 # Define the configuration for the model
 class Config:
-    BATCH_SIZE = 10
-    EPOCHS = 1
+    BATCH_SIZE = 32
+    EPOCHS = 2
     LR = 0.01
     IMSIZE = (28, 28)
 
@@ -76,9 +79,9 @@ trainloader = DataLoader(trainset, Config.BATCH_SIZE)
 model = nn.Sequential(
     nn.Linear(784, 512, bias=False),
     ReLU(),
-    nn.Linear(512, 128, bias=False),
+    nn.Linear(512, 256, bias=False),
     ReLU(),
-    nn.Linear(128, 10, bias=False),
+    nn.Linear(256, 10, bias=False),
     Softmax()
 )
 
@@ -95,11 +98,6 @@ for epoch in range(Config.EPOCHS):
 
         loss.backward()
 
-
         optim.step()
 
-
-    print(f"Epoch [{epoch}/20]: Loss {loss}")
-
-
-
+    print(f"Epoch [{epoch + 1}/20]: Loss {loss.mean()}")
