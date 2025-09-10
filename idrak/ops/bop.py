@@ -65,7 +65,7 @@ class BOp(LazyOp):
 
 class Add(BOp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float):
         if isinstance(b, CTensor):
             # Explicitly broadcast a and b to the shape of out
             a = a.broadcast(out.shape)
@@ -74,14 +74,13 @@ class Add(BOp):
         else:
             scalar = ctypes.c_float(b)
             c_add_scalar(a._c_tensor, scalar, out._c_tensor)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_add_grad_op(out_ptr, prev_ptrs, n_prev, extras)
 
 class Sub(BOp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor" | float, b: "Tensor" | float) -> "Tensor": 
+    def forward(out: "Tensor", a: "Tensor" | float, b: "Tensor" | float):
         if isinstance(b, CTensor):
             # Explicitly broadcast a and b to the shape of out
             a = a.broadcast(out.shape)
@@ -90,24 +89,22 @@ class Sub(BOp):
         else:
             scalar = ctypes.c_float(b)
             c_sub_scalar(a._c_tensor, scalar, out._c_tensor)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_sub_grad_op(out_ptr, prev_ptrs, n_prev, extras)
 
 class RSub(BOp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", b: float) -> "Tensor": 
+    def forward(out: "Tensor", a: "Tensor", b: float):
         scalar = ctypes.c_float(b)
         c_rsub_scalar(scalar, a._c_tensor, out._c_tensor)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.pointer(ctensor), prev_ptrs: ctypes.pointer(ctypes.pointer(ctensor)), n_prev: int, extras): c_rsub_grad_op(out_ptr, prev_ptrs, n_prev, extras)
 
 class Mul(BOp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float):
         if isinstance(b, CTensor):
             # Explicitly broadcast a and b to the shape of out
             a = a.broadcast(out.shape)
@@ -116,14 +113,13 @@ class Mul(BOp):
         else:
             scalar = ctypes.c_float(b)
             c_mul_scalar(a._c_tensor, scalar, out._c_tensor)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_mul_grad_op(out_ptr, prev_ptrs, n_prev, extras)
 
 class Div(BOp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float):
         if isinstance(b, CTensor):
             # Explicitly broadcast a and b to the shape of out
             a = a.broadcast(out.shape)
@@ -132,17 +128,15 @@ class Div(BOp):
         else:
             scalar = ctypes.c_float(b)
             c_div_scalar(a._c_tensor, scalar, out._c_tensor)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_div_grad_op(out_ptr, prev_ptrs, n_prev, extras)
 
 class RDiv(BOp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float):
         scalar = ctypes.c_float(b)
         c_rdiv_scalar(scalar, a._c_tensor, out._c_tensor)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
@@ -150,13 +144,12 @@ class RDiv(BOp):
 
 class Pow(BOp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float):
         if isinstance(b, CTensor):
             print("Still in work")
         else:
             scalar = ctypes.c_float(b)
             c_pow_scalar(a._c_tensor, scalar, out._c_tensor)
-        return out
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
         c_pow_grad_op(out_ptr, prev_ptrs, n_prev, extras)
@@ -206,16 +199,10 @@ class MatMul(BOp):
             return tuple(result_batch_shape) + (a_N, b_M)
 
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float):
         if isinstance(b, CTensor):
-            # Determine the target shapes for broadcasting a and b
-            # The batch dimensions of a and b should be broadcasted to the batch dimensions of out
-            # The last two dimensions of a and b should remain as they are for matmul
-            
             out_batch_shape = out.shape[:-2] if out.ndim >= 2 else ()
 
-            # Construct target shapes for a and b for broadcasting
-            # If a or b was originally 1D, we need to promote it to 2D for broadcasting
             a_target_shape = out_batch_shape
             if a.ndim == 1:
                 a_target_shape += (1, a.shape[0])
@@ -241,7 +228,6 @@ class MatMul(BOp):
             c_matmul(a_broadcasted._c_tensor, b_broadcasted._c_tensor, out._c_tensor, N=N, K=K, P=M)
         else:
             raise TypeError("MatMul does not support scalar multiplication.")
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
@@ -299,9 +285,8 @@ class Conv2D(BOp):
     @staticmethod
     def forward(
         out: "Tensor", a: "Tensor", b: "Tensor", kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int
-        ) -> "Tensor":
+        ):
         c_conv(a._c_tensor, b._c_tensor, out._c_tensor, kernel_size, stride, padding)
-        return out
     
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_conv_grad_op(out_ptr, prev_ptrs, n_prev, extras)
@@ -312,9 +297,8 @@ class Dot(BOp):
         return (1,)
 
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", b: "Tensor") -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", b: "Tensor"):
         c_dot(a._c_tensor, b._c_tensor, out._c_tensor)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
