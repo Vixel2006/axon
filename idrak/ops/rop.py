@@ -34,14 +34,13 @@ class ROp(LazyOp):
 
 class Sum(ROp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", dim: int | None, keepdim: bool) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", dim: int | None, keepdim: bool):
         if dim is None:
             c_sum_full(a._c_tensor, out._c_tensor)
         else:
             if dim < 0:
                 dim = a.ndim + dim
             c_sum(a._c_tensor, out._c_tensor, dim, keepdim)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
@@ -52,14 +51,13 @@ class Sum(ROp):
 
 class Mean(ROp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", dim: int | None, keepdim: bool) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", dim: int | None, keepdim: bool):
         if dim is None:
             c_mean_full(a._c_tensor, out._c_tensor)
         else:
             if dim < 0:
                 dim = a.ndim + dim
             c_mean(a._c_tensor, out._c_tensor, dim, keepdim)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
@@ -70,14 +68,13 @@ class Mean(ROp):
 
 class Max(ROp):
     @staticmethod
-    def forward(out: "Tensor", a: "Tensor", dim: int | None, keepdim: bool) -> "Tensor":
+    def forward(out: "Tensor", a: "Tensor", dim: int | None, keepdim: bool):
         if dim is None:
             c_max_full(a._c_tensor, out._c_tensor)
         else:
             if dim < 0:
                 dim = a.ndim + dim
             c_max(a._c_tensor, out._c_tensor, dim, keepdim)
-        return out
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):

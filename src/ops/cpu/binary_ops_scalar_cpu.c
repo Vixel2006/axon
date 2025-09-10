@@ -7,42 +7,21 @@
 
 static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
   IDRAK_DEBUG("OP   ", "reconfigure_scalar_output: Reconfiguring output "
-              "tensor for scalar op\n");
-
-  if (out->shape) {
-    free(out->shape);
-    out->shape = NULL;
-  }
-  if (out->strides) {
-    free(out->strides);
-    out->strides = NULL;
-  }
-  if (out->data && out->data->ptr) {
-    free(out->data->ptr);
-    out->data->ptr = NULL;
-  }
-
-  out->ndim = in_tensor->ndim;
-  out->shape = (int *)malloc(out->ndim * sizeof(int));
-  if (!out->shape) {
-    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for out->shape.\n");
-    return;
-  }
-  memcpy(out->shape, in_tensor->shape, out->ndim * sizeof(int));
-
+                       "tensor for scalar op\n");
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides &&
       out->ndim > 0) { // compute_strides can return NULL if ndim=0 or error
-    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for out->strides.\n");
+    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for "
+                "out->strides.\n");
     free(out->shape);
     out->shape = NULL;
     return;
   }
 
   size_t out_total_size = numel(out->shape, out->ndim);
-  out->data->ptr = (float *)malloc(out_total_size * sizeof(float));
   if (!out->data->ptr) {
-    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for out->data->ptr.\n");
+    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for "
+                "out->data->ptr.\n");
     free(out->shape);
     out->shape = NULL;
     if (out->strides) {
@@ -54,9 +33,8 @@ static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
 }
 
 void add_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "add_scalar_op: Performing scalar addition (scalar=%.2f)\n",
-              b);
-
+  IDRAK_DEBUG("OP   ",
+              "add_scalar_op: Performing scalar addition (scalar=%.2f)\n", b);
 
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
@@ -94,12 +72,11 @@ void add_scalar_op(Tensor *a, float b, Tensor *out) {
       out->data->ptr[i] = a->data->ptr[i] + b;
     }
   }
-
-  out->requires_grad = a->requires_grad ? true : false;
 }
 
 void sub_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "sub_scalar_op: Performing scalar subtraction "
+  IDRAK_DEBUG("OP   ",
+              "sub_scalar_op: Performing scalar subtraction "
               "(scalar=%.2f)\n",
               b);
 
@@ -139,29 +116,30 @@ void sub_scalar_op(Tensor *a, float b, Tensor *out) {
       out->data->ptr[i] = a->data->ptr[i] - b;
     }
   }
-
-  out->requires_grad = a->requires_grad ? true : false;
 }
 
 void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "rsub_scalar_op: Performing reverse scalar "
+  IDRAK_DEBUG("OP   ",
+              "rsub_scalar_op: Performing reverse scalar "
               "subtraction (scalar=%.2f)\n",
               a);
 
   // Error checking for null tensors
   if (!b || !out) {
-    IDRAK_ERROR("rsub_scalar_op ERROR: Input or output tensor is NULL! b=%p, out=%p\n", (void*)b, (void*)out);
+    IDRAK_ERROR(
+        "rsub_scalar_op ERROR: Input or output tensor is NULL! b=%p, out=%p\n",
+        (void *)b, (void *)out);
     return;
   }
 
   reconfigure_scalar_output(b, out);
   if (!out->data->ptr) {
-    IDRAK_ERROR("rsub_scalar_op ERROR: Output tensor data pointer is NULL after reconfiguration.\n");
+    IDRAK_ERROR("rsub_scalar_op ERROR: Output tensor data pointer is NULL "
+                "after reconfiguration.\n");
     return;
   }
 
   int size = numel(b->shape, b->ndim);
-
 
   if (!is_contiguous(b) || !is_contiguous(out)) {
     for (int idx = 0; idx < size; ++idx) {
@@ -193,12 +171,11 @@ void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
       out->data->ptr[i] = a - b->data->ptr[i];
     }
   }
-
-  out->requires_grad = b->requires_grad ? true : false;
 }
 
 void mul_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "mul_scalar_op: Performing scalar multiplication "
+  IDRAK_DEBUG("OP   ",
+              "mul_scalar_op: Performing scalar multiplication "
               "(scalar=%.2f)\n",
               b);
 
@@ -238,14 +215,11 @@ void mul_scalar_op(Tensor *a, float b, Tensor *out) {
       out->data->ptr[i] = a->data->ptr[i] * b;
     }
   }
-
-  out->requires_grad = a->requires_grad ? true : false;
 }
 
 void div_scalar_op(Tensor *a, float b, Tensor *out) {
   IDRAK_DEBUG("OP   ",
-      "div_scalar_op: Performing scalar division (scalar=%.2f)\n",
-      b);
+              "div_scalar_op: Performing scalar division (scalar=%.2f)\n", b);
 
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
@@ -282,7 +256,7 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
     __m256 scalar = _mm256_set1_ps(b);
     if (b == 0.0f) {
       IDRAK_WARNING("Division by zero in div_scalar_op (SIMD path). "
-                      "Results will be +/-INF or NaN.\n");
+                    "Results will be +/-INF or NaN.\n");
     }
 
     for (; i + 7 < size; i += 8) {
@@ -299,12 +273,11 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
       }
     }
   }
-
-  out->requires_grad = a->requires_grad ? true : false;
 }
 
 void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "rdiv_scalar_op: Performing reverse scalar "
+  IDRAK_DEBUG("OP   ",
+              "rdiv_scalar_op: Performing reverse scalar "
               "division (scalar=%.2f)\n",
               b);
 
@@ -359,14 +332,11 @@ void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
       }
     }
   }
-
-  out->requires_grad = a->requires_grad ? true : false;
 }
 
 void pow_scalar_op(Tensor *a, float b, Tensor *out) {
   IDRAK_DEBUG("OP   ",
-      "pow_scalar_op: Performing scalar power (exponent=%.2f)\n",
-      b);
+              "pow_scalar_op: Performing scalar power (exponent=%.2f)\n", b);
 
   reconfigure_scalar_output(a, out);
   if (!out->data->ptr) {
@@ -404,5 +374,4 @@ void pow_scalar_op(Tensor *a, float b, Tensor *out) {
       out->data->ptr[i] = powf(a->data->ptr[i], b);
     }
   }
-  out->requires_grad = a->requires_grad;
 }

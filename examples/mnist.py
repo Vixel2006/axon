@@ -1,11 +1,13 @@
 import sys
 from idrak.core.tensor import Tensor
+from idrak.functions import *
 from idrak.data.dataset import Dataset
 from idrak.optim import SGD, Adam
 import idrak.nn as nn
 from idrak.nn.activations import Tanh, ReLU, Sigmoid, Softmax
 from idrak.idrak_bindings.c_wrapper_functions import c_set_debug_mode
 import idrak.metrics as metrics
+from idrak.metrics.cce import categorical_cross_entropy
 import numpy as np
 from mnist_datasets import MNISTLoader
 
@@ -81,9 +83,12 @@ model = nn.Sequential(
     ReLU(),
     nn.Linear(512, 256, bias=False),
     ReLU(),
-    nn.Linear(256, 10, bias=False),
-    Softmax()
+    nn.Linear(256, 10, bias=False)
 )
+
+def cce(logits, one_hot_labels):
+    corr = log(sum(logits * one_hot_labels, dim=1))
+    return mean(corr)
 
 # Define the optimizer
 optim = SGD(model.params, Config.LR)
@@ -94,9 +99,11 @@ for epoch in range(Config.EPOCHS):
         optim.zero_grad()
         pred = model(images)
 
-        loss = metrics.bce(pred, labels)
+        loss = categorical_cross_entropy(pred, labels)
 
         loss.backward()
+
+        print(loss)
 
         optim.step()
 

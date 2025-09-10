@@ -63,7 +63,7 @@ class LazyOp(ABC):
             out_tensor=out,
             input_tensors=in_tensors,
             forward_fn=cls.forward,
-            forward_args=(out, *args),
+            forward_args=args,
             forward_kwargs=kwargs,
             backward_fn=cls.backward,
             extras=extras
