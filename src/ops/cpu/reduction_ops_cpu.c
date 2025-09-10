@@ -8,8 +8,11 @@
 
 #include "ops/ops.h"
 
+#define SIMD_WIDTH 8
+
 void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  IDRAK_DEBUG("OP   ", "sum_op: Performing sum reduction along axis %d "
+  IDRAK_DEBUG("OP   ",
+              "sum_op: Performing sum reduction along axis %d "
               "(keepdim=%d)\n",
               axis, keepdim);
 
@@ -36,7 +39,6 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
     free_tensor(&out);
     return;
   }
-
 
   int j = 0;
   for (int i = 0; i < a->ndim; ++i) {
@@ -94,7 +96,6 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   }
 
   size_t reduction_stride_a = a->strides[axis];
-  const int VEC_SIZE = 8;
 
   // 4. Loop over "batches" × "post" slices (everything except reduced axis)
   for (int batch_idx_linear = 0; batch_idx_linear < batch_num;
@@ -174,7 +175,7 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
       if (reduction_stride_a == 1) {
         __m256 sum_vec = _mm256_setzero_ps();
 
-        for (; i + (VEC_SIZE - 1) < reduction_size; i += VEC_SIZE) {
+        for (; i + (SIMD_WIDTH - 1) < reduction_size; i += SIMD_WIDTH) {
           __m256 vec_a =
               _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
           sum_vec = _mm256_add_ps(sum_vec, vec_a);
@@ -208,7 +209,8 @@ void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  IDRAK_DEBUG("OP   ", "mean_op: Performing mean reduction along axis %d "
+  IDRAK_DEBUG("OP   ",
+              "mean_op: Performing mean reduction along axis %d "
               "(keepdim=%d)\n",
               axis, keepdim);
 
@@ -233,7 +235,6 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
     free_tensor(&out);
     return;
   }
-
 
   int j = 0;
   for (int i = 0; i < a->ndim; ++i) {
@@ -289,7 +290,6 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   }
 
   size_t reduction_stride_a = a->strides[axis];
-  const int VEC_SIZE = 8;
 
   for (int batch_idx_linear = 0; batch_idx_linear < batch_num;
        ++batch_idx_linear) {
@@ -358,7 +358,7 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
       if (reduction_stride_a == 1) {
         __m256 sum_vec = _mm256_setzero_ps();
 
-        for (; i + (VEC_SIZE - 1) < reduction_size; i += VEC_SIZE) {
+        for (; i + (SIMD_WIDTH - 1) < reduction_size; i += SIMD_WIDTH) {
           __m256 vec_a =
               _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
           sum_vec = _mm256_add_ps(sum_vec, vec_a);
@@ -392,7 +392,9 @@ void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
 }
 
 void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  IDRAK_DEBUG("OP   ", "max_op: Performing max reduction along axis %d (keepdim=%d)\n", axis, keepdim);
+  IDRAK_DEBUG("OP   ",
+              "max_op: Performing max reduction along axis %d (keepdim=%d)\n",
+              axis, keepdim);
 
   if (out->shape) {
     free(out->shape);
@@ -415,7 +417,6 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
     free_tensor(&out);
     return;
   }
-
 
   int j = 0;
   for (int i = 0; i < a->ndim; ++i) {
@@ -473,7 +474,6 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
   }
 
   size_t reduction_stride_a = a->strides[axis];
-  const int VEC_SIZE = 8;
   const __m256 neg_flt_max_vec = _mm256_set1_ps(-FLT_MAX);
 
   for (int batch_idx_linear = 0; batch_idx_linear < batch_num;
@@ -543,7 +543,7 @@ void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
       if (reduction_stride_a == 1) {
         __m256 max_vec = neg_flt_max_vec;
 
-        for (; i + (VEC_SIZE - 1) < reduction_size; i += VEC_SIZE) {
+        for (; i + (SIMD_WIDTH - 1) < reduction_size; i += SIMD_WIDTH) {
           __m256 vec_a =
               _mm256_loadu_ps(&a->data->ptr[base_in_offset + (size_t)i]);
           max_vec = _mm256_max_ps(max_vec, vec_a);
@@ -592,46 +592,26 @@ void sum_full_op(Tensor *a, Tensor *out) {
     out->strides = NULL;
   }
   if (out && out->data && out->data->ptr) {
-    free(out->data->ptr);
-    out->data->ptr = NULL;
+    free_shared_ptr(&out->data);
   }
 
-  out->ndim = 0;
-  out->shape = NULL;
-  out->strides = NULL;
+  out->ndim = 1;
+  out->shape = malloc(sizeof(int));
+  out->shape[0] = 1;
+  out->strides = malloc(sizeof(int));
+  out->strides[0] = 1;
 
-  out->data->ptr = (float *)malloc(sizeof(float));
-  if (!out->data->ptr) {
-    IDRAK_ERROR("sum_full_op: Failed to allocate memory for out->data->ptr.\n");
-    return;
-  }
+  size_t total_elements = numel(a->shape, a->ndim);
 
-
-  size_t total_elements = 1;
-  for (int i = 0; i < a->ndim; ++i) {
-    total_elements *= a->shape[i];
-  }
-
-  bool is_contiguous = true;
-  if (a->ndim > 0) {
-    size_t expected_stride = 1;
-    for (int i = a->ndim - 1; i >= 0; --i) {
-      if (a->strides[i] != expected_stride) {
-        is_contiguous = false;
-        break;
-      }
-      expected_stride *= a->shape[i];
-    }
-  }
+  bool is_a_contiguous = is_contiguous(a);
 
   float total_sum = 0.0f;
-  const int VEC_SIZE = 8;
 
-  if (is_contiguous) {
+  if (is_a_contiguous) {
     __m256 sum_vec = _mm256_setzero_ps();
     size_t i = 0;
 
-    for (; i + (VEC_SIZE - 1) < total_elements; i += VEC_SIZE) {
+    for (; i + (SIMD_WIDTH - 1) < total_elements; i += SIMD_WIDTH) {
       __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[i]);
       sum_vec = _mm256_add_ps(sum_vec, vec_a);
     }
@@ -647,7 +627,7 @@ void sum_full_op(Tensor *a, Tensor *out) {
       total_sum += a->data->ptr[i];
     }
   } else {
-    int *coords = (int *)malloc(a->ndim * sizeof(int));
+    int *coords = malloc(a->ndim * sizeof(int));
     if (!coords) {
       IDRAK_ERROR("sum_full_op: Failed to allocate memory for coords.\n");
       free(out->data->ptr);
@@ -680,7 +660,9 @@ void sum_full_op(Tensor *a, Tensor *out) {
     free(coords);
   }
 
-  out->data->ptr[0] = total_sum;
+  float *out_data = malloc(sizeof(float));
+  out_data[0] = total_sum;
+  out->data = malloc_shared_ptr(out_data, numel(out->shape, out->ndim));
   out->requires_grad = a->requires_grad;
 }
 
@@ -694,11 +676,7 @@ void mean_full_op(Tensor *a, Tensor *out) {
     return;
   }
 
-
-  size_t total_elements = 1;
-  for (int i = 0; i < a->ndim; ++i) {
-    total_elements *= a->shape[i];
-  }
+  size_t total_elements = numel(a->shape, a->ndim);
 
   if (total_elements > 0) {
     out->data->ptr[0] /= total_elements;
@@ -725,20 +703,19 @@ void max_full_op(Tensor *a, Tensor *out) {
     out->data->ptr = NULL;
   }
 
-  out->ndim = 0;
-  out->shape = NULL;
-  out->strides = NULL;
+  out->ndim = 1;
+  out->shape = malloc(sizeof(int));
+  out->shape[0] = 1;
+  out->strides = malloc(sizeof(int));
+  out->strides[0] = 1;
 
-  out->data->ptr = (float *)malloc(sizeof(float));
+  out->data->ptr = malloc(sizeof(float));
   if (!out->data->ptr) {
     fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
     return;
   }
 
-  size_t total_elements = 1;
-  for (int i = 0; i < a->ndim; ++i) {
-    total_elements *= a->shape[i];
-  }
+  size_t total_elements = numel(a->shape, a->ndim);
 
   if (total_elements == 0) {
     out->data->ptr[0] = -FLT_MAX;
@@ -746,26 +723,15 @@ void max_full_op(Tensor *a, Tensor *out) {
     return;
   }
 
-  bool is_contiguous = true;
-  if (a->ndim > 0) {
-    size_t expected_stride = 1;
-    for (int i = a->ndim - 1; i >= 0; --i) {
-      if (a->strides[i] != expected_stride) {
-        is_contiguous = false;
-        break;
-      }
-      expected_stride *= a->shape[i];
-    }
-  }
+  bool is_a_contiguous = is_contiguous(a);
 
   float max_val = -FLT_MAX;
-  const int VEC_SIZE = 8;
 
-  if (is_contiguous) {
+  if (is_a_contiguous) {
     __m256 max_vec = _mm256_set1_ps(-FLT_MAX);
     size_t i = 0;
 
-    for (; i + (VEC_SIZE - 1) < total_elements; i += VEC_SIZE) {
+    for (; i + (SIMD_WIDTH - 1) < total_elements; i += SIMD_WIDTH) {
       __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[i]);
       max_vec = _mm256_max_ps(max_vec, vec_a);
     }

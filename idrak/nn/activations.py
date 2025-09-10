@@ -1,7 +1,7 @@
 from idrak.nn.module import Module
 from idrak.core.tensor import Tensor
 from idrak.ops.uop import UOp
-from idrak.functions import relu, exp, sum
+from idrak.functions import *
 import ctypes
 
 class ReLU(Module):
@@ -19,5 +19,6 @@ class Sigmoid(Module):
 
 class Softmax(Module):
     def forward(self, x: Tensor) -> Tensor:
-        return exp(x) / sum(exp(x))
-
+        x_max = max(x, dim=-1)
+        exp_x = exp(x - x_max)
+        return exp_x / sum(exp_x, dim=-1)
