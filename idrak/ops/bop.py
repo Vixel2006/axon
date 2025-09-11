@@ -11,6 +11,7 @@ from idrak.idrak_bindings.c_wrapper_functions import (
     c_matmul,
     c_div,
     c_pow_scalar,
+    c_pow,
     c_div_scalar,
     c_add_scalar,
     c_sub_scalar,
@@ -146,7 +147,10 @@ class Pow(BOp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", b: "Tensor" | float):
         if isinstance(b, CTensor):
-            print("Still in work")
+            # Explicitly broadcast a and b to the shape of out
+            a = a.broadcast(out.shape)
+            b = b.broadcast(out.shape)
+            c_pow(a._c_tensor, b._c_tensor, out._c_tensor)
         else:
             scalar = ctypes.c_float(b)
             c_pow_scalar(a._c_tensor, scalar, out._c_tensor)
@@ -274,8 +278,8 @@ class Conv2D(BOp):
         Hin = a.shape[2]
         Win = a.shape[3]
 
-        Kh = b.shape[1]
-        Kw = b.shape[2]
+        Kh = kernel_size[0]
+        Kw = kernel_size[1]
 
         Hout = math.floor((Hin - Kh + 2 * padding + 1) / stride[0])
         Wout = math.floor((Win - Kw + 2 * padding + 1) / stride[1])

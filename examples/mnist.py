@@ -22,8 +22,8 @@ class MNIST(Dataset):
     def __init__(self, train=True):
         loader = MNISTLoader()
         self.images, self.labels = loader.load(train=train)
-        self.images = self.images[:64]
-        self.labels = self.labels[:64]
+        self.images = self.images[:10]
+        self.labels = self.labels[:10]
     
     def __len__(self):
         return len(self.labels)
@@ -69,7 +69,7 @@ class DataLoader:
 
 # Define the configuration for the model
 class Config:
-    BATCH_SIZE = 32
+    BATCH_SIZE = 1
     EPOCHS = 2
     LR = 0.01
     IMSIZE = (28, 28)
@@ -83,28 +83,35 @@ model = nn.Sequential(
     ReLU(),
     nn.Linear(512, 256, bias=False),
     ReLU(),
-    nn.Linear(256, 10, bias=False)
+    nn.Linear(256, 10, bias=False),
+    ReLU(),
+    Softmax()
 )
 
 def cce(logits, one_hot_labels):
-    corr = log(sum(logits * one_hot_labels, dim=1))
+    corr = log(sum(logits * one_hot_labels, dim=-1))
     return mean(corr)
 
 # Define the optimizer
-optim = SGD(model.params, Config.LR)
+optim = Adam(model.params, Config.LR)
+
 
 # Now do the training
 for epoch in range(Config.EPOCHS):
+    avg_loss = 0.0
     for images, labels in trainloader:
         optim.zero_grad()
         pred = model(images)
 
-        loss = categorical_cross_entropy(pred, labels)
+        loss = cce(pred, labels)
 
         loss.backward()
 
-        print(loss)
+        for param in model.params:
+            print(param)
 
         optim.step()
 
-    print(f"Epoch [{epoch + 1}/20]: Loss {loss.mean()}")
+        avg_loss += loss
+
+    print(f"Epoch [{epoch + 1}/20]: Loss {avg_loss}")

@@ -15,7 +15,7 @@ class Conv2d(Module):
         bias: bool = False
     ):
         self.kernel_size = (in_channels, out_channels, *kernel_size)
-        self.weights = xavier_normal_(self.kernel_size, in_features=in_channels, out_features=out_channels)
+        self.weights = xavier_normal_((out_channels, in_channels, *kernel_size), in_features=in_channels, out_features=out_channels)
         self.bias = None
 
 
@@ -23,10 +23,10 @@ class Conv2d(Module):
         self.padding = padding
 
         if bias:
-            self.bias = zeros((out_channels))
+            self.bias = zeros((out_channels,))
 
     def forward(self, x: Tensor) -> Tensor:
-        out = conv2d(x, self.weights, self.kernel_size, self.stride, self.padding)
+        out = conv2d(x, self.weights, self.kernel_size[2:], self.stride, self.padding)
 
         if self.bias:
             out += self.bias
