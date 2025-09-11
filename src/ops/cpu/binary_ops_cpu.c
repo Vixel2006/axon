@@ -5,6 +5,8 @@
 #include <math.h>
 #include <sleef.h>
 
+extern __m256 Sleef_powf8_u10(__m256 x, __m256 y);
+
 #define SIMD_WIDTH 8
 
 void add_op(Tensor *a, Tensor *b, Tensor *out) {
@@ -206,18 +208,18 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
     IDRAK_ERROR(
         "matmul_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p\n",
         (void *)a, (void *)b, (void *)out);
-    return; // Or handle error appropriately
-  }
-
-  // Error checking for insufficient dimensions
-  if (a->ndim < 2 || b->ndim < 2) {
-    IDRAK_ERROR("matmul_op ERROR: Tensors must have at least 2 dimensions for "
-                "matrix multiplication! a->ndim=%d, b->ndim=%d\n",
-                a->ndim, b->ndim);
     return;
   }
 
-  // Error checking for dimension mismatch (inner dimensions)
+  // Error checking for insufficient dimensions
+  if (a->ndim < 2 || b->ndim < 2 || out->ndim < 2) {
+    IDRAK_ERROR("matmul_op ERROR: All tensors must have at least 2 dimensions! "
+                "a->ndim=%d, b->ndim=%d, out->ndim=%d\n",
+                a->ndim, b->ndim, out->ndim);
+    return;
+  }
+
+  // Error checking for dimension mismatch
   if (a->shape[a->ndim - 1] != K || b->shape[b->ndim - 2] != K) {
     IDRAK_ERROR("matmul_op ERROR: Dimension mismatch! a->shape[last]=%d, "
                 "b->shape[second_last]=%d, K=%d\n",
@@ -225,91 +227,75 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
     return;
   }
 
-  // 1. Figure out how many "batch matmuls" we need.
-  int num_batches = 1;
+  // Verify output dimensions are correct
+  if (out->shape[out->ndim - 2] != N || out->shape[out->ndim - 1] != P) {
+    IDRAK_ERROR("matmul_op ERROR: Output tensor dimensions incorrect! "
+                "Expected (%d, %d), got (%d, %d)\n",
+                N, P, out->shape[out->ndim - 2], out->shape[out->ndim - 1]);
+    return;
+  }
 
-  // Set up output tensor dimensions
-  out->ndim = a->ndim;
+  // Calculate batch size (should be same for all tensors after broadcasting)
+  int batch_size = 1;
   for (int i = 0; i < out->ndim - 2; ++i) {
-    num_batches *= a->shape[i];
-    out->shape[i] =
-        a->shape[i]; // This modifies existing allocation, which is fine
+    batch_size *= out->shape[i];
   }
-  out->shape[a->ndim - 2] = N;
-  out->shape[a->ndim - 1] = P;
 
-  // Free old strides and compute new ones
-  if (out->strides) {
-    free(out->strides);
-  }
-  out->strides = compute_strides(out->shape, out->ndim);
-
+  // Initialize output to zero
   int size = numel(out->shape, out->ndim);
-
   for (int i = 0; i < size; ++i) {
     out->data->ptr[i] = 0.0f;
   }
 
-  // 2. Precompute per-batch strides so we can jump to the right slice of data.
-  int a_batch_stride = (a->ndim > 2) ? a->strides[a->ndim - 3] : N * K;
-  int b_batch_stride = (b->ndim > 2) ? b->strides[b->ndim - 3] : K * P;
-  int out_batch_stride = (out->ndim > 2) ? out->strides[out->ndim - 3] : N * P;
+  // Check if we can use SIMD (requires contiguous inner dimensions)
+  bool can_use_simd =
+      is_contiguous(a) && is_contiguous(b) && is_contiguous(out);
 
-  if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
-    // Slow path: pure scalar, respect strides
-    for (int batch_idx = 0; batch_idx < num_batches; ++batch_idx) {
-      int a_curr_stride = batch_idx * a_batch_stride;
-      int b_curr_stride = batch_idx * b_batch_stride;
-      int out_curr_stride = batch_idx * out_batch_stride;
-
-      for (int i = 0; i < N; ++i) {
-        int row = i * a->strides[a->ndim - 2];
-        for (int j = 0; j < P; ++j) {
-          int col = j * b->strides[b->ndim - 1];
-          float sum = 0.0f;
-
-          for (int k = 0; k < K; ++k) {
-            float a_val =
-                a->data->ptr[a_curr_stride + row + k * a->strides[a->ndim - 1]];
-            float b_val =
-                b->data->ptr[b_curr_stride + col + k * b->strides[b->ndim - 2]];
-            sum += a_val * b_val;
-          }
-
-          out->data->ptr[out_curr_stride + i * out->strides[out->ndim - 2] +
-                         j * out->strides[out->ndim - 1]] = sum;
-        }
-      }
-    }
-  } else {
-    // 3. Vectorization setup.
+  if (can_use_simd) {
+    // Fast path: SIMD vectorized computation
     const int k_simd = (K / SIMD_WIDTH) * SIMD_WIDTH;
 
-    // 4. Batched matmul loop: [num_batches, N, P].
-    for (int batch_idx = 0; batch_idx < num_batches; ++batch_idx) {
-      int a_curr_stride = batch_idx * a_batch_stride;
-      int b_curr_stride = batch_idx * b_batch_stride;
-      int out_curr_stride = batch_idx * out_batch_stride;
+    for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
+      // Calculate batch offsets with proper broadcasting
+      int a_batch_offset = 0;
+      int b_batch_offset = 0;
+      int out_batch_offset = 0;
+
+      int temp_batch_idx = batch_idx;
+      for (int dim = out->ndim - 3; dim >= 0; --dim) {
+        int a_dim = (dim < a->ndim - 2) ? a->shape[dim] : 1;
+        int b_dim = (dim < b->ndim - 2) ? b->shape[dim] : 1;
+        int out_dim = out->shape[dim];
+
+        int coord = temp_batch_idx % out_dim;
+        temp_batch_idx /= out_dim;
+
+        if (dim < a->ndim - 2 && a_dim > 1) {
+          a_batch_offset += coord * a->strides[dim];
+        }
+        if (dim < b->ndim - 2 && b_dim > 1) {
+          b_batch_offset += coord * b->strides[dim];
+        }
+        out_batch_offset += coord * out->strides[dim];
+      }
 
       for (int i = 0; i < N; ++i) {
-        int row = i * a->strides[a->ndim - 2];
+        int a_row_offset = a_batch_offset + i * a->strides[a->ndim - 2];
         for (int j = 0; j < P; ++j) {
-          int col = j * b->strides[b->ndim - 1];
+          int b_col_offset = b_batch_offset + j * b->strides[b->ndim - 1];
 
-          // Vectorized dot product over the K dimension
+          // Vectorized dot product
           __m256 sum_vec = _mm256_setzero_ps();
 
           for (int k = 0; k < k_simd; k += SIMD_WIDTH) {
             __m256 a_vec = _mm256_loadu_ps(
-                &a->data
-                     ->ptr[a_curr_stride + row + k * a->strides[a->ndim - 1]]);
+                &a->data->ptr[a_row_offset + k * a->strides[a->ndim - 1]]);
             __m256 b_vec = _mm256_loadu_ps(
-                &b->data
-                     ->ptr[b_curr_stride + col + k * b->strides[b->ndim - 2]]);
+                &b->data->ptr[b_col_offset + k * b->strides[b->ndim - 2]]);
             sum_vec = _mm256_fmadd_ps(a_vec, b_vec, sum_vec);
           }
 
-          // Horizontal sum across the SIMD vector
+          // Horizontal sum
           __m128 sum_high = _mm256_extractf128_ps(sum_vec, 1);
           __m128 sum_low = _mm256_castps256_ps128(sum_vec);
           __m128 sum128 = _mm_add_ps(sum_high, sum_low);
@@ -319,21 +305,66 @@ void matmul_op(Tensor *a, Tensor *b, Tensor *out, int N, int K, int P) {
           sums = _mm_add_ss(sums, shuf);
           float sum = _mm_cvtss_f32(sums);
 
-          // Finish leftover elements if K is not a multiple of 8
+          // Handle remaining elements
           for (int k = k_simd; k < K; ++k) {
-            sum +=
-                a->data
-                    ->ptr[a_curr_stride + row + k * a->strides[a->ndim - 1]] *
-                b->data->ptr[b_curr_stride + col + k * b->strides[b->ndim - 2]];
+            sum += a->data->ptr[a_row_offset + k * a->strides[a->ndim - 1]] *
+                   b->data->ptr[b_col_offset + k * b->strides[b->ndim - 2]];
           }
 
-          // Write result into output tensor
-          out->data->ptr[out_curr_stride + i * out->strides[out->ndim - 2] +
+          out->data->ptr[out_batch_offset + i * out->strides[out->ndim - 2] +
+                         j * out->strides[out->ndim - 1]] = sum;
+        }
+      }
+    }
+  } else {
+    // Slow path: respect all strides
+    for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
+      // Calculate batch offsets with proper broadcasting
+      int a_batch_offset = 0;
+      int b_batch_offset = 0;
+      int out_batch_offset = 0;
+
+      int temp_batch_idx = batch_idx;
+      for (int dim = out->ndim - 3; dim >= 0; --dim) {
+        int a_dim = (dim < a->ndim - 2) ? a->shape[dim] : 1;
+        int b_dim = (dim < b->ndim - 2) ? b->shape[dim] : 1;
+        int out_dim = out->shape[dim];
+
+        int coord = temp_batch_idx % out_dim;
+        temp_batch_idx /= out_dim;
+
+        if (dim < a->ndim - 2 && a_dim > 1) {
+          a_batch_offset += coord * a->strides[dim];
+        }
+        if (dim < b->ndim - 2 && b_dim > 1) {
+          b_batch_offset += coord * b->strides[dim];
+        }
+        out_batch_offset += coord * out->strides[dim];
+      }
+
+      for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < P; ++j) {
+          float sum = 0.0f;
+
+          for (int k = 0; k < K; ++k) {
+            float a_val =
+                a->data->ptr[a_batch_offset + i * a->strides[a->ndim - 2] +
+                             k * a->strides[a->ndim - 1]];
+            float b_val =
+                b->data->ptr[b_batch_offset + k * b->strides[b->ndim - 2] +
+                             j * b->strides[b->ndim - 1]];
+            sum += a_val * b_val;
+          }
+
+          out->data->ptr[out_batch_offset + i * out->strides[out->ndim - 2] +
                          j * out->strides[out->ndim - 1]] = sum;
         }
       }
     }
   }
+
+  IDRAK_DEBUG("OP   ",
+              "matmul_op: Matrix multiplication completed successfully\n");
 }
 
 void conv2d_op(Tensor *in, Tensor *kernel, Tensor *out, const int *kernel_size,
@@ -419,8 +450,8 @@ void dot_op(Tensor *a, Tensor *b, Tensor *out) {
         int coord = idx % a->shape[d];
         idx /= a->shape[d];
 
-        a_offset += coord * a_strides[d];
-        b_offset += coord * b_strides[d];
+        a_offset += coord * a->strides[d];
+        b_offset += coord * b->strides[d];
       }
       sum += a->data->ptr[a_offset] * b->data->ptr[b_offset];
     }
@@ -451,3 +482,57 @@ void dot_op(Tensor *a, Tensor *b, Tensor *out) {
     out->data->ptr[0] = sum;
   }
 }
+
+void pow_op(Tensor *a, Tensor *b, Tensor *out) {
+  IDRAK_DEBUG("OP   ", "pow_op: Performing element-wise power\n");
+
+  // Error checking for null tensors
+  if (!a || !b || !out) {
+    IDRAK_ERROR(
+        "pow_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p\n",
+        (void *)a, (void *)b, (void *)out);
+    return;
+  }
+
+  int size = numel(out->shape, out->ndim);
+
+  if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
+    int ndim = out->ndim;
+    int *shape = out->shape;
+
+    int *a_strides = a->strides;
+    int *b_strides = b->strides;
+    int *out_strides = out->strides;
+
+    for (int linear = 0; linear < size; ++linear) {
+      int idx = linear;
+      int a_offset = 0, b_offset = 0, out_offset = 0;
+
+      for (int d = ndim - 1; d >= 0; --d) {
+        int coord = idx % shape[d];
+        idx /= shape[d];
+
+        a_offset += coord * a_strides[d];
+        b_offset += coord * b_strides[d];
+        out_offset += coord * out_strides[d];
+      }
+
+      out->data->ptr[out_offset] = 
+          powf(a->data->ptr[a_offset], b->data->ptr[b_offset]);
+    }
+  } else {
+    int i = 0;
+
+    for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 y = _mm256_loadu_ps(b->data->ptr + i);
+      __m256 z = Sleef_powf8_u10(x, y);
+      _mm256_storeu_ps(out->data->ptr + i, z);
+    }
+
+    for (; i < size; ++i) {
+      out->data->ptr[i] = powf(a->data->ptr[i], b->data->ptr[i]);
+    }
+  }
+}
+  

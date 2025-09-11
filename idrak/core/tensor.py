@@ -36,6 +36,8 @@ def _flatten_list(nested_list):
 
 class Tensor(CTensor):
     def __init__(self, shape=None, data=None, requires_grad=True, _c_tensor_ptr=None):
+        self._c_tensor = None
+
         if _c_tensor_ptr is not None:
             self._c_tensor = _c_tensor_ptr
             if self._c_tensor and self._c_tensor.contents:
@@ -48,9 +50,7 @@ class Tensor(CTensor):
                     )
             else:
                 self._shape = None
-            return
 
-        self._c_tensor = None
         self._node = Node(
             out_tensor=self,
             input_tensors=[],
@@ -60,7 +60,9 @@ class Tensor(CTensor):
             backward_fn=None,
         )
 
-        if shape is None and data is None:
+        if _c_tensor_ptr is not None:
+            pass # Already handled above
+        elif shape is None and data is None:
             self._c_tensor = c_malloc_tensor_empty()
         elif shape is not None and data is None:
             ndim = len(shape)
@@ -242,9 +244,9 @@ class Tensor(CTensor):
 
 
     # ============ Reduction Operations ==============
-    def sum(self, dim: int | None = None, keepdim: bool = False) -> Tensor: return Sum.create_node(self, dim=dim, keepdim=keepdim)
-    def mean(self, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(self, dim=dim, keepdim=keepdim)
-    def max(self, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(self, dim=dim, keepdim=keepdim)
+    def sum(self, dim: int | None = None, keepdim: bool = True) -> Tensor: return Sum.create_node(self, dim=dim, keepdim=keepdim)
+    def mean(self, dim: int | None = None, keepdim: bool = True) -> Tensor: return Mean.create_node(self, dim=dim, keepdim=keepdim)
+    def max(self, dim: int | None = None, keepdim: bool = True) -> Tensor: return Max.create_node(self, dim=dim, keepdim=keepdim)
 
     def validate(self) -> bool:
         try:

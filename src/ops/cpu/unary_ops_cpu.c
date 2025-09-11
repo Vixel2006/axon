@@ -213,8 +213,71 @@ void neg_op(Tensor *in, Tensor *out) {
   }
 }
 
-void abs_op(Tensor *in, Tensor *out) {
+void clip_op(Tensor *in, float min_val, float max_val, Tensor *out) {
+  IDRAK_DEBUG("OP   ", "clip_op: Performing clipping\n");
 
+  if (!in || !out) {
+    IDRAK_ERROR("clip_op ERROR: Input or output tensor is NULL! in=%p, out=%p\n",
+                (void *)in, (void *)out);
+    return;
+  }
+
+  if (!out->data->ptr) {
+    IDRAK_ERROR("clip_op ERROR: Output tensor data pointer is NULL after "
+                "reconfiguration.\n");
+    return;
+  }
+
+  int size = numel(in->shape, in->ndim);
+
+  if (!is_contiguous(in) || !is_contiguous(out)) {
+    for (int idx = 0; idx < size; ++idx) {
+      int offset_in = 0;
+      int offset_out = 0;
+      int tmp = idx;
+
+      for (int d = in->ndim - 1; d >= 0; --d) {
+        int coord = tmp % in->shape[d];
+        tmp /= in->shape[d];
+        offset_in += coord * in->strides[d];
+        offset_out += coord * out->strides[d];
+      }
+
+      float val = in->data->ptr[offset_in];
+      if (val < min_val) {
+        out->data->ptr[offset_out] = min_val;
+      } else if (val > max_val) {
+        out->data->ptr[offset_out] = max_val;
+      } else {
+        out->data->ptr[offset_out] = val;
+      }
+    }
+  } else {
+    int i = 0;
+    __m256 v_min = _mm256_set1_ps(min_val);
+    __m256 v_max = _mm256_set1_ps(max_val);
+
+    for (; i + 7 < size; i += 8) {
+      __m256 x = _mm256_loadu_ps(in->data->ptr + i);
+      __m256 y = _mm256_max_ps(x, v_min);
+      y = _mm256_min_ps(y, v_max);
+      _mm256_storeu_ps(out->data->ptr + i, y);
+    }
+
+    for (; i < size; ++i) {
+      float val = in->data->ptr[i];
+      if (val < min_val) {
+        out->data->ptr[i] = min_val;
+      } else if (val > max_val) {
+        out->data->ptr[i] = max_val;
+      } else {
+        out->data->ptr[i] = val;
+      }
+    }
+  }
+}
+
+void abs_op(Tensor *in, Tensor *out) {
   IDRAK_DEBUG("OP   ", "abs_op: Performing absolute value\n");
 
   if (!out->data->ptr) {
