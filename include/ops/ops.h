@@ -5,7 +5,17 @@
 
 typedef void (*UnaryOpFn)(Tensor *in, Tensor *out);
 typedef void (*BinaryOpFn)(Tensor *a, Tensor *b, Tensor *out);
+void add_op(Tensor *a, Tensor *b, Tensor *out);
+void sub_op(Tensor *a, Tensor *b, Tensor *out);
+void mul_op(Tensor *a, Tensor *b, Tensor *out);
+void div_op(Tensor *a, Tensor *b, Tensor *out);
+void pow_op(Tensor *a, Tensor *b, Tensor *out);
 typedef void (*BinaryOpScalarFn)(Tensor *a, float b, Tensor *out);
+void add_scalar_op(Tensor *a, float b, Tensor *out);
+void sub_scalar_op(Tensor *a, float b, Tensor *out);
+void mul_scalar_op(Tensor *a, float b, Tensor *out);
+void div_scalar_op(Tensor *a, float b, Tensor *out);
+void pow_scalar_op(Tensor *a, float b, Tensor *out);
 typedef void (*ReductionOpFn)(Tensor *in, Tensor *out, int axis);
 typedef void (*MovementOpFn)(Tensor *in, Tensor *out, void *args);
 
@@ -25,6 +35,7 @@ typedef struct {
   BinaryOpFn sub;
   BinaryOpFn mul;
   BinaryOpFn div;
+  BinaryOpFn pow;
   BinaryOpFn matmul;
 } BinaryOps;
 
@@ -33,6 +44,7 @@ typedef struct {
   BinaryOpScalarFn sub;
   BinaryOpScalarFn mul;
   BinaryOpScalarFn div;
+  BinaryOpScalarFn pow;
 } BinaryScalarOps;
 
 typedef struct {

@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <stdlib.h>
+#include <string.h> // For memcpy
 
 #include "ops/ops.h"
 #include "ops/ops_utils.h"
@@ -282,6 +283,82 @@ void broadcast_op(Tensor *in, Tensor *out, int ndim, const int *shape) {
   print_shape(out->shape, out->ndim);
 }
 
-void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {}
+void concat_op(Tensor **in, Tensor *out, int num_tensors, int axis) {
+  IDRAK_DEBUG("OP   ", "concat_op: Concatenating %d tensors along axis %d\n",
+              num_tensors, axis);
+
+  if (!out || !out->data || !out->data->ptr) {
+    IDRAK_ERROR("concat_op: Output tensor or its data is NULL.\n");
+    return;
+  }
+
+  // Get the total number of elements in the output tensor
+  int total_out_elements = numel(out->shape, out->ndim);
+
+  // Iterate through each element of the output tensor
+  int *out_coords = (int *)malloc(out->ndim * sizeof(int));
+  if (!out_coords) {
+    IDRAK_ERROR("concat_op: Failed to allocate memory for out_coords.\n");
+    return;
+  }
+
+  // Iterate through each element of the output tensor
+  for (int k = 0; k < total_out_elements; ++k) {
+    // Convert linear index k to multi-dimensional index (out_coords)
+    int temp_k = k;
+    for (int d = out->ndim - 1; d >= 0; --d) {
+      out_coords[d] = temp_k / out->strides[d];
+      temp_k %= out->strides[d];
+    }
+
+    // Determine which input tensor this element belongs to
+    int current_input_tensor_idx = 0;
+    int current_axis_val_in_out =
+        out_coords[axis]; // Value of the coordinate along the concatenation
+                          // axis in the output tensor
+    int current_offset_in_axis =
+        0; // Offset within the concatenation axis for the current input tensor
+
+    for (int t_idx = 0; t_idx < num_tensors; ++t_idx) {
+      Tensor *t = in[t_idx];
+      if (current_axis_val_in_out < current_offset_in_axis + t->shape[axis]) {
+        current_input_tensor_idx = t_idx;
+        break;
+      }
+      current_offset_in_axis += t->shape[axis];
+    }
+
+    Tensor *src_tensor = in[current_input_tensor_idx];
+
+    // Calculate the corresponding index in the source tensor
+    int *src_coords = (int *)malloc(src_tensor->ndim * sizeof(int));
+    if (!src_coords) {
+      IDRAK_ERROR("concat_op: Failed to allocate memory for src_coords.\n");
+      free(out_coords);
+      return;
+    }
+
+    for (int d = 0; d < out->ndim; ++d) {
+      if (d == axis) {
+        src_coords[d] = out_coords[d] - current_offset_in_axis;
+      } else {
+        src_coords[d] = out_coords[d];
+      }
+    }
+
+    // Convert multi-dimensional src_coords to linear index in src_tensor
+    int src_linear_idx = 0;
+    for (int d = 0; d < src_tensor->ndim; ++d) {
+      src_linear_idx += src_coords[d] * src_tensor->strides[d];
+    }
+
+    // Copy the element
+    out->data->ptr[k] = src_tensor->data->ptr[src_linear_idx];
+
+    free(src_coords);
+  }
+  free(out_coords);
+  IDRAK_DEBUG("OP   ", "concat_op: Concatenation complete.\n");
+}
 
 void stack_op(Tensor **in, Tensor *out, int num_tensors, int axis) {}

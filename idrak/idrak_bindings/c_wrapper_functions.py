@@ -72,6 +72,8 @@ if tensor_lib:
     tensor_lib.abs_op.restype = None
     tensor_lib.neg_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.neg_op.restype = None
+    tensor_lib.clip_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.c_float, ctypes.POINTER(CTensor)]
+    tensor_lib.clip_op.restype = None
 
     # Binary ops
     tensor_lib.add_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
@@ -82,6 +84,8 @@ if tensor_lib:
     tensor_lib.mul_op.restype = None
     tensor_lib.div_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.div_op.restype = None
+    tensor_lib.pow_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.pow_op.restype = None
     tensor_lib.matmul_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int, ctypes.c_int]
     tensor_lib.matmul_op.restype = None
     tensor_lib.dot_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
@@ -100,6 +104,10 @@ if tensor_lib:
     tensor_lib.div_scalar_op.restype = None
     tensor_lib.rdiv_scalar_op.argtypes = [ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.rdiv_scalar_op.restype = None
+    tensor_lib.rdiv_scalar_op.argtypes = [ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.rdiv_scalar_op.restype = None
+    tensor_lib.pow_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.pow_op.restype = None
     tensor_lib.pow_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
     tensor_lib.pow_scalar_op.restype = None
 
@@ -176,6 +184,8 @@ if tensor_lib:
     tensor_lib.abs_grad_op.restype = None
     tensor_lib.neg_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
     tensor_lib.neg_grad_op.restype = None
+    tensor_lib.clip_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
+    tensor_lib.clip_grad_op.restype = None
     tensor_lib.sum_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
     tensor_lib.sum_grad_op.restype = None
     tensor_lib.mean_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
@@ -404,6 +414,9 @@ if tensor_lib:
     def c_neg_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.neg_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
+    def c_clip_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        tensor_lib.clip_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
+
     def c_sum_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.sum_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
@@ -449,6 +462,9 @@ if tensor_lib:
 
     def c_neg(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.neg_op(in_tensor_ptr, out_tensor_ptr)
+
+    def c_clip(in_tensor_ptr, min_val, max_val, out_tensor_ptr):
+        tensor_lib.clip_op(in_tensor_ptr, min_val, max_val, out_tensor_ptr)
 
     def c_tanh(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.tanh_op(in_tensor_ptr, out_tensor_ptr)
@@ -524,6 +540,9 @@ if tensor_lib:
 
     def c_pow_scalar(a_tensor_ptr, b, out_tensor_ptr):
         tensor_lib.pow_scalar_op(a_tensor_ptr, b, out_tensor_ptr)
+
+    def c_pow(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr):
+        tensor_lib.pow_op(a_tensor_ptr, b_tensor_ptr, out_tensor_ptr)
 
     # Movement operations wrappers
     def c_view(in_tensor_ptr, out_tensor_ptr, shape, ndim):

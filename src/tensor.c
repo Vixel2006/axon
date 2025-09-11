@@ -77,7 +77,9 @@ bool is_contiguous(Tensor *t) {
 }
 
 int numel(const int *shape, int ndim) {
-  if (ndim <= 0 || !shape)
+  if (ndim == 0)
+    return 1;
+  if (ndim < 0 || !shape)
     return 0;
   int size = 1;
   for (int i = 0; i < ndim; ++i) {
