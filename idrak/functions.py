@@ -4,6 +4,7 @@ from idrak.ops.uop import *
 from idrak.ops.bop import *
 from idrak.ops.mop import *
 from idrak.ops.rop import *
+from idrak.ops.bop import Conv2D
 from idrak.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
 
 # =========== Initialization Operations ============
@@ -25,6 +26,7 @@ def stack(a: list[Tensor], axis: int = 0) -> Tensor: return Stack.create_node(a,
 
 # =========== Unary Operations =============
 def relu(a: Tensor) -> Tensor: return ReLU.create_node(a)
+def clip(a: Tensor, min_val: float, max_val: float) -> Tensor: return Clip.create_node(a, min_val=min_val, max_val=max_val)
 def softmax(a: Tensor, dim: int = -1) -> Tensor:
     e_x = exp(a - max(a, dim=dim, keepdim=True))
     return e_x / sum(e_x, dim=dim, keepdim=True)
@@ -64,21 +66,15 @@ def div(a: Tensor | float, b: Tensor | float) -> Tensor:
 
 
 # ========= Reduction Operations ==========
-def sum(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Sum.create_node(a, dim=dim, keepdim=keepdim)
-def mean(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Mean.create_node(a, dim=dim, keepdim=keepdim)
-def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
+def sum(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Sum.create_node(a, dim=dim, keepdim=keepdim)
+def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(a, dim=dim, keepdim=keepdim)
+def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
 
 if __name__ == "__main__":
-    a = Tensor((2,3), [[1,2,3], [3,4,2]])
-    b = Tensor((3,2), [[1,2], [3,4], [2,3]])
+    a = Tensor((2,2), [[1., 2.], [3., 4.]])
 
+    b = sum(a, dim=0)
 
-    d = dot(a, b)
+    b.realize()
 
-    d.backward()
-
-    #d.backward()
-
-    print(a);print(d)
-    print(a.grad);print(d.grad)
-
+    print(b)

@@ -52,3 +52,9 @@ class ConcatExtras(ctypes.Structure):
         ("axis", ctypes.c_int),
     ]
 
+class ClipExtras(ctypes.Structure):
+    _fields_ = [
+        ("min_val", ctypes.c_float),
+        ("max_val", ctypes.c_float),
+    ]
+
