@@ -1,13 +1,13 @@
 #include "utils.h"
+#include "logger.h"
+#include "tensor.h" // Added this line
+#include <stdio.h>
 
 int _idrak_debug_enabled = 0;
 
-#include <stdio.h>
-#include "utils.h"
-
 void idrak_set_debug_mode(int enable) {
     _idrak_debug_enabled = enable;
-    DEBUG_PRINT(ANSI_COLOR_CYAN, "Debug mode set to %d\n", enable);
+    LOG_INFO("Debug mode set to %d", enable);
 }
 
 int get_num_batches(const int *shape, int ndim) {
@@ -31,13 +31,12 @@ void print_shape(const int *shape, int ndim) {
     if (!_idrak_debug_enabled) {
         return;
     }
-    fprintf(stderr, ANSI_COLOR_CYAN "[DEBUG] [Shape] (" ANSI_COLOR_RESET);
+    LOG_INFO("[Shape] (");
     for (int i = 0; i < ndim; ++i) {
         fprintf(stderr, "%d", shape[i]);
         if (i < ndim - 1) {
             fprintf(stderr, ", ");
         }
     }
-    fprintf(stderr, ANSI_COLOR_CYAN ")\n" ANSI_COLOR_RESET);
+    fprintf(stderr, ")\n");
 }
-

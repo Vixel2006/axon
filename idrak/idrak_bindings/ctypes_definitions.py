@@ -1,10 +1,23 @@
 import ctypes
 
+# Define the C Dtype enum
+class CDtype(ctypes.c_int):
+    FLOAT32 = 0
+    FLOAT64 = 1
+    INT32 = 2
+
+# Define the C Device enum
+class CDevice(ctypes.c_int):
+    CPU = 0
+    CUDA = 1
+
 # Define the C SharedPtr struct
 class CSharedPtr(ctypes.Structure):
     _fields_ = [
-        ("ptr", ctypes.POINTER(ctypes.c_float)),
-        ("ref_counter", ctypes.c_int),
+        ("elems", ctypes.c_void_p),
+        ("ref_counter", ctypes.c_uint),
+        ("dtype", CDtype),
+        ("device", CDevice),
     ]
 
 # Define the C Tensor struct
@@ -12,9 +25,9 @@ class CTensor(ctypes.Structure):
     _fields_ = [
         ("data", ctypes.POINTER(CSharedPtr)),
         ("grad", ctypes.POINTER(CSharedPtr)),
-        ("ndim", ctypes.c_int),
         ("shape", ctypes.POINTER(ctypes.c_int)),
         ("strides", ctypes.POINTER(ctypes.c_int)),
+        ("ndim", ctypes.c_int),
         ("requires_grad", ctypes.c_bool),
     ]
 
@@ -54,7 +67,6 @@ class ConcatExtras(ctypes.Structure):
 
 class ClipExtras(ctypes.Structure):
     _fields_ = [
-        ("min_val", ctypes.c_float),
-        ("max_val", ctypes.c_float),
+        ("min_val", ctypes.c_double),
+        ("max_val", ctypes.c_double),
     ]
-
