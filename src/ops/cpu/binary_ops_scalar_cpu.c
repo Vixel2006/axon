@@ -4,24 +4,25 @@
 #include <math.h>
 #include <sleef.h>
 #include <string.h>
+#include "logger.h"
 
 static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "reconfigure_scalar_output: Reconfiguring output "
-                       "tensor for scalar op\n");
+  LOG_INFO("OP: reconfigure_scalar_output: Reconfiguring output "
+                       "tensor for scalar op");
   out->strides = compute_strides(out->shape, out->ndim);
   if (!out->strides &&
       out->ndim > 0) { // compute_strides can return NULL if ndim=0 or error
-    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for "
-                "out->strides.\n");
+    LOG_ERROR("reconfigure_scalar_output: Failed to allocate memory for "
+                "out->strides.");
     free(out->shape);
     out->shape = NULL;
     return;
   }
 
   size_t out_total_size = numel(out->shape, out->ndim);
-  if (!out->data->ptr) {
-    IDRAK_ERROR("reconfigure_scalar_output: Failed to allocate memory for "
-                "out->data->ptr.\n");
+  if (!out->data->elems) {
+    LOG_ERROR("reconfigure_scalar_output: Failed to allocate memory for "
+                "out->data->elems.");
     free(out->shape);
     out->shape = NULL;
     if (out->strides) {
@@ -33,11 +34,10 @@ static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
 }
 
 void add_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ",
-              "add_scalar_op: Performing scalar addition (scalar=%.2f)\n", b);
+  LOG_INFO("OP: add_scalar_op: Performing scalar addition (scalar=%.2f)", b);
 
   reconfigure_scalar_output(a, out);
-  if (!out->data->ptr) {
+  if (!out->data->elems) {
     return;
   }
 
@@ -56,32 +56,29 @@ void add_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data->ptr[offset_out] = a->data->ptr[offset_a] + b;
+      ((float*)out->data->elems)[offset_out] = ((float*)a->data->elems)[offset_a] + b;
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
       __m256 z = _mm256_add_ps(x, scalar);
-      _mm256_storeu_ps(out->data->ptr + i, z);
+      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data->ptr[i] = a->data->ptr[i] + b;
+      ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] + b;
     }
   }
 }
 
 void sub_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ",
-              "sub_scalar_op: Performing scalar subtraction "
-              "(scalar=%.2f)\n",
-              b);
+  LOG_INFO("OP: sub_scalar_op: Performing scalar subtraction (scalar=%.2f)", b);
 
   reconfigure_scalar_output(a, out);
-  if (!out->data->ptr) {
+  if (!out->data->elems) {
     return;
   }
 
@@ -100,42 +97,39 @@ void sub_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data->ptr[offset_out] = a->data->ptr[offset_a] - b;
+      ((float*)out->data->elems)[offset_out] = ((float*)a->data->elems)[offset_a] - b;
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
       __m256 z = _mm256_sub_ps(x, scalar);
-      _mm256_storeu_ps(out->data->ptr + i, z);
+      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data->ptr[i] = a->data->ptr[i] - b;
+      ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] - b;
     }
   }
 }
 
 void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
-  IDRAK_DEBUG("OP   ",
-              "rsub_scalar_op: Performing reverse scalar "
-              "subtraction (scalar=%.2f)\n",
-              a);
+  LOG_INFO("OP: rsub_scalar_op: Performing reverse scalar subtraction (scalar=%.2f)", a);
 
   // Error checking for null tensors
   if (!b || !out) {
-    IDRAK_ERROR(
-        "rsub_scalar_op ERROR: Input or output tensor is NULL! b=%p, out=%p\n",
+    LOG_ERROR(
+        "rsub_scalar_op ERROR: Input or output tensor is NULL! b=%p, out=%p",
         (void *)b, (void *)out);
     return;
   }
 
   reconfigure_scalar_output(b, out);
-  if (!out->data->ptr) {
-    IDRAK_ERROR("rsub_scalar_op ERROR: Output tensor data pointer is NULL "
-                "after reconfiguration.\n");
+  if (!out->data->elems) {
+    LOG_ERROR("rsub_scalar_op ERROR: Output tensor data pointer is NULL "
+                "after reconfiguration.");
     return;
   }
 
@@ -155,32 +149,29 @@ void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
         out_offset += coord * out->strides[d];
       }
 
-      out->data->ptr[out_offset] = a - b->data->ptr[b_offset];
+      ((float*)out->data->elems)[out_offset] = a - ((float*)b->data->elems)[b_offset];
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(a);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(b->data->ptr + i);
+      __m256 x = _mm256_loadu_ps(((float*)b->data->elems) + i);
       __m256 z = _mm256_sub_ps(scalar, x);
-      _mm256_storeu_ps(out->data->ptr + i, z);
+      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data->ptr[i] = a - b->data->ptr[i];
+      ((float*)out->data->elems)[i] = a - ((float*)b->data->elems)[i];
     }
   }
 }
 
 void mul_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ",
-              "mul_scalar_op: Performing scalar multiplication "
-              "(scalar=%.2f)\n",
-              b);
+  LOG_INFO("OP: mul_scalar_op: Performing scalar multiplication (scalar=%.2f)", b);
 
   reconfigure_scalar_output(a, out);
-  if (!out->data->ptr) {
+  if (!out->data->elems) {
     return;
   }
 
@@ -199,30 +190,29 @@ void mul_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data->ptr[offset_out] = a->data->ptr[offset_a] * b;
+      ((float*)out->data->elems)[offset_out] = ((float*)a->data->elems)[offset_a] * b;
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
       __m256 z = _mm256_mul_ps(x, scalar);
-      _mm256_storeu_ps(out->data->ptr + i, z);
+      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
     }
 
     for (; i < size; ++i) {
-      out->data->ptr[i] = a->data->ptr[i] * b;
+      ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] * b;
     }
   }
 }
 
 void div_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ",
-              "div_scalar_op: Performing scalar division (scalar=%.2f)\n", b);
+  LOG_INFO("OP: div_scalar_op: Performing scalar division (scalar=%.2f)", b);
 
   reconfigure_scalar_output(a, out);
-  if (!out->data->ptr) {
+  if (!out->data->elems) {
     return;
   }
 
@@ -242,47 +232,44 @@ void div_scalar_op(Tensor *a, float b, Tensor *out) {
       }
 
       if (b == 0.0f) {
-        IDRAK_WARNING("Division by zero in div_scalar_op at index %d. "
-                      "Result will be +/-INF or NaN.\n",
+        LOG_WARN("Division by zero in div_scalar_op at index %d. "
+                      "Result will be +/-INF or NaN.",
                       idx);
-        out->data->ptr[offset_out] =
-            a->data->ptr[offset_a] / b; // Will result in INF/NaN
+        ((float*)out->data->elems)[offset_out] =
+            ((float*)a->data->elems)[offset_a] / b; // Will result in INF/NaN
       } else {
-        out->data->ptr[offset_out] = a->data->ptr[offset_a] / b;
+        ((float*)out->data->elems)[offset_out] = ((float*)a->data->elems)[offset_a] / b;
       }
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
     if (b == 0.0f) {
-      IDRAK_WARNING("Division by zero in div_scalar_op (SIMD path). "
-                    "Results will be +/-INF or NaN.\n");
+      LOG_WARN("Division by zero in div_scalar_op (SIMD path). "
+                    "Results will be +/-INF or NaN.");
     }
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
       __m256 z = _mm256_div_ps(x, scalar);
-      _mm256_storeu_ps(out->data->ptr + i, z);
+      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
     }
 
     for (; i < size; ++i) {
       if (b == 0.0f) {
-        out->data->ptr[i] = a->data->ptr[i] / b;
+        ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] / b;
       } else {
-        out->data->ptr[i] = a->data->ptr[i] / b;
+        ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] / b;
       }
     }
   }
 }
 
 void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ",
-              "rdiv_scalar_op: Performing reverse scalar "
-              "division (scalar=%.2f)\n",
-              b);
+  LOG_INFO("OP: rdiv_scalar_op: Performing reverse scalar division (scalar=%.2f)", b);
 
   reconfigure_scalar_output(a, out);
-  if (!out->data->ptr) {
+  if (!out->data->elems) {
     return;
   }
 
@@ -301,14 +288,14 @@ void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      if (a->data->ptr[offset_a] == 0.0f) {
-        IDRAK_WARNING("Division by zero in rdiv_scalar_op at index %d. "
-                      "Result will be +/-INF or NaN.\n",
+      if (((float*)a->data->elems)[offset_a] == 0.0f) {
+        LOG_WARN("Division by zero in rdiv_scalar_op at index %d. "
+                      "Result will be +/-INF or NaN.",
                       idx);
-        out->data->ptr[offset_out] =
-            b / a->data->ptr[offset_a]; // Will result in INF/NaN
+        ((float*)out->data->elems)[offset_out] =
+            b / ((float*)a->data->elems)[offset_a]; // Will result in INF/NaN
       } else {
-        out->data->ptr[offset_out] = b / a->data->ptr[offset_a];
+        ((float*)out->data->elems)[offset_out] = b / ((float*)a->data->elems)[offset_a];
       }
     }
   } else {
@@ -316,30 +303,29 @@ void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
       __m256 z = _mm256_div_ps(scalar, x);
-      _mm256_storeu_ps(out->data->ptr + i, z);
+      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
     }
 
     for (; i < size; ++i) {
-      if (a->data->ptr[i] == 0.0f) {
-        IDRAK_WARNING("Division by zero in rdiv_scalar_op at index %d. "
-                      "Result will be +/-INF or NaN.\n",
+      if (((float*)a->data->elems)[i] == 0.0f) {
+        LOG_WARN("Division by zero in rdiv_scalar_op at index %d. "
+                      "Result will be +/-INF or NaN.",
                       i);
-        out->data->ptr[i] = b / a->data->ptr[i];
+        ((float*)out->data->elems)[i] = b / ((float*)a->data->elems)[i];
       } else {
-        out->data->ptr[i] = b / a->data->ptr[i];
+        ((float*)out->data->elems)[i] = b / ((float*)a->data->elems)[i];
       }
     }
   }
 }
 
 void pow_scalar_op(Tensor *a, float b, Tensor *out) {
-  IDRAK_DEBUG("OP   ",
-              "pow_scalar_op: Performing scalar power (exponent=%.2f)\n", b);
+  LOG_INFO("OP: pow_scalar_op: Performing scalar power (exponent=%.2f)", b);
 
   reconfigure_scalar_output(a, out);
-  if (!out->data->ptr) {
+  if (!out->data->elems) {
     return;
   }
 
@@ -358,20 +344,20 @@ void pow_scalar_op(Tensor *a, float b, Tensor *out) {
         offset_out += coord * out->strides[d];
       }
 
-      out->data->ptr[offset_out] = powf(a->data->ptr[offset_a], b);
+      ((float*)out->data->elems)[offset_out] = powf(((float*)a->data->elems)[offset_a], b);
     }
   } else {
     int i = 0;
     __m256 scalar = _mm256_set1_ps(b);
 
     for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(a->data->ptr + i);
+      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
       __m256 y = Sleef_powf8_u10avx2(x, scalar);
-      _mm256_storeu_ps(out->data->ptr + i, y);
+      _mm256_storeu_ps(((float*)out->data->elems) + i, y);
     }
 
     for (; i < size; ++i) {
-      out->data->ptr[i] = powf(a->data->ptr[i], b);
+      ((float*)out->data->elems)[i] = powf(((float*)a->data->elems)[i], b);
     }
   }
 }

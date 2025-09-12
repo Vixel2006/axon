@@ -6,473 +6,459 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "logger.h"
 #include "ops/ops.h"
 
 #define SIMD_WIDTH 8
 
-void sum_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  IDRAK_DEBUG("OP   ",
-              "sum_op: Performing sum reduction along axis %d (keepdim=%d)\n",
-              axis, keepdim);
+void sum_op(Tensor* a, Tensor* out, int axis, bool keepdim) {
+    LOG_INFO("OP: sum_op: Performing sum reduction along axis %d (keepdim=%d)", axis, keepdim);
 
-  // Validate inputs
-  if (!a || !out || !a->data || !out->data) {
-    IDRAK_ERROR("sum_op: Invalid tensor pointers\n");
-    return;
-  }
+    // Validate inputs
+    if (!a || !out || !a->data->elems || !out->data->elems) {
+        LOG_ERROR("sum_op: Invalid tensor pointers");
+        return;
+    }
 
-  if (axis < 0 || axis >= a->ndim) {
-    IDRAK_ERROR("sum_op: Invalid axis %d for tensor with %d dimensions\n", axis,
-                a->ndim);
-    return;
-  }
+    if (axis < 0 || axis >= a->ndim) {
+        LOG_ERROR("sum_op: Invalid axis %d for tensor with %d dimensions", axis, a->ndim);
+        return;
+    }
 
-  // Set up output tensor
-  out->strides = compute_strides(out->shape, out->ndim);
-  if (!out->strides && out->ndim > 0) {
-    IDRAK_ERROR("sum_op: Failed to allocate memory for out->strides.\n");
-    return;
-  }
+    // Set up output tensor
+    out->strides = compute_strides(out->shape, out->ndim);
+    if (!out->strides && out->ndim > 0) {
+        LOG_ERROR("sum_op: Failed to allocate memory for out->strides.");
+        return;
+    }
 
-  size_t out_total_size = numel(out->shape, out->ndim);
-  memset(out->data->ptr, 0, out_total_size * sizeof(float));
+    size_t out_total_size = numel(out->shape, out->ndim);
+    memset(out->data->elems, 0, out_total_size * sizeof(float));
 
-  // Calculate dimensions
-  size_t outer_size = 1;
-  for (int i = 0; i < axis; i++) {
-    outer_size *= a->shape[i];
-  }
+    // Calculate dimensions
+    size_t outer_size = 1;
+    for (int i = 0; i < axis; i++) {
+        outer_size *= a->shape[i];
+    }
 
-  size_t reduction_size = a->shape[axis];
+    size_t reduction_size = a->shape[axis];
 
-  size_t inner_size = 1;
-  for (int i = axis + 1; i < a->ndim; i++) {
-    inner_size *= a->shape[i];
-  }
+    size_t inner_size = 1;
+    for (int i = axis + 1; i < a->ndim; i++) {
+        inner_size *= a->shape[i];
+    }
 
-  size_t reduction_stride = a->strides[axis];
+    size_t reduction_stride = a->strides[axis];
 
-  // Process each outer x inner slice
-  for (size_t outer = 0; outer < outer_size; outer++) {
-    for (size_t inner = 0; inner < inner_size; inner++) {
+    // Process each outer x inner slice
+    for (size_t outer = 0; outer < outer_size; outer++) {
+        for (size_t inner = 0; inner < inner_size; inner++) {
 
-      // Calculate base input offset for this (outer, inner) position
-      size_t input_base = 0;
+            // Calculate base input offset for this (outer, inner) position
+            size_t input_base = 0;
 
-      // Add outer dimension offsets
-      size_t temp_outer = outer;
-      for (int d = axis - 1; d >= 0; d--) {
-        size_t coord = temp_outer % a->shape[d];
-        temp_outer /= a->shape[d];
-        input_base += coord * a->strides[d];
-      }
+            // Add outer dimension offsets
+            size_t temp_outer = outer;
+            for (int d = axis - 1; d >= 0; d--) {
+                size_t coord = temp_outer % a->shape[d];
+                temp_outer /= a->shape[d];
+                input_base += coord * a->strides[d];
+            }
 
-      // Add inner dimension offsets
-      size_t temp_inner = inner;
-      for (int d = a->ndim - 1; d > axis; d--) {
-        size_t coord = temp_inner % a->shape[d];
-        temp_inner /= a->shape[d];
-        input_base += coord * a->strides[d];
-      }
+            // Add inner dimension offsets
+            size_t temp_inner = inner;
+            for (int d = a->ndim - 1; d > axis; d--) {
+                size_t coord = temp_inner % a->shape[d];
+                temp_inner /= a->shape[d];
+                input_base += coord * a->strides[d];
+            }
 
-      // Calculate output offset
-      size_t output_offset = 0;
-      int out_dim_idx = 0;
+            // Calculate output offset
+            size_t output_offset = 0;
+            int out_dim_idx = 0;
 
-      // Map outer coordinates to output
-      temp_outer = outer;
-      for (int d = 0; d < axis; d++) {
-        size_t stride_product = 1;
-        for (int k = d + 1; k < axis; k++) {
-          stride_product *= a->shape[k];
+            // Map outer coordinates to output
+            temp_outer = outer;
+            for (int d = 0; d < axis; d++) {
+                size_t stride_product = 1;
+                for (int k = d + 1; k < axis; k++) {
+                    stride_product *= a->shape[k];
+                }
+                size_t coord = temp_outer / stride_product;
+                temp_outer %= stride_product;
+                output_offset += coord * out->strides[out_dim_idx++];
+            }
+
+            // Handle keepdim case
+            if (keepdim) {
+                out_dim_idx++; // Skip the reduced dimension (always 0)
+            }
+
+            // Map inner coordinates to output
+            temp_inner = inner;
+            for (int d = axis + 1; d < a->ndim; d++) {
+                size_t stride_product = 1;
+                for (int k = d + 1; k < a->ndim; k++) {
+                    stride_product *= a->shape[k];
+                }
+                size_t coord = temp_inner / stride_product;
+                temp_inner %= stride_product;
+                output_offset += coord * out->strides[out_dim_idx++];
+            }
+
+            // Perform reduction along the specified axis
+            float sum = 0.0f;
+
+            if (reduction_stride == 1 && reduction_size >= SIMD_WIDTH) {
+                // SIMD path for contiguous data
+                __m256 sum_vec = _mm256_setzero_ps();
+                size_t i = 0;
+
+                for (; i + SIMD_WIDTH - 1 < reduction_size; i += SIMD_WIDTH) {
+                    __m256 vec_a = _mm256_loadu_ps(((float*)a->data->elems) + input_base + i);
+                    sum_vec = _mm256_add_ps(sum_vec, vec_a);
+                }
+
+                // Horizontal sum of SIMD vector
+                sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
+                sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
+                __m128 lo = _mm256_extractf128_ps(sum_vec, 0);
+                __m128 hi = _mm256_extractf128_ps(sum_vec, 1);
+                __m128 total = _mm_add_ps(lo, hi);
+                sum = _mm_cvtss_f32(total);
+
+                // Handle remaining elements
+                for (; i < reduction_size; i++) {
+                    sum += ((float*)a->data->elems)[input_base + i * reduction_stride];
+                }
+            } else {
+                // Scalar path
+                for (size_t i = 0; i < reduction_size; i++) {
+                    sum += ((float*)a->data->elems)[input_base + i * reduction_stride];
+                }
+            }
+
+            ((float*)out->data->elems)[output_offset] = sum;
         }
-        size_t coord = temp_outer / stride_product;
-        temp_outer %= stride_product;
-        output_offset += coord * out->strides[out_dim_idx++];
-      }
+    }
+}
 
-      // Handle keepdim case
-      if (keepdim) {
-        out_dim_idx++; // Skip the reduced dimension (always 0)
-      }
+void mean_op(Tensor* a, Tensor* out, int axis, bool keepdim) {
+    LOG_INFO("OP: mean_op: Performing mean reduction along axis %d (keepdim=%d)", axis, keepdim);
 
-      // Map inner coordinates to output
-      temp_inner = inner;
-      for (int d = axis + 1; d < a->ndim; d++) {
-        size_t stride_product = 1;
-        for (int k = d + 1; k < a->ndim; k++) {
-          stride_product *= a->shape[k];
+    // Validate inputs
+    if (!a || !out || !a->data->elems || !out->data->elems) {
+        LOG_ERROR("mean_op: Invalid tensor pointers");
+        return;
+    }
+
+    if (axis < 0 || axis >= a->ndim) {
+        LOG_ERROR("mean_op: Invalid axis %d for tensor with %d dimensions", axis, a->ndim);
+        return;
+    }
+
+    // First compute the sum
+    sum_op(a, out, axis, keepdim);
+
+    // Then divide by the reduction size
+    float reduction_size = (float)a->shape[axis];
+    size_t out_total_size = numel(out->shape, out->ndim);
+
+    for (size_t i = 0; i < out_total_size; i++) {
+        ((float*)out->data->elems)[i] /= reduction_size;
+    }
+}
+
+void max_op(Tensor* a, Tensor* out, int axis, bool keepdim) {
+    LOG_INFO("OP: max_op: Performing max reduction along axis %d (keepdim=%d)", axis, keepdim);
+
+    // Validate inputs
+    if (!a || !out || !a->data->elems || !out->data->elems) {
+        LOG_ERROR("max_op: Invalid tensor pointers");
+        return;
+    }
+
+    if (axis < 0 || axis >= a->ndim) {
+        LOG_ERROR("max_op: Invalid axis %d for tensor with %d dimensions", axis, a->ndim);
+        return;
+    }
+
+    // Set up output tensor
+    out->strides = compute_strides(out->shape, out->ndim);
+    if (!out->strides && out->ndim > 0) {
+        LOG_ERROR("max_op: Failed to allocate memory for out->strides.");
+        return;
+    }
+
+    size_t out_total_size = numel(out->shape, out->ndim);
+    for (size_t i = 0; i < out_total_size; i++) {
+        ((float*)out->data->elems)[i] = -FLT_MAX;
+    }
+
+    // Calculate dimensions
+    size_t outer_size = 1;
+    for (int i = 0; i < axis; i++) {
+        outer_size *= a->shape[i];
+    }
+
+    size_t reduction_size = a->shape[axis];
+
+    size_t inner_size = 1;
+    for (int i = axis + 1; i < a->ndim; i++) {
+        inner_size *= a->shape[i];
+    }
+
+    size_t reduction_stride = a->strides[axis];
+
+    // Process each outer x inner slice
+    for (size_t outer = 0; outer < outer_size; outer++) {
+        for (size_t inner = 0; inner < inner_size; inner++) {
+
+            // Calculate base input offset for this (outer, inner) position
+            size_t input_base = 0;
+
+            // Add outer dimension offsets
+            size_t temp_outer = outer;
+            for (int d = axis - 1; d >= 0; d--) {
+                size_t coord = temp_outer % a->shape[d];
+                temp_outer /= a->shape[d];
+                input_base += coord * a->strides[d];
+            }
+
+            // Add inner dimension offsets
+            size_t temp_inner = inner;
+            for (int d = a->ndim - 1; d > axis; d--) {
+                size_t coord = temp_inner % a->shape[d];
+                temp_inner /= a->shape[d];
+                input_base += coord * a->strides[d];
+            }
+
+            // Calculate output offset
+            size_t output_offset = 0;
+            int out_dim_idx = 0;
+
+            // Map outer coordinates to output
+            temp_outer = outer;
+            for (int d = axis - 1; d >= 0; d--) {
+                size_t coord = temp_outer % a->shape[d];
+                temp_outer /= a->shape[d];
+                output_offset += coord * out->strides[out_dim_idx++];
+            }
+
+            // Handle keepdim case
+            if (keepdim) {
+                out_dim_idx++; // Skip the reduced dimension (always 0)
+            }
+
+            // Map inner coordinates to output
+            temp_inner = inner;
+            for (int d = axis + 1; d < a->ndim; d++) {
+                size_t coord = temp_inner % a->shape[d];
+                temp_inner /= a->shape[d];
+                output_offset += coord * out->strides[out_dim_idx++];
+            }
+
+            // Find maximum along the specified axis
+            float max_val = -FLT_MAX;
+
+            if (reduction_stride == 1 && reduction_size >= SIMD_WIDTH) {
+                // SIMD path for contiguous data
+                __m256 max_vec = _mm256_set1_ps(-FLT_MAX);
+                size_t i = 0;
+
+                for (; i + SIMD_WIDTH - 1 < reduction_size; i += SIMD_WIDTH) {
+                    __m256 vec_a = _mm256_loadu_ps(((float*)a->data->elems) + input_base + i);
+                    max_vec = _mm256_max_ps(max_vec, vec_a);
+                }
+
+                // Horizontal max of SIMD vector
+                __m128 vlow = _mm256_castps256_ps128(max_vec);
+                __m128 vhigh = _mm256_extractf128_ps(max_vec, 1);
+                vlow = _mm_max_ps(vlow, vhigh);
+                vlow = _mm_max_ps(vlow, _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(2, 3, 0, 1)));
+                vlow = _mm_max_ps(vlow, _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(1, 0, 3, 2)));
+                max_val = _mm_cvtss_f32(vlow);
+
+                // Handle remaining elements
+                for (; i < reduction_size; i++) {
+                    max_val = fmaxf(max_val, ((float*)a->data->elems)[input_base + i * reduction_stride]);
+                }
+            } else {
+                // Scalar path
+                for (size_t i = 0; i < reduction_size; i++) {
+                    max_val = fmaxf(max_val, ((float*)a->data->elems)[input_base + i * reduction_stride]);
+                }
+            }
+
+            ((float*)out->data->elems)[output_offset] = max_val;
         }
-        size_t coord = temp_inner / stride_product;
-        temp_inner %= stride_product;
-        output_offset += coord * out->strides[out_dim_idx++];
-      }
+    }
+}
 
-      // Perform reduction along the specified axis
-      float sum = 0.0f;
+void sum_full_op(Tensor* a, Tensor* out) {
+    LOG_INFO("OP: sum_full_op: Performing full sum reduction");
 
-      if (reduction_stride == 1 && reduction_size >= SIMD_WIDTH) {
-        // SIMD path for contiguous data
+    size_t total_elements = numel(a->shape, a->ndim);
+
+    bool is_a_contiguous = is_contiguous(a);
+
+    float total_sum = 0.0f;
+
+    if (is_a_contiguous) {
         __m256 sum_vec = _mm256_setzero_ps();
         size_t i = 0;
 
-        for (; i + SIMD_WIDTH - 1 < reduction_size; i += SIMD_WIDTH) {
-          __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[input_base + i]);
-          sum_vec = _mm256_add_ps(sum_vec, vec_a);
+        for (; i + (SIMD_WIDTH - 1) < total_elements; i += SIMD_WIDTH) {
+            __m256 vec_a = _mm256_loadu_ps(((float*)a->data->elems) + i);
+            sum_vec = _mm256_add_ps(sum_vec, vec_a);
         }
 
-        // Horizontal sum of SIMD vector
         sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
         sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
-        __m128 lo = _mm256_extractf128_ps(sum_vec, 0);
-        __m128 hi = _mm256_extractf128_ps(sum_vec, 1);
-        __m128 total = _mm_add_ps(lo, hi);
-        sum = _mm_cvtss_f32(total);
+        __m128 lo_half = _mm256_extractf128_ps(sum_vec, 0);
+        __m128 hi_half = _mm256_extractf128_ps(sum_vec, 1);
+        __m128 total_sum_m128 = _mm_add_ps(lo_half, hi_half);
+        total_sum = _mm_cvtss_f32(total_sum_m128);
 
-        // Handle remaining elements
-        for (; i < reduction_size; i++) {
-          sum += a->data->ptr[input_base + i * reduction_stride];
+        for (; i < total_elements; ++i) {
+            total_sum += ((float*)a->data->elems)[i];
         }
-      } else {
-        // Scalar path
-        for (size_t i = 0; i < reduction_size; i++) {
-          sum += a->data->ptr[input_base + i * reduction_stride];
+    } else {
+        int* coords = malloc(a->ndim * sizeof(int));
+        if (!coords) {
+            LOG_ERROR("sum_full_op: Failed to allocate memory for coords.");
+            free(out->data->elems);
+            out->data->elems = NULL;
+            return;
         }
-      }
 
-      out->data->ptr[output_offset] = sum;
+        memset(coords, 0, a->ndim * sizeof(int));
+
+        for (size_t elem = 0; elem < total_elements; ++elem) {
+            size_t flat_idx = 0;
+            for (int d = 0; d < a->ndim; ++d) {
+                flat_idx += (size_t)coords[d] * a->strides[d];
+            }
+
+            total_sum += ((float*)a->data->elems)[flat_idx];
+
+            int carry = 1;
+            for (int d = a->ndim - 1; d >= 0 && carry; --d) {
+                coords[d] += carry;
+                if (coords[d] < a->shape[d]) {
+                    carry = 0;
+                } else {
+                    coords[d] = 0;
+                    carry = 1;
+                }
+            }
+        }
+
+        free(coords);
     }
-  }
+
+    ((float*)out->data->elems)[0] = total_sum;
 }
 
-void mean_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  IDRAK_DEBUG("OP   ",
-              "mean_op: Performing mean reduction along axis %d (keepdim=%d)\n",
-              axis, keepdim);
+void mean_full_op(Tensor* a, Tensor* out) {
+    LOG_INFO("OP: mean_full_op: Performing full mean reduction");
 
-  // Validate inputs
-  if (!a || !out || !a->data || !out->data) {
-    IDRAK_ERROR("mean_op: Invalid tensor pointers\n");
-    return;
-  }
+    sum_full_op(a, out);
 
-  if (axis < 0 || axis >= a->ndim) {
-    IDRAK_ERROR("mean_op: Invalid axis %d for tensor with %d dimensions\n",
-                axis, a->ndim);
-    return;
-  }
+    if (out && out->data->elems == NULL) {
+        LOG_ERROR("mean_full_op: sum_full_op failed, cannot compute mean.");
+        return;
+    }
 
-  // First compute the sum
-  sum_op(a, out, axis, keepdim);
+    size_t total_elements = numel(a->shape, a->ndim);
 
-  // Then divide by the reduction size
-  float reduction_size = (float)a->shape[axis];
-  size_t out_total_size = numel(out->shape, out->ndim);
-
-  for (size_t i = 0; i < out_total_size; i++) {
-    out->data->ptr[i] /= reduction_size;
-  }
+    if (total_elements > 0) {
+        ((float*)out->data->elems)[0] /= total_elements;
+    } else {
+        if (out && out->data->elems) {
+            ((float*)out->data->elems)[0] = 0.0f;
+        }
+    }
 }
 
-void max_op(Tensor *a, Tensor *out, int axis, bool keepdim) {
-  IDRAK_DEBUG("OP   ",
-              "max_op: Performing max reduction along axis %d (keepdim=%d)\n",
-              axis, keepdim);
+void max_full_op(Tensor* a, Tensor* out) {
+    LOG_INFO("OP: max_full_op: Performing full max reduction");
 
-  // Validate inputs
-  if (!a || !out || !a->data || !out->data) {
-    IDRAK_ERROR("max_op: Invalid tensor pointers\n");
-    return;
-  }
+    if (!out->data->elems) {
+        fprintf(stderr, "Error: Failed to allocate memory for out->data.elems\n");
+        return;
+    }
 
-  if (axis < 0 || axis >= a->ndim) {
-    IDRAK_ERROR("max_op: Invalid axis %d for tensor with %d dimensions\n", axis,
-                a->ndim);
-    return;
-  }
+    size_t total_elements = numel(a->shape, a->ndim);
 
-  // Set up output tensor
-  out->strides = compute_strides(out->shape, out->ndim);
-  if (!out->strides && out->ndim > 0) {
-    IDRAK_ERROR("max_op: Failed to allocate memory for out->strides.\n");
-    return;
-  }
+    if (total_elements == 0) {
+        ((float*)out->data->elems)[0] = -FLT_MAX;
+        out->requires_grad = a->requires_grad;
+        return;
+    }
 
-  size_t out_total_size = numel(out->shape, out->ndim);
-  for (size_t i = 0; i < out_total_size; i++) {
-    out->data->ptr[i] = -FLT_MAX;
-  }
+    bool is_a_contiguous = is_contiguous(a);
 
-  // Calculate dimensions
-  size_t outer_size = 1;
-  for (int i = 0; i < axis; i++) {
-    outer_size *= a->shape[i];
-  }
+    float max_val = -FLT_MAX;
 
-  size_t reduction_size = a->shape[axis];
-
-  size_t inner_size = 1;
-  for (int i = axis + 1; i < a->ndim; i++) {
-    inner_size *= a->shape[i];
-  }
-
-  size_t reduction_stride = a->strides[axis];
-
-  // Process each outer x inner slice
-  for (size_t outer = 0; outer < outer_size; outer++) {
-    for (size_t inner = 0; inner < inner_size; inner++) {
-
-      // Calculate base input offset for this (outer, inner) position
-      size_t input_base = 0;
-
-      // Add outer dimension offsets
-      size_t temp_outer = outer;
-      for (int d = axis - 1; d >= 0; d--) {
-        size_t coord = temp_outer % a->shape[d];
-        temp_outer /= a->shape[d];
-        input_base += coord * a->strides[d];
-      }
-
-      // Add inner dimension offsets
-      size_t temp_inner = inner;
-      for (int d = a->ndim - 1; d > axis; d--) {
-        size_t coord = temp_inner % a->shape[d];
-        temp_inner /= a->shape[d];
-        input_base += coord * a->strides[d];
-      }
-
-      // Calculate output offset
-      size_t output_offset = 0;
-      int out_dim_idx = 0;
-
-      // Map outer coordinates to output
-      temp_outer = outer;
-      for (int d = axis - 1; d >= 0; d--) {
-        size_t coord = temp_outer % a->shape[d];
-        temp_outer /= a->shape[d];
-        output_offset += coord * out->strides[out_dim_idx++];
-      }
-
-      // Handle keepdim case
-      if (keepdim) {
-        out_dim_idx++; // Skip the reduced dimension (always 0)
-      }
-
-      // Map inner coordinates to output
-      temp_inner = inner;
-      for (int d = a->ndim - 1; d > axis; d--) {
-        size_t coord = temp_inner % a->shape[d];
-        temp_inner /= a->shape[d];
-        output_offset += coord * out->strides[out_dim_idx++];
-      }
-
-      // Find maximum along the specified axis
-      float max_val = -FLT_MAX;
-
-      if (reduction_stride == 1 && reduction_size >= SIMD_WIDTH) {
-        // SIMD path for contiguous data
+    if (is_a_contiguous) {
         __m256 max_vec = _mm256_set1_ps(-FLT_MAX);
         size_t i = 0;
 
-        for (; i + SIMD_WIDTH - 1 < reduction_size; i += SIMD_WIDTH) {
-          __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[input_base + i]);
-          max_vec = _mm256_max_ps(max_vec, vec_a);
+        for (; i + (SIMD_WIDTH - 1) < total_elements; i += SIMD_WIDTH) {
+            __m256 vec_a = _mm256_loadu_ps(((float*)a->data->elems) + i);
+            max_vec = _mm256_max_ps(max_vec, vec_a);
         }
 
-        // Horizontal max of SIMD vector
         __m128 vlow = _mm256_castps256_ps128(max_vec);
         __m128 vhigh = _mm256_extractf128_ps(max_vec, 1);
         vlow = _mm_max_ps(vlow, vhigh);
-        vlow = _mm_max_ps(vlow,
-                          _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(2, 3, 0, 1)));
-        vlow = _mm_max_ps(vlow,
-                          _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(1, 0, 3, 2)));
+        vlow = _mm_max_ps(vlow, _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(2, 3, 0, 1)));
+        vlow = _mm_max_ps(vlow, _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(1, 0, 3, 2)));
         max_val = _mm_cvtss_f32(vlow);
 
-        // Handle remaining elements
-        for (; i < reduction_size; i++) {
-          max_val =
-              fmaxf(max_val, a->data->ptr[input_base + i * reduction_stride]);
+        for (; i < total_elements; ++i) {
+            max_val = fmaxf(max_val, ((float*)a->data->elems)[i]);
         }
-      } else {
-        // Scalar path
-        for (size_t i = 0; i < reduction_size; i++) {
-          max_val =
-              fmaxf(max_val, a->data->ptr[input_base + i * reduction_stride]);
+    } else {
+        int* coords = (int*)malloc(a->ndim * sizeof(int));
+        if (!coords) {
+            LOG_ERROR("max_full_op: Failed to allocate memory for coords.");
+            free(out->data->elems);
+            out->data->elems = NULL;
+            return;
         }
-      }
 
-      out->data->ptr[output_offset] = max_val;
-    }
-  }
-}
+        memset(coords, 0, a->ndim * sizeof(int));
+        bool first = true;
 
-void sum_full_op(Tensor *a, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "sum_full_op: Performing full sum reduction\n");
+        for (size_t elem = 0; elem < total_elements; ++elem) {
+            size_t flat_idx = 0;
+            for (int d = 0; d < a->ndim; ++d) {
+                flat_idx += (size_t)coords[d] * a->strides[d];
+            }
 
-  size_t total_elements = numel(a->shape, a->ndim);
+            if (first) {
+                max_val = ((float*)a->data->elems)[flat_idx];
+                first = false;
+            } else {
+                max_val = fmaxf(max_val, ((float*)a->data->elems)[flat_idx]);
+            }
 
-  bool is_a_contiguous = is_contiguous(a);
-
-  float total_sum = 0.0f;
-
-  if (is_a_contiguous) {
-    __m256 sum_vec = _mm256_setzero_ps();
-    size_t i = 0;
-
-    for (; i + (SIMD_WIDTH - 1) < total_elements; i += SIMD_WIDTH) {
-      __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[i]);
-      sum_vec = _mm256_add_ps(sum_vec, vec_a);
-    }
-
-    sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
-    sum_vec = _mm256_hadd_ps(sum_vec, sum_vec);
-    __m128 lo_half = _mm256_extractf128_ps(sum_vec, 0);
-    __m128 hi_half = _mm256_extractf128_ps(sum_vec, 1);
-    __m128 total_sum_m128 = _mm_add_ps(lo_half, hi_half);
-    total_sum = _mm_cvtss_f32(total_sum_m128);
-
-    for (; i < total_elements; ++i) {
-      total_sum += a->data->ptr[i];
-    }
-  } else {
-    int *coords = malloc(a->ndim * sizeof(int));
-    if (!coords) {
-      IDRAK_ERROR("sum_full_op: Failed to allocate memory for coords.\n");
-      free(out->data->ptr);
-      out->data->ptr = NULL;
-      return;
-    }
-
-    memset(coords, 0, a->ndim * sizeof(int));
-
-    for (size_t elem = 0; elem < total_elements; ++elem) {
-      size_t flat_idx = 0;
-      for (int d = 0; d < a->ndim; ++d) {
-        flat_idx += (size_t)coords[d] * a->strides[d];
-      }
-
-      total_sum += a->data->ptr[flat_idx];
-
-      int carry = 1;
-      for (int d = a->ndim - 1; d >= 0 && carry; --d) {
-        coords[d] += carry;
-        if (coords[d] < a->shape[d]) {
-          carry = 0;
-        } else {
-          coords[d] = 0;
-          carry = 1;
+            int carry = 1;
+            for (int d = a->ndim - 1; d >= 0 && carry; --d) {
+                coords[d] += carry;
+                if (coords[d] < a->shape[d]) {
+                    carry = 0;
+                } else {
+                    coords[d] = 0;
+                    carry = 1;
+                }
+            }
         }
-      }
+
+        free(coords);
     }
 
-    free(coords);
-  }
-
-  out->data->ptr[0] = total_sum;
-}
-
-void mean_full_op(Tensor *a, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "mean_full_op: Performing full mean reduction\n");
-
-  sum_full_op(a, out);
-
-  if (out && out->data && out->data->ptr == NULL) {
-    IDRAK_ERROR("mean_full_op: sum_full_op failed, cannot compute mean.\n");
-    return;
-  }
-
-  size_t total_elements = numel(a->shape, a->ndim);
-
-  if (total_elements > 0) {
-    out->data->ptr[0] /= total_elements;
-  } else {
-    if (out && out->data && out->data->ptr) {
-      out->data->ptr[0] = 0.0f;
-    }
-  }
-}
-
-void max_full_op(Tensor *a, Tensor *out) {
-  IDRAK_DEBUG("OP   ", "max_full_op: Performing full max reduction\n");
-
-  if (!out->data->ptr) {
-    fprintf(stderr, "Error: Failed to allocate memory for out->data->ptr\n");
-    return;
-  }
-
-  size_t total_elements = numel(a->shape, a->ndim);
-
-  if (total_elements == 0) {
-    out->data->ptr[0] = -FLT_MAX;
-    out->requires_grad = a->requires_grad;
-    return;
-  }
-
-  bool is_a_contiguous = is_contiguous(a);
-
-  float max_val = -FLT_MAX;
-
-  if (is_a_contiguous) {
-    __m256 max_vec = _mm256_set1_ps(-FLT_MAX);
-    size_t i = 0;
-
-    for (; i + (SIMD_WIDTH - 1) < total_elements; i += SIMD_WIDTH) {
-      __m256 vec_a = _mm256_loadu_ps(&a->data->ptr[i]);
-      max_vec = _mm256_max_ps(max_vec, vec_a);
-    }
-
-    __m128 vlow = _mm256_castps256_ps128(max_vec);
-    __m128 vhigh = _mm256_extractf128_ps(max_vec, 1);
-    vlow = _mm_max_ps(vlow, vhigh);
-    vlow =
-        _mm_max_ps(vlow, _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(2, 3, 0, 1)));
-    vlow =
-        _mm_max_ps(vlow, _mm_shuffle_ps(vlow, vlow, _MM_SHUFFLE(1, 0, 3, 2)));
-    max_val = _mm_cvtss_f32(vlow);
-
-    for (; i < total_elements; ++i) {
-      max_val = fmaxf(max_val, a->data->ptr[i]);
-    }
-  } else {
-    int *coords = (int *)malloc(a->ndim * sizeof(int));
-    if (!coords) {
-      IDRAK_ERROR("max_full_op: Failed to allocate memory for coords.\n");
-      free(out->data->ptr);
-      out->data->ptr = NULL;
-      return;
-    }
-
-    memset(coords, 0, a->ndim * sizeof(int));
-    bool first = true;
-
-    for (size_t elem = 0; elem < total_elements; ++elem) {
-      size_t flat_idx = 0;
-      for (int d = 0; d < a->ndim; ++d) {
-        flat_idx += (size_t)coords[d] * a->strides[d];
-      }
-
-      if (first) {
-        max_val = a->data->ptr[flat_idx];
-        first = false;
-      } else {
-        max_val = fmaxf(max_val, a->data->ptr[flat_idx]);
-      }
-
-      int carry = 1;
-      for (int d = a->ndim - 1; d >= 0 && carry; --d) {
-        coords[d] += carry;
-        if (coords[d] < a->shape[d]) {
-          carry = 0;
-        } else {
-          coords[d] = 0;
-          carry = 1;
-        }
-      }
-    }
-
-    free(coords);
-  }
-
-  out->data->ptr[0] = max_val;
+    ((float*)out->data->elems)[0] = max_val;
 }

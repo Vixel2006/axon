@@ -2,208 +2,11 @@ import ctypes
 from os import wait
 import numpy as np
 from .c_library_loader import tensor_lib
-from .ctypes_definitions import CTensor, CNode, CSharedPtr
+from .c_function_signatures import *
+from .ctypes_definitions import CTensor, CNode, CSharedPtr, CDtype, CDevice
+
 
 if tensor_lib:
-    # Explicitly set argtypes and restype for C functions
-    tensor_lib.numel.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
-    tensor_lib.numel.restype = ctypes.c_int
-
-    tensor_lib.set_ones_grad.argtypes = [ctypes.POINTER(CTensor)]
-    tensor_lib.set_ones_grad.restype = None
-
-    tensor_lib.compute_strides.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
-    tensor_lib.compute_strides.restype = ctypes.POINTER(ctypes.c_int)
-
-    tensor_lib.malloc_tensor_empty.argtypes = []
-    tensor_lib.malloc_tensor_empty.restype = ctypes.POINTER(CTensor)
-
-    tensor_lib.malloc_tensor_shape.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_bool]
-    tensor_lib.malloc_tensor_shape.restype = ctypes.POINTER(CTensor)
-
-    tensor_lib.malloc_shared_ptr.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.c_int]
-    tensor_lib.malloc_shared_ptr.restype = ctypes.POINTER(CSharedPtr)
-
-    tensor_lib.malloc_tensor_full.argtypes = [
-        ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.POINTER(ctypes.c_int),
-        ctypes.POINTER(CSharedPtr), ctypes.c_bool, ctypes.POINTER(CSharedPtr)
-    ]
-    tensor_lib.malloc_tensor_full.restype = ctypes.POINTER(CTensor)
-
-    tensor_lib.free_shared_ptr.argtypes = [ctypes.POINTER(ctypes.POINTER(CSharedPtr))]
-    tensor_lib.free_shared_ptr.restype = None
-
-    tensor_lib.free_tensor.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor))]
-    tensor_lib.free_tensor.restype = None
-
-    tensor_lib.zeros.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_bool]
-    tensor_lib.zeros.restype = ctypes.POINTER(CTensor)
-
-    tensor_lib.ones.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_bool]
-    tensor_lib.ones.restype = ctypes.POINTER(CTensor)
-
-    tensor_lib.randn.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_int, ctypes.c_bool]
-    tensor_lib.randn.restype = ctypes.POINTER(CTensor)
-
-    tensor_lib.uniform.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_float, ctypes.c_float, ctypes.c_bool]
-    tensor_lib.uniform.restype = ctypes.POINTER(CTensor)
-
-    tensor_lib.malloc_node.argtypes = [
-        ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int,
-        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p
-    ]
-    tensor_lib.malloc_node.restype = ctypes.POINTER(CNode)
-
-    tensor_lib.free_node.argtypes = [ctypes.POINTER(CNode)]
-    tensor_lib.free_node.restype = None
-
-    # Add argtypes for all other C functions that are called directly from Python wrappers
-    # This is a long list, I will only add the ones that are directly called in c_wrapper_functions.py
-    # and are not already covered by the above.
-
-    # Unary ops
-    tensor_lib.relu_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.relu_op.restype = None
-    tensor_lib.log_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.log_op.restype = None
-    tensor_lib.exp_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.exp_op.restype = None
-    tensor_lib.abs_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.abs_op.restype = None
-    tensor_lib.neg_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.neg_op.restype = None
-    tensor_lib.clip_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.c_float, ctypes.POINTER(CTensor)]
-    tensor_lib.clip_op.restype = None
-
-    # Binary ops
-    tensor_lib.add_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.add_op.restype = None
-    tensor_lib.sub_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.sub_op.restype = None
-    tensor_lib.mul_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.mul_op.restype = None
-    tensor_lib.div_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.div_op.restype = None
-    tensor_lib.pow_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.pow_op.restype = None
-    tensor_lib.matmul_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int, ctypes.c_int]
-    tensor_lib.matmul_op.restype = None
-    tensor_lib.dot_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.dot_op.restype = None
-
-    # Binary ops with scalars
-    tensor_lib.add_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
-    tensor_lib.add_scalar_op.restype = None
-    tensor_lib.sub_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
-    tensor_lib.sub_scalar_op.restype = None
-    tensor_lib.rsub_scalar_op.argtypes = [ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.rsub_scalar_op.restype = None
-    tensor_lib.mul_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
-    tensor_lib.mul_scalar_op.restype = None
-    tensor_lib.div_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
-    tensor_lib.div_scalar_op.restype = None
-    tensor_lib.rdiv_scalar_op.argtypes = [ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.rdiv_scalar_op.restype = None
-    tensor_lib.rdiv_scalar_op.argtypes = [ctypes.c_float, ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.rdiv_scalar_op.restype = None
-    tensor_lib.pow_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.pow_op.restype = None
-    tensor_lib.pow_scalar_op.argtypes = [ctypes.POINTER(CTensor), ctypes.c_float, ctypes.POINTER(CTensor)]
-    tensor_lib.pow_scalar_op.restype = None
-
-    # Movement ops
-    tensor_lib.view_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int), ctypes.c_int]
-    tensor_lib.view_op.restype = None
-    tensor_lib.unsqueeze_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int]
-    tensor_lib.unsqueeze_op.restype = None
-    tensor_lib.squeeze_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int]
-    tensor_lib.squeeze_op.restype = None
-    tensor_lib.transpose_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int]
-    tensor_lib.transpose_op.restype = None
-    tensor_lib.expand_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.c_int)]
-    tensor_lib.expand_op.restype = None
-    tensor_lib.broadcast_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.POINTER(ctypes.c_int)]
-    tensor_lib.broadcast_op.restype = None
-    tensor_lib.concat_op.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int]
-    tensor_lib.concat_op.restype = None
-    tensor_lib.stack_op.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_int]
-    tensor_lib.stack_op.restype = None
-
-    # Reduction ops
-    tensor_lib.sum_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_bool]
-    tensor_lib.sum_op.restype = None
-    tensor_lib.mean_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_bool]
-    tensor_lib.mean_op.restype = None
-    tensor_lib.max_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor), ctypes.c_int, ctypes.c_bool]
-    tensor_lib.max_op.restype = None
-    tensor_lib.sum_full_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.sum_full_op.restype = None
-    tensor_lib.mean_full_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.mean_full_op.restype = None
-    tensor_lib.max_full_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.max_full_op.restype = None
-
-    # Optimizers
-    tensor_lib.sgd.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_float]
-    tensor_lib.sgd.restype = None
-    tensor_lib.adam.argtypes = [
-        ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.POINTER(ctypes.POINTER(CTensor)),
-        ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_int,
-        ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float
-    ]
-    tensor_lib.adam.restype = None
-    tensor_lib.zero_grad.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int]
-    tensor_lib.zero_grad.restype = None
-
-    # Backward ops (grad_op)
-    tensor_lib.add_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.add_grad_op.restype = None
-    tensor_lib.sub_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.sub_grad_op.restype = None
-    tensor_lib.rsub_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.rsub_grad_op.restype = None
-    tensor_lib.mul_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.mul_grad_op.restype = None
-    tensor_lib.pow_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.pow_grad_op.restype = None
-    tensor_lib.div_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.div_grad_op.restype = None
-    tensor_lib.rdiv_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.rdiv_grad_op.restype = None
-    tensor_lib.matmul_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.matmul_grad_op.restype = None
-    tensor_lib.conv2d_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.conv2d_grad_op.restype = None
-    tensor_lib.relu_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.relu_grad_op.restype = None
-    tensor_lib.log_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.log_grad_op.restype = None
-    tensor_lib.exp_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.exp_grad_op.restype = None
-    tensor_lib.abs_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.abs_grad_op.restype = None
-    tensor_lib.neg_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.neg_grad_op.restype = None
-    tensor_lib.clip_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.clip_grad_op.restype = None
-    tensor_lib.sum_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.sum_grad_op.restype = None
-    tensor_lib.mean_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.mean_grad_op.restype = None
-    tensor_lib.max_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.max_grad_op.restype = None
-    tensor_lib.sum_full_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.sum_full_grad_op.restype = None
-    tensor_lib.mean_full_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.mean_full_grad_op.restype = None
-    tensor_lib.max_full_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.max_full_grad_op.restype = None
-    tensor_lib.stack_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.stack_grad_op.restype = None
-    tensor_lib.concat_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.concat_grad_op.restype = None
-    tensor_lib.dot_grad_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(ctypes.POINTER(CTensor)), ctypes.c_int, ctypes.c_void_p]
-    tensor_lib.dot_grad_op.restype = None
 
     # Python wrapper functions
     def c_numel(shape, ndim):
@@ -221,37 +24,13 @@ if tensor_lib:
         c_shape = (ctypes.c_int * ndim)(*shape)
         return tensor_lib.compute_strides(c_shape, ndim)
 
-    def c_malloc_tensor_empty():
-        return tensor_lib.malloc_tensor_empty()
+    
 
-    def c_malloc_tensor_shape(shape, ndim, requires_grad):
-        if ndim == 0:
-            return tensor_lib.malloc_tensor_shape(None, 0, requires_grad)
+    def c_malloc_tensor_shape(shape, ndim, requires_grad, dtype, device):
         c_shape = (ctypes.c_int * ndim)(*shape)
-        return tensor_lib.malloc_tensor_shape(c_shape, ndim, requires_grad)
+        return tensor_lib.tmalloc_shape(c_shape, ndim, dtype, device, requires_grad)
 
-    def c_malloc_tensor_full(shape, ndim, strides, data, requires_grad, grad=None):
-        if ndim == 0:
-            if isinstance(data, (list, tuple, np.ndarray)):
-                data_val = float(data[0]) if len(data) > 0 else 0.0
-            else:
-                data_val = float(data)
-
-            c_data_array = (ctypes.c_float * 1)(data_val)
-            c_data_shared_ptr = tensor_lib.malloc_shared_ptr(c_data_array, 1)
-            c_grad_shared_ptr = None
-            if grad is not None:
-                if isinstance(grad, (list, tuple, np.ndarray)):
-                    grad_val = float(grad[0]) if len(grad) > 0 else 0.0
-                else:
-                    grad_val = float(grad)
-                c_grad_array = (ctypes.c_float * 1)(grad_val)
-                c_grad_shared_ptr = tensor_lib.malloc_shared_ptr(c_grad_array, 1)
-
-            return tensor_lib.malloc_tensor_full(
-                None, 0, None, c_data_shared_ptr, requires_grad, c_grad_shared_ptr
-            )
-
+    def c_malloc_tensor_full(shape, ndim, strides, dtype, device, data, requires_grad, grad=None):
         if not shape or ndim <= 0:
             raise ValueError("Invalid shape or ndim")
 
@@ -278,22 +57,20 @@ if tensor_lib:
             )
 
         c_data_array = (ctypes.c_float * len(data))(*data)
-        c_data_shared_ptr = tensor_lib.malloc_shared_ptr(c_data_array, len(data))
+        c_data_shared_ptr = tensor_lib.palloc(ctypes.cast(c_data_array, ctypes.c_void_p), len(data), dtype, device).contents
 
-        c_grad_shared_ptr = None
-        if grad is not None:
-            c_grad_shared_ptr = None
+        c_grad_shared_ptr = CSharedPtr() # Initialize with default values
         if requires_grad and grad is None:
             # If requires_grad is True but no initial grad is provided, create a zeroed grad
             if ndim == 0:
                 zero_grad_val = 0.0
                 c_grad_array = (ctypes.c_float * 1)(zero_grad_val)
-                c_grad_shared_ptr = tensor_lib.malloc_shared_ptr(c_grad_array, 1)
+                c_grad_shared_ptr = tensor_lib.palloc(ctypes.cast(c_grad_array, ctypes.c_void_p), 1, dtype, device).contents
             else:
                 # Determine size based on data length, assuming grad should match data size
                 grad_size = len(data) if isinstance(data, (list, tuple, np.ndarray)) else 1
-                zero_grad_array = (ctypes.c_float * grad_size)(*[0.0] * grad_size)
-                c_grad_shared_ptr = tensor_lib.malloc_shared_ptr(zero_grad_array, grad_size)
+                c_grad_array = (ctypes.c_float * grad_size)(*[0.0] * grad_size)
+                c_grad_shared_ptr = tensor_lib.palloc(ctypes.cast(c_grad_array, ctypes.c_void_p), grad_size, dtype, device).contents
         elif grad is not None:
             if ndim == 0:
                 if isinstance(grad, (list, tuple, np.ndarray)):
@@ -301,7 +78,7 @@ if tensor_lib:
                 else:
                     grad_val = float(grad)
                 c_grad_array = (ctypes.c_float * 1)(grad_val)
-                c_grad_shared_ptr = tensor_lib.malloc_shared_ptr(c_grad_array, 1)
+                c_grad_shared_ptr = tensor_lib.palloc(c_grad_array, 1, dtype, device).contents
             else:
                 if isinstance(grad, np.ndarray):
                     grad = grad.flatten().astype(np.float32).tolist()
@@ -318,56 +95,55 @@ if tensor_lib:
                     raise ValueError("Gradient size must match data size")
 
                 c_grad_array = (ctypes.c_float * len(grad))(*grad)
-                c_grad_shared_ptr = tensor_lib.malloc_shared_ptr(c_grad_array, len(grad))
+                c_grad_shared_ptr = tensor_lib.palloc(ctypes.cast(c_grad_array, ctypes.c_void_p), len(grad), dtype, device).contents
 
-        return tensor_lib.malloc_tensor_full(
-            c_shape, ndim, c_strides, c_data_shared_ptr, requires_grad, c_grad_shared_ptr
-        )
+        c_tensor_ptr = tensor_lib.tmalloc_full(
+                c_shape, ndim, c_strides, dtype, device, c_data_shared_ptr, requires_grad, c_grad_shared_ptr
+            )
+        return c_tensor_ptr
 
     def c_free_tensor(tensor_ptr):
-        if tensor_ptr:
+        if tensor_ptr and tensor_ptr.contents:
             # Free the shared pointers first
             if tensor_ptr.contents.data:
-                tensor_lib.free_shared_ptr(ctypes.byref(tensor_ptr.contents.data))
+                tensor_lib.pfree(tensor_ptr.contents.data)
             if tensor_ptr.contents.grad:
-                tensor_lib.free_shared_ptr(ctypes.byref(tensor_ptr.contents.grad))
-            tensor_lib.free_tensor(ctypes.byref(tensor_ptr))
+                tensor_lib.pfree(tensor_ptr.contents.grad)
+            tensor_lib.tfree(ctypes.byref(tensor_ptr))
 
-    def c_zeros(shape, ndim, requires_grad):
-        if ndim == 0:
-            return tensor_lib.zeros(None, 0, requires_grad)
+    def c_zeros(shape, ndim, requires_grad, dtype, device):
         c_shape = (ctypes.c_int * ndim)(*shape)
-        return tensor_lib.zeros(c_shape, ndim, requires_grad)
+        return tensor_lib.zeros(c_shape, ndim, requires_grad, dtype, device)
 
-    def c_ones(shape, ndim, requires_grad):
+    def c_ones(shape, ndim, requires_grad, dtype, device):
         if ndim == 0:
-            return tensor_lib.ones(None, 0, requires_grad)
+            return tensor_lib.ones(None, 0, requires_grad, dtype, device)
         c_shape = (ctypes.c_int * ndim)(*shape)
-        return tensor_lib.ones(c_shape, ndim, requires_grad)
+        return tensor_lib.ones(c_shape, ndim, requires_grad, dtype, device)
 
-    def c_randn(shape, ndim, seed, requires_grad):
+    def c_randn(shape, ndim, dtype, device, seed, requires_grad):
         if ndim == 0:
-            return tensor_lib.randn(None, 0, seed, requires_grad)
+            return tensor_lib.randn(None, 0, dtype.value, device.value, seed, requires_grad)
         c_shape = (ctypes.c_int * ndim)(*shape)
-        return tensor_lib.randn(c_shape, ndim, seed, requires_grad)
+        return tensor_lib.randn(c_shape, ndim, dtype.value, device.value, seed, requires_grad)
 
-    def c_uniform(shape, ndim, low, high, requires_grad):
+    def c_uniform(shape, ndim, dtype, device, low, high, requires_grad):
         if ndim == 0:
-            return tensor_lib.uniform(None, 0, low, high, requires_grad)
+            return tensor_lib.uniform(None, 0, dtype.value, device.value, low, high, requires_grad)
         c_shape = (ctypes.c_int * ndim)(*shape)
-        return tensor_lib.uniform(c_shape, ndim, low, high, requires_grad)
+        return tensor_lib.uniform(c_shape, ndim, dtype.value, device.value, low, high, requires_grad)
 
     def c_malloc_node(
         out_tensor_ptr, prev_tensor_ptrs, n_prev, extras, forward_fn, backward_fn
     ):
         c_prev_array = (ctypes.POINTER(CTensor) * n_prev)(*prev_tensor_ptrs)
-        return tensor_lib.malloc_node(
+        return tensor_lib.nmalloc(
             out_tensor_ptr, c_prev_array, n_prev, extras, forward_fn, backward_fn
         )
 
     def c_free_node(node_ptr):
         if node_ptr:
-            tensor_lib.free_node(node_ptr)
+            tensor_lib.nfree(node_ptr)
 
     def c_add_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.add_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
@@ -415,6 +191,7 @@ if tensor_lib:
         tensor_lib.neg_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
     def c_clip_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
+        print(extras)
         tensor_lib.clip_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
     def c_sum_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
@@ -606,16 +383,14 @@ else:
         print("C backend not available: compute_strides()")
         return None
 
-    def c_malloc_tensor_empty():
-        print("C backend not available: malloc_tensor_empty()")
+    
+
+    def c_tmalloc_shape(shape, ndim, requires_grad):
+        print("C backend not available: tmalloc_shape()")
         return None
 
-    def c_malloc_tensor_shape(shape, ndim, requires_grad):
-        print("C backend not available: malloc_tensor_shape()")
-        return None
-
-    def c_malloc_tensor_full(shape, ndim, strides, data, requires_grad, grad=None):
-        print("C backend not available: malloc_tensor_full()")
+    def c_tmalloc_full(shape, ndim, strides, data, requires_grad, grad=None):
+        print("C backend not available: tmalloc_full()")
         return None
 
     def c_zeros(shape, ndim, requires_grad):
