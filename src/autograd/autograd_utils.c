@@ -1,8 +1,9 @@
 #include "autograd/autograd_utils.h"
 #include "utils.h"
+#include "logger.h"
 
 int get_reduced_dim(int *in_shape, int *out_shape, int in_ndim, int out_ndim) {
-  IDRAK_DEBUG("DEBUG", "get_reduced_dim: Calculating reduced dimension\n");
+  LOG_INFO("DEBUG: get_reduced_dim: Calculating reduced dimension");
 
   int reduced_dim = -1;
   for (int i = 0; i < in_ndim; ++i) {
@@ -16,7 +17,7 @@ int get_reduced_dim(int *in_shape, int *out_shape, int in_ndim, int out_ndim) {
 }
 
 int get_num_reduction_batches(int *in_shape, int in_ndim, int reduced_dim) {
-  IDRAK_DEBUG("DEBUG", "get_num_reduction_batches: Calculating number of reduction batches\n");
+  LOG_INFO("DEBUG: get_num_reduction_batches: Calculating number of reduction batches");
 
   int num_batches = 1;
   for (int i = 0; i < in_ndim; ++i) {

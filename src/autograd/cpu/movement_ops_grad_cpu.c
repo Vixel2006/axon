@@ -1,6 +1,7 @@
 #include "autograd/autograd.h"
 #include "utils.h"
 #include <stdlib.h>
+#include "logger.h"
 
 typedef struct {
   int axis;
