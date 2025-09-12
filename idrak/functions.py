@@ -1,5 +1,4 @@
-from os import wait
-from idrak.core.tensor import Tensor
+from idrak.core.tensor import Tensor, dtype, Device
 from idrak.ops.uop import *
 from idrak.ops.bop import *
 from idrak.ops.mop import *
@@ -8,11 +7,17 @@ from idrak.ops.bop import Conv2D
 from idrak.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
 
 # =========== Initialization Operations ============
-def zeros(shape: tuple[int, ...] | list[int], requires_grad: bool = True) -> Tensor: return Tensor(_c_tensor_ptr=c_zeros(shape, len(shape), requires_grad))
-def ones(shape: tuple[int, ...] | list[int], requires_grad: bool = True) -> Tensor: return Tensor(_c_tensor_ptr=c_ones(shape, len(shape), requires_grad))
-def randn(shape: tuple[int, ...] | list[int], requires_grad: bool = True, seed: int = 42) -> Tensor: return Tensor(_c_tensor_ptr=c_randn(shape, len(shape), seed, requires_grad))
-def uniform(shape: tuple[int, ...] | list[int], requires_grad: bool = True, low: int = 0, high: int = 1) -> Tensor: return Tensor(_c_tensor_ptr=c_uniform(shape, len(shape), low, high, requires_grad))
+def zeros(shape: tuple[int, ...] | list[int], requires_grad: bool = True, dtype: dtype = dtype.FLOAT32, device: Device = Device.CPU) -> Tensor:
+    return Tensor(_c_tensor_ptr=c_zeros(shape, len(shape), requires_grad, dtype.value, device.value))
 
+def ones(shape: tuple[int, ...] | list[int], requires_grad: bool = True, dtype: dtype = dtype.FLOAT32, device: Device = Device.CPU) -> Tensor:
+    return Tensor(_c_tensor_ptr=c_ones(shape, len(shape), requires_grad, dtype.value, device.value))
+
+def randn(shape: tuple[int, ...] | list[int], requires_grad: bool = True, seed: int = 42, dtype: dtype = dtype.FLOAT32, device: Device = Device.CPU) -> Tensor:
+    return Tensor(_c_tensor_ptr=c_randn(shape, len(shape), dtype, device, seed, requires_grad))
+
+def uniform(shape: tuple[int, ...] | list[int], requires_grad: bool = True, low: int = 0, high: int = 1, dtype: dtype = dtype.FLOAT32, device: Device = Device.CPU) -> Tensor:
+    return Tensor(_c_tensor_ptr=c_uniform(shape, len(shape), dtype, device, low, high, requires_grad))
 
 # ========== Movment Operations ============
 def view(a: Tensor, shape: tuple[int, ...]) -> Tensor: return View.create_node(a, shape=shape)
@@ -71,10 +76,11 @@ def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: re
 def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
 
 if __name__ == "__main__":
-    a = Tensor((2,2), [[1., 2.], [3., 4.]])
+    from idrak.metrics import bce
+    a = zeros((1, 2,3))
+    b = ones((1,2,3))
 
-    b = sum(a, dim=0)
+    c = a + b
+    c.realize()
 
-    b.realize()
-
-    print(b)
+    print(c)

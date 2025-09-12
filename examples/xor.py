@@ -44,7 +44,7 @@ model = nn.Sequential(
 # Here we define the optimizer
 optimizer = optim.Adam(model.params, 0.1)
 # Here we do the loop
-for i in range(1000):
+for i in range(100):
     for input, truth in xorset:
         optimizer.zero_grad()
 
