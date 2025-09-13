@@ -1,207 +1,195 @@
 #include "logger.h"
-#include "ops/ops.h"
+#include "ops/binary_ops.h"
+#include "ops/init_ops.h"
 #include "tensor.h"
 #include "utils.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
+#include <string.h> // For memset
 
 extern __m256 Sleef_powf8_u10(__m256 x, __m256 y);
 
 #define SIMD_WIDTH 8
 
+#define COMPUTE_OFFSETS(linear_idx, tensor_for_shape, str_a, str_b, str_out, off_a, off_b, off_out)                                                                                                                                                                                                        \
+    do {                                                                                                                                                                                                                                                                                                   \
+        int idx = linear_idx;                                                                                                                                                                                                                                                                              \
+        off_a = 0;                                                                                                                                                                                                                                                                                         \
+        off_b = 0;                                                                                                                                                                                                                                                                                         \
+        off_out = 0;                                                                                                                                                                                                                                                                                       \
+        for (int d = tensor_for_shape->ndim - 1; d >= 0; --d) {                                                                                                                                                                                                                                            \
+            int coord = idx % tensor_for_shape->shape[d];                                                                                                                                                                                                                                                  \
+            idx /= tensor_for_shape->shape[d];                                                                                                                                                                                                                                                             \
+            off_a += coord * str_a[d];                                                                                                                                                                                                                                                                     \
+            off_b += coord * str_b[d];                                                                                                                                                                                                                                                                     \
+            off_out += coord * str_out[d];                                                                                                                                                                                                                                                                 \
+        }                                                                                                                                                                                                                                                                                                  \
+    } while (0)
+
+static inline bool check_tensors(Tensor* a, Tensor* b, Tensor* out, const char* op_name) {
+    if (!a || !b || !out) {
+        LOG_ERROR("%s ERROR: NULL tensor! a=%p, b=%p, out=%p", op_name, (void*)a, (void*)b, (void*)out);
+        return false;
+    }
+    return true;
+}
+
+static inline bool check_tensors_unary_or_dot(Tensor* a, Tensor* out, const char* op_name) {
+    if (!a || !out) {
+        LOG_ERROR("%s ERROR: NULL tensor! a=%p, out=%p", op_name, (void*)a, (void*)out);
+        return false;
+    }
+    return true;
+}
+
+static inline float* alloc_tensor_data(int size, const char* op_name) {
+    float* data = (float*)malloc(sizeof(float) * size);
+    if (!data) {
+        LOG_ERROR("%s ERROR: Failed to allocate memory for %d floats", op_name, size);
+        return NULL;
+    }
+    return data;
+}
+
+static inline bool can_use_simd(Tensor* a, Tensor* b, Tensor* out) {
+    return is_contiguous(a) && is_contiguous(b) && is_contiguous(out);
+}
+
 void add_op(Tensor* a, Tensor* b, Tensor* out) {
     LOG_INFO("OP: add_op: Performing element-wise addition");
 
-    // Error checking for null tensors
-    if (!a || !b || !out) {
-        LOG_ERROR("add_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p", (void*)a, (void*)b, (void*)out);
+    if (!check_tensors(a, b, out, "add_op"))
         return;
-    }
 
     int size = numel(out->shape, out->ndim);
+    float* data = alloc_tensor_data(size, "add_op");
+    if (!data)
+        return;
 
-    if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
-        int ndim = out->ndim;
-        int* shape = out->shape;
-
-        int* a_strides = a->strides;
-        int* b_strides = b->strides;
-        int* out_strides = out->strides;
-
+    if (!can_use_simd(a, b, out)) {
+        int a_offset, b_offset, out_offset;
         for (int linear = 0; linear < size; ++linear) {
-            int idx = linear;
-            int a_offset = 0, b_offset = 0, out_offset = 0;
-
-            for (int d = ndim - 1; d >= 0; --d) {
-                int coord = idx % shape[d];
-                idx /= shape[d];
-
-                a_offset += coord * a_strides[d];
-                b_offset += coord * b_strides[d];
-                out_offset += coord * out_strides[d];
-            }
-
-            ((float*)out->data->elems)[out_offset] = ((float*)a->data->elems)[a_offset] + ((float*)b->data->elems)[b_offset];
+            COMPUTE_OFFSETS(linear, out, a->strides, b->strides, out->strides, a_offset, b_offset, out_offset);
+            data[out_offset] = a->data->data[a_offset] + b->data->data[b_offset];
         }
     } else {
         int i = 0;
-
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-            __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-            __m256 y = _mm256_loadu_ps(((float*)b->data->elems) + i);
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 y = _mm256_loadu_ps(b->data->data + i);
             __m256 z = _mm256_add_ps(x, y);
-            _mm256_storeu_ps(((float*)out->data->elems) + i, z);
+            _mm256_storeu_ps(data + i, z);
         }
-
         for (; i < size; ++i) {
-            ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] + ((float*)b->data->elems)[i];
+            data[i] = a->data->data[i] + b->data->data[i];
         }
     }
+    from_data(out, data);
 }
 
 void sub_op(Tensor* a, Tensor* b, Tensor* out) {
     LOG_INFO("OP: sub_op: Performing element-wise subtraction");
 
+    if (!check_tensors(a, b, out, "sub_op"))
+        return;
+
     int size = numel(out->shape, out->ndim);
+    float* data = alloc_tensor_data(size, "sub_op");
+    if (!data)
+        return;
 
-    if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
-        int ndim = out->ndim;
-        int* shape = out->shape;
-
-        int* a_strides = a->strides;
-        int* b_strides = b->strides;
-        int* out_strides = out->strides;
-
+    if (!can_use_simd(a, b, out)) {
+        int a_offset, b_offset, out_offset;
         for (int linear = 0; linear < size; ++linear) {
-            int idx = linear;
-            int a_offset = 0, b_offset = 0, out_offset = 0;
-
-            for (int d = ndim - 1; d >= 0; --d) {
-                int coord = idx % shape[d];
-                idx /= shape[d];
-
-                a_offset += coord * a->strides[d];
-                b_offset += coord * b->strides[d];
-                out_offset += coord * out->strides[d];
-            }
-
-            ((float*)out->data->elems)[out_offset] = ((float*)a->data->elems)[a_offset] - ((float*)b->data->elems)[b_offset];
+            COMPUTE_OFFSETS(linear, out, a->strides, b->strides, out->strides, a_offset, b_offset, out_offset);
+            data[out_offset] = a->data->data[a_offset] - b->data->data[b_offset];
         }
     } else {
         int i = 0;
-
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-            __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-            __m256 y = _mm256_loadu_ps(((float*)b->data->elems) + i);
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 y = _mm256_loadu_ps(b->data->data + i);
             __m256 z = _mm256_sub_ps(x, y);
-            _mm256_storeu_ps(((float*)out->data->elems) + i, z);
+            _mm256_storeu_ps(data + i, z);
         }
-
         for (; i < size; ++i) {
-            ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] - ((float*)b->data->elems)[i];
+            data[i] = a->data->data[i] - b->data->data[i];
         }
     }
+    from_data(out, data);
 }
 
 void mul_op(Tensor* a, Tensor* b, Tensor* out) {
     LOG_INFO("OP: mul_op: Performing element-wise multiplication");
 
+    if (!check_tensors(a, b, out, "mul_op"))
+        return;
+
     int size = numel(out->shape, out->ndim);
+    float* data = alloc_tensor_data(size, "mul_op");
+    if (!data)
+        return;
 
-    if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
-        int ndim = out->ndim;
-        int* shape = out->shape;
-
-        int* a_strides = a->strides;
-        int* b_strides = b->strides;
-        int* out_strides = out->strides;
-
+    if (!can_use_simd(a, b, out)) {
+        int a_offset, b_offset, out_offset;
         for (int linear = 0; linear < size; ++linear) {
-            int idx = linear;
-            int a_offset = 0, b_offset = 0, out_offset = 0;
-
-            for (int d = ndim - 1; d >= 0; --d) {
-                int coord = idx % shape[d];
-                idx /= shape[d];
-
-                a_offset += coord * a->strides[d];
-                b_offset += coord * b->strides[d];
-                out_offset += coord * out->strides[d];
-            }
-
-            ((float*)out->data->elems)[out_offset] = ((float*)a->data->elems)[a_offset] * ((float*)b->data->elems)[b_offset];
+            COMPUTE_OFFSETS(linear, out, a->strides, b->strides, out->strides, a_offset, b_offset, out_offset);
+            data[out_offset] = a->data->data[a_offset] * b->data->data[b_offset];
         }
     } else {
         int i = 0;
-
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-            __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-            __m256 y = _mm256_loadu_ps(((float*)b->data->elems) + i);
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 y = _mm256_loadu_ps(b->data->data + i);
             __m256 z = _mm256_mul_ps(x, y);
-            _mm256_storeu_ps(((float*)out->data->elems) + i, z);
+            _mm256_storeu_ps(data + i, z);
         }
-
         for (; i < size; ++i) {
-            ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] * ((float*)b->data->elems)[i];
+            data[i] = a->data->data[i] * b->data->data[i];
         }
     }
+    from_data(out, data);
 }
 
 void div_op(Tensor* a, Tensor* b, Tensor* out) {
     LOG_INFO("OP: div_op: Performing element-wise division");
 
+    if (!check_tensors(a, b, out, "div_op"))
+        return;
+
     int size = numel(out->shape, out->ndim);
+    float* data = alloc_tensor_data(size, "div_op");
+    if (!data)
+        return;
 
-    if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
-        int ndim = out->ndim;
-        int* shape = out->shape;
-
-        int* a_strides = a->strides;
-        int* b_strides = b->strides;
-        int* out_strides = out->strides;
-
+    if (!can_use_simd(a, b, out)) {
+        int a_offset, b_offset, out_offset;
         for (int linear = 0; linear < size; ++linear) {
-            int idx = linear;
-            int a_offset = 0, b_offset = 0, out_offset = 0;
-
-            for (int d = ndim - 1; d >= 0; --d) {
-                int coord = idx % shape[d];
-                idx /= shape[d];
-
-                a_offset += coord * a->strides[d];
-                b_offset += coord * b->strides[d];
-                out_offset += coord * out->strides[d];
-            }
-
-            ((float*)out->data->elems)[out_offset] = ((float*)a->data->elems)[a_offset] / ((float*)b->data->elems)[b_offset];
+            COMPUTE_OFFSETS(linear, out, a->strides, b->strides, out->strides, a_offset, b_offset, out_offset);
+            data[out_offset] = a->data->data[a_offset] / b->data->data[b_offset];
         }
     } else {
         int i = 0;
-
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-            __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-            __m256 y = _mm256_loadu_ps(((float*)b->data->elems) + i);
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 y = _mm256_loadu_ps(b->data->data + i);
             __m256 z = _mm256_div_ps(x, y);
-            _mm256_storeu_ps(((float*)out->data->elems) + i, z);
+            _mm256_storeu_ps(data + i, z);
         }
-
         for (; i < size; ++i) {
-            ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] / ((float*)b->data->elems)[i];
+            data[i] = a->data->data[i] / b->data->data[i];
         }
     }
+    from_data(out, data);
 }
 
 void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
     LOG_INFO("OP: matmul_op: Performing matrix multiplication (N=%d, K=%d, P=%d)", N, K, P);
 
-    // Error checking for null tensors
-    if (!a || !b || !out) {
-        LOG_ERROR("matmul_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p", (void*)a, (void*)b, (void*)out);
+    if (!check_tensors(a, b, out, "matmul_op"))
         return;
-    }
 
-    // Error checking for insufficient dimensions
     if (a->ndim < 2 || b->ndim < 2 || out->ndim < 2) {
         LOG_ERROR("matmul_op ERROR: All tensors must have at least 2 dimensions! "
                   "a->ndim=%d, b->ndim=%d, out->ndim=%d",
@@ -209,7 +197,6 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
         return;
     }
 
-    // Error checking for dimension mismatch
     if (a->shape[a->ndim - 1] != K || b->shape[b->ndim - 2] != K) {
         LOG_ERROR("matmul_op ERROR: Dimension mismatch! a->shape[last]=%d, "
                   "b->shape[second_last]=%d, K=%d",
@@ -217,7 +204,6 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
         return;
     }
 
-    // Verify output dimensions are correct
     if (out->shape[out->ndim - 2] != N || out->shape[out->ndim - 1] != P) {
         LOG_ERROR("matmul_op ERROR: Output tensor dimensions incorrect! "
                   "Expected (%d, %d), got (%d, %d)",
@@ -225,27 +211,23 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
         return;
     }
 
-    // Calculate batch size (should be same for all tensors after broadcasting)
     int batch_size = 1;
     for (int i = 0; i < out->ndim - 2; ++i) {
         batch_size *= out->shape[i];
     }
 
-    // Initialize output to zero
     int size = numel(out->shape, out->ndim);
-    for (int i = 0; i < size; ++i) {
-        ((float*)out->data->elems)[i] = 0.0f;
-    }
+    float* data = alloc_tensor_data(size, "matmul_op");
+    if (!data)
+        return;
+    memset(data, 0, sizeof(float) * size);
 
-    // Check if we can use SIMD (requires contiguous inner dimensions)
-    bool can_use_simd = is_contiguous(a) && is_contiguous(b) && is_contiguous(out);
+    bool use_simd_path = can_use_simd(a, b, out);
 
-    if (can_use_simd) {
-        // Fast path: SIMD vectorized computation
+    if (use_simd_path) {
         const int k_simd = (K / SIMD_WIDTH) * SIMD_WIDTH;
 
         for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
-            // Calculate batch offsets with proper broadcasting
             int a_batch_offset = 0;
             int b_batch_offset = 0;
             int out_batch_offset = 0;
@@ -273,16 +255,14 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
                 for (int j = 0; j < P; ++j) {
                     int b_col_offset = b_batch_offset + j * b->strides[b->ndim - 1];
 
-                    // Vectorized dot product
                     __m256 sum_vec = _mm256_setzero_ps();
 
                     for (int k = 0; k < k_simd; k += SIMD_WIDTH) {
-                        __m256 a_vec = _mm256_loadu_ps(((float*)a->data->elems) + a_row_offset + k * a->strides[a->ndim - 1]);
-                        __m256 b_vec = _mm256_loadu_ps(((float*)b->data->elems) + b_col_offset + k * b->strides[b->ndim - 2]);
+                        __m256 a_vec = _mm256_loadu_ps(a->data->data + a_row_offset + k * a->strides[a->ndim - 1]);
+                        __m256 b_vec = _mm256_loadu_ps(b->data->data + b_col_offset + k * b->strides[b->ndim - 2]);
                         sum_vec = _mm256_fmadd_ps(a_vec, b_vec, sum_vec);
                     }
 
-                    // Horizontal sum
                     __m128 sum_high = _mm256_extractf128_ps(sum_vec, 1);
                     __m128 sum_low = _mm256_castps256_ps128(sum_vec);
                     __m128 sum128 = _mm_add_ps(sum_high, sum_low);
@@ -292,19 +272,16 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
                     sums = _mm_add_ss(sums, shuf);
                     float sum = _mm_cvtss_f32(sums);
 
-                    // Handle remaining elements
                     for (int k = k_simd; k < K; ++k) {
-                        sum += ((float*)a->data->elems)[a_row_offset + k * a->strides[a->ndim - 1]] * ((float*)b->data->elems)[b_col_offset + k * b->strides[b->ndim - 2]];
+                        sum += a->data->data[a_row_offset + k * a->strides[a->ndim - 1]] * b->data->data[b_col_offset + k * b->strides[b->ndim - 2]];
                     }
 
-                    ((float*)out->data->elems)[out_batch_offset + i * out->strides[out->ndim - 2] + j * out->strides[out->ndim - 1]] = sum;
+                    data[out_batch_offset + i * out->strides[out->ndim - 2] + j * out->strides[out->ndim - 1]] = sum;
                 }
             }
         }
     } else {
-        // Slow path: respect all strides
         for (int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
-            // Calculate batch offsets with proper broadcasting
             int a_batch_offset = 0;
             int b_batch_offset = 0;
             int out_batch_offset = 0;
@@ -332,22 +309,26 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
                     float sum = 0.0f;
 
                     for (int k = 0; k < K; ++k) {
-                        float a_val = ((float*)a->data->elems)[a_batch_offset + i * a->strides[a->ndim - 2] + k * a->strides[a->ndim - 1]];
-                        float b_val = ((float*)b->data->elems)[b_batch_offset + k * b->strides[b->ndim - 2] + j * b->strides[b->ndim - 1]];
+                        float a_val = a->data->data[a_batch_offset + i * a->strides[a->ndim - 2] + k * a->strides[a->ndim - 1]];
+                        float b_val = b->data->data[b_batch_offset + k * b->strides[b->ndim - 2] + j * b->strides[b->ndim - 1]];
                         sum += a_val * b_val;
                     }
 
-                    ((float*)out->data->elems)[out_batch_offset + i * out->strides[out->ndim - 2] + j * out->strides[out->ndim - 1]] = sum;
+                    data[out_batch_offset + i * out->strides[out->ndim - 2] + j * out->strides[out->ndim - 1]] = sum;
                 }
             }
         }
     }
+    from_data(out, data);
 
     LOG_INFO("OP: matmul_op: Matrix multiplication completed successfully");
 }
 
 void conv2d_op(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size, const int* stride, const int padding) {
     LOG_INFO("OP: conv2d_op: Performing 2D convolution");
+
+    if (!check_tensors(in, kernel, out, "conv2d_op"))
+        return;
 
     int Cin = kernel_size[0];
     int Cout = kernel_size[1];
@@ -361,13 +342,12 @@ void conv2d_op(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size, 
     int Wout = (W + 2 * padding - Kw) / Sw + 1;
     int N = in->shape[0];
 
-    // Initialize output to zero
     int out_size = N * Cout * Hout * Wout;
-    for (int i = 0; i < out_size; ++i) {
-        ((float*)out->data->elems)[i] = 0.0f;
-    }
+    float* data = alloc_tensor_data(out_size, "conv2d_op");
+    if (!data)
+        return;
+    memset(data, 0, sizeof(float) * out_size);
 
-    // Tile sizes
     const int TILE_H = 16;
     const int TILE_W = 16;
 
@@ -388,12 +368,12 @@ void conv2d_op(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size, 
 
                                     if (ih >= 0 && ih < H && iw >= 0 && iw < W) {
                                         int in_idx = n * Cin * H * W + ic * H * W + ih * W + iw;
-                                        float in_val = ((float*)in->data->elems)[in_idx];
+                                        float in_val = in->data->data[in_idx];
 
                                         for (int oc = 0; oc < Cout; ++oc) {
                                             int kernel_idx = oc * Cin * Kh * Kw + ic * Kh * Kw + kh * Kw + kw;
                                             int out_idx = n * Cout * Hout * Wout + oc * Hout * Wout + oh * Wout + ow;
-                                            ((float*)out->data->elems)[out_idx] += in_val * ((float*)kernel->data->elems)[kernel_idx];
+                                            data[out_idx] += in_val * kernel->data->data[kernel_idx];
                                         }
                                     }
                                 }
@@ -404,42 +384,38 @@ void conv2d_op(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size, 
             }
         }
     }
+
+    from_data(out, data);
 }
 
 void dot_op(Tensor* a, Tensor* b, Tensor* out) {
     LOG_INFO("OP: dot_op: Performing dot product");
 
+    if (!check_tensors(a, b, out, "dot_op"))
+        return;
+
     int size = numel(a->shape, a->ndim);
+    float* data = alloc_tensor_data(1, "dot_op");
+    if (!data)
+        return;
 
-    if (!is_contiguous(a) || !is_contiguous(b)) {
+    if (!can_use_simd(a, b, out)) {
         float sum = 0.0f;
-        int* a_strides = a->strides;
-        int* b_strides = b->strides;
-
+        int a_offset, b_offset, dummy_out_offset;
         for (int linear = 0; linear < size; ++linear) {
-            int idx = linear;
-            int a_offset = 0, b_offset = 0;
-
-            for (int d = a->ndim - 1; d >= 0; --d) {
-                int coord = idx % a->shape[d];
-                idx /= a->shape[d];
-
-                a_offset += coord * a->strides[d];
-                b_offset += coord * b->strides[d];
-            }
-            sum += ((float*)a->data->elems)[a_offset] * ((float*)b->data->elems)[b_offset];
+            COMPUTE_OFFSETS(linear, a, a->strides, b->strides, a->strides, a_offset, b_offset, dummy_out_offset);
+            sum += a->data->data[a_offset] * b->data->data[b_offset];
         }
-        ((float*)out->data->elems)[0] = sum;
+        data[0] = sum;
     } else {
         float sum = 0.0f;
         int i = 0;
 
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-            __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-            __m256 y = _mm256_loadu_ps(((float*)b->data->elems) + i);
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 y = _mm256_loadu_ps(b->data->data + i);
             __m256 prod_vec = _mm256_mul_ps(x, y);
 
-            // Horizontal sum across the SIMD vector
             __m128 sum_high = _mm256_extractf128_ps(prod_vec, 1);
             __m128 sum_low = _mm256_castps256_ps128(prod_vec);
             __m128 sum128 = _mm_add_ps(sum_high, sum_low);
@@ -451,58 +427,70 @@ void dot_op(Tensor* a, Tensor* b, Tensor* out) {
         }
 
         for (; i < size; ++i) {
-            sum += ((float*)a->data->elems)[i] * ((float*)b->data->elems)[i];
+            sum += a->data->data[i] * b->data->data[i];
         }
-        ((float*)out->data->elems)[0] = sum;
+        data[0] = sum;
     }
+    from_data(out, data);
 }
 
 void pow_op(Tensor* a, Tensor* b, Tensor* out) {
     LOG_INFO("OP: pow_op: Performing element-wise power");
 
-    // Error checking for null tensors
-    if (!a || !b || !out) {
-        LOG_ERROR("pow_op ERROR: Input or output tensor is NULL! a=%p, b=%p, out=%p", (void*)a, (void*)b, (void*)out);
+    if (!check_tensors(a, b, out, "pow_op"))
         return;
-    }
 
     int size = numel(out->shape, out->ndim);
+    float* data = alloc_tensor_data(size, "pow_op");
+    if (!data)
+        return;
 
-    if (!is_contiguous(a) || !is_contiguous(b) || !is_contiguous(out)) {
-        int ndim = out->ndim;
-        int* shape = out->shape;
-
-        int* a_strides = a->strides;
-        int* b_strides = b->strides;
-        int* out_strides = out->strides;
-
+    if (!can_use_simd(a, b, out)) {
+        int a_offset, b_offset, out_offset;
         for (int linear = 0; linear < size; ++linear) {
-            int idx = linear;
-            int a_offset = 0, b_offset = 0, out_offset = 0;
-
-            for (int d = ndim - 1; d >= 0; --d) {
-                int coord = idx % shape[d];
-                idx /= shape[d];
-
-                a_offset += coord * a->strides[d];
-                b_offset += coord * b->strides[d];
-                out_offset += coord * out->strides[d];
-            }
-
-            ((float*)out->data->elems)[out_offset] = powf(((float*)a->data->elems)[a_offset], ((float*)b->data->elems)[b_offset]);
+            COMPUTE_OFFSETS(linear, out, a->strides, b->strides, out->strides, a_offset, b_offset, out_offset);
+            data[out_offset] = powf(a->data->data[a_offset], b->data->data[b_offset]);
         }
     } else {
         int i = 0;
-
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-            __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-            __m256 y = _mm256_loadu_ps(((float*)b->data->elems) + i);
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 y = _mm256_loadu_ps(b->data->data + i);
             __m256 z = Sleef_powf8_u10(x, y);
-            _mm256_storeu_ps(((float*)out->data->elems) + i, z);
+            _mm256_storeu_ps(data + i, z);
         }
-
         for (; i < size; ++i) {
-            ((float*)out->data->elems)[i] = powf(((float*)a->data->elems)[i], ((float*)b->data->elems)[i]);
+            data[i] = powf(a->data->data[i], b->data->data[i]);
         }
     }
+    from_data(out, data);
+}
+
+int main(void) {
+    int shape[] = {1, 2};
+    Device device = CPU;
+    Tensor* a = tmalloc(shape, 2, device, true);
+
+    float* data = malloc(sizeof(float) * 2);
+    for (int i = 0; i < 2; ++i) {
+        data[i] = i + 3;
+    }
+
+    from_data(a, data);
+
+    Tensor* b = tmalloc(shape, 2, device, true);
+    borrow(b, a->data);
+
+    Tensor* out = tmalloc(shape, 2, device, true);
+
+    div_op(a, b, out);
+
+    for (int i = 0; i < out->data->size; ++i) {
+        printf("%f, ", out->data->data[i]);
+    }
+    printf("\n");
+
+    SAFE_FREE(a, tfree);
+    SAFE_FREE(b, tfree);
+    SAFE_FREE(out, tfree);
 }
