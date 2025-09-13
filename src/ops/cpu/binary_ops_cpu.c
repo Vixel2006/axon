@@ -465,32 +465,3 @@ void pow_op(Tensor* a, Tensor* b, Tensor* out) {
     }
     from_data(out, data);
 }
-
-int main(void) {
-    int shape[] = {1, 2};
-    Device device = CPU;
-    Tensor* a = tmalloc(shape, 2, device, true);
-
-    float* data = malloc(sizeof(float) * 2);
-    for (int i = 0; i < 2; ++i) {
-        data[i] = i + 3;
-    }
-
-    from_data(a, data);
-
-    Tensor* b = tmalloc(shape, 2, device, true);
-    borrow(b, a->data);
-
-    Tensor* out = tmalloc(shape, 2, device, true);
-
-    div_op(a, b, out);
-
-    for (int i = 0; i < out->data->size; ++i) {
-        printf("%f, ", out->data->data[i]);
-    }
-    printf("\n");
-
-    SAFE_FREE(a, tfree);
-    SAFE_FREE(b, tfree);
-    SAFE_FREE(out, tfree);
-}
