@@ -77,10 +77,6 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: ret
 
 if __name__ == "__main__":
     from idrak.metrics import bce
-    a = zeros((1, 2,3))
-    b = ones((1,2,3))
+    a = Tensor((2,2), [[2,2], [3,4]])
 
-    c = a + b
-    c.realize()
-
-    print(c)
+    print(a)
