@@ -1,363 +1,312 @@
-#include "ops/ops.h"
+#include "logger.h"
+#include "ops/binary_scalar_ops.h"
 #include "utils.h"
 #include <immintrin.h>
 #include <math.h>
 #include <sleef.h>
 #include <string.h>
-#include "logger.h"
 
-static void reconfigure_scalar_output(Tensor *in_tensor, Tensor *out) {
-  LOG_INFO("OP: reconfigure_scalar_output: Reconfiguring output "
-                       "tensor for scalar op");
-  out->strides = compute_strides(out->shape, out->ndim);
-  if (!out->strides &&
-      out->ndim > 0) { // compute_strides can return NULL if ndim=0 or error
-    LOG_ERROR("reconfigure_scalar_output: Failed to allocate memory for "
-                "out->strides.");
-    free(out->shape);
-    out->shape = NULL;
-    return;
-  }
+#define SIMD_WIDTH 8
 
-  size_t out_total_size = numel(out->shape, out->ndim);
-  if (!out->data->elems) {
-    LOG_ERROR("reconfigure_scalar_output: Failed to allocate memory for "
-                "out->data->elems.");
-    free(out->shape);
-    out->shape = NULL;
-    if (out->strides) {
-      free(out->strides);
-      out->strides = NULL;
+void add_scalar_op(Tensor* a, float b, Tensor* out) {
+    LOG_INFO("OP: add_scalar_op: Performing scalar addition (scalar=%.2f)", b);
+
+    int size = numel(a->shape, a->ndim);
+    float* data = malloc(sizeof(float) * size);
+
+    if (!is_contiguous(a) || !is_contiguous(out)) {
+        for (int idx = 0; idx < size; ++idx) {
+            int offset_a = 0;
+            int offset_out = 0;
+            int tmp = idx;
+
+            for (int d = a->ndim - 1; d >= 0; --d) {
+                int coord = tmp % a->shape[d];
+                tmp /= a->shape[d];
+                offset_a += coord * a->strides[d];
+                offset_out += coord * out->strides[d];
+            }
+
+            data[offset_out] = a->data->data[offset_a] + b;
+        }
+    } else {
+        int i = 0;
+        __m256 scalar = _mm256_set1_ps(b);
+
+        for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 z = _mm256_add_ps(x, scalar);
+            _mm256_storeu_ps(data + i, z);
+        }
+
+        for (; i < size; ++i) {
+            data[i] = a->data->data[i] + b;
+        }
     }
-    return;
-  }
+    from_data(out, data);
 }
 
-void add_scalar_op(Tensor *a, float b, Tensor *out) {
-  LOG_INFO("OP: add_scalar_op: Performing scalar addition (scalar=%.2f)", b);
+void sub_scalar_op(Tensor* a, float b, Tensor* out) {
+    LOG_INFO("OP: sub_scalar_op: Performing scalar subtraction (scalar=%.2f)", b);
 
-  reconfigure_scalar_output(a, out);
-  if (!out->data->elems) {
-    return;
-  }
+    int size = numel(a->shape, a->ndim);
+    float* data = malloc(sizeof(float) * size);
 
-  int size = numel(a->shape, a->ndim);
+    if (!is_contiguous(a) || !is_contiguous(out)) {
+        for (int idx = 0; idx < size; ++idx) {
+            int offset_a = 0;
+            int offset_out = 0;
+            int tmp = idx;
 
-  if (!is_contiguous(a) || !is_contiguous(out)) {
-    for (int idx = 0; idx < size; ++idx) {
-      int offset_a = 0;
-      int offset_out = 0;
-      int tmp = idx;
+            for (int d = a->ndim - 1; d >= 0; --d) {
+                int coord = tmp % a->shape[d];
+                tmp /= a->shape[d];
+                offset_a += coord * a->strides[d];
+                offset_out += coord * out->strides[d];
+            }
 
-      for (int d = a->ndim - 1; d >= 0; --d) {
-        int coord = tmp % a->shape[d];
-        tmp /= a->shape[d];
-        offset_a += coord * a->strides[d];
-        offset_out += coord * out->strides[d];
-      }
+            data[offset_out] = a->data->data[offset_a] - b;
+        }
+    } else {
+        int i = 0;
+        __m256 scalar = _mm256_set1_ps(b);
 
-      ((float*)out->data->elems)[offset_out] = ((float*)a->data->elems)[offset_a] + b;
+        for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 z = _mm256_sub_ps(x, scalar);
+            _mm256_storeu_ps(data + i, z);
+        }
+
+        for (; i < size; ++i) {
+            data[i] = a->data->data[i] - b;
+        }
     }
-  } else {
-    int i = 0;
-    __m256 scalar = _mm256_set1_ps(b);
-
-    for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-      __m256 z = _mm256_add_ps(x, scalar);
-      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
-    }
-
-    for (; i < size; ++i) {
-      ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] + b;
-    }
-  }
+    from_data(out, data);
 }
 
-void sub_scalar_op(Tensor *a, float b, Tensor *out) {
-  LOG_INFO("OP: sub_scalar_op: Performing scalar subtraction (scalar=%.2f)", b);
+void rsub_scalar_op(Tensor* a, float b, Tensor* out) {
+    LOG_INFO("OP: rsub_scalar_op: Performing reverse scalar subtraction (scalar=%.2f)", b);
 
-  reconfigure_scalar_output(a, out);
-  if (!out->data->elems) {
-    return;
-  }
-
-  int size = numel(a->shape, a->ndim);
-
-  if (!is_contiguous(a) || !is_contiguous(out)) {
-    for (int idx = 0; idx < size; ++idx) {
-      int offset_a = 0;
-      int offset_out = 0;
-      int tmp = idx;
-
-      for (int d = a->ndim - 1; d >= 0; --d) {
-        int coord = tmp % a->shape[d];
-        tmp /= a->shape[d];
-        offset_a += coord * a->strides[d];
-        offset_out += coord * out->strides[d];
-      }
-
-      ((float*)out->data->elems)[offset_out] = ((float*)a->data->elems)[offset_a] - b;
-    }
-  } else {
-    int i = 0;
-    __m256 scalar = _mm256_set1_ps(b);
-
-    for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-      __m256 z = _mm256_sub_ps(x, scalar);
-      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
+    // Error checking for null tensors
+    if (!b || !out) {
+        LOG_ERROR("rsub_scalar_op ERROR: Input or output tensor is NULL! b=%p, out=%p", (void*)a, (void*)out);
+        return;
     }
 
-    for (; i < size; ++i) {
-      ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] - b;
+    int size = numel(a->shape, a->ndim);
+    float* data = malloc(sizeof(float) * size);
+
+    if (!is_contiguous(a) || !is_contiguous(out)) {
+        for (int idx = 0; idx < size; ++idx) {
+            int a_offset = 0;
+            int out_offset = 0;
+            int tmp = idx;
+
+            for (int d = a->ndim - 1; d >= 0; --d) {
+                int coord = tmp % a->shape[d];
+                tmp /= a->shape[d];
+
+                a_offset += coord * a->strides[d];
+                out_offset += coord * out->strides[d];
+            }
+
+            data[out_offset] = b - a->data->data[a_offset];
+        }
+    } else {
+        int i = 0;
+        __m256 scalar = _mm256_set1_ps(b);
+
+        for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 z = _mm256_sub_ps(scalar, x);
+            _mm256_storeu_ps(data + i, z);
+        }
+
+        for (; i < size; ++i) {
+            data[i] = b - a->data->data[i];
+        }
     }
-  }
+    from_data(out, data);
 }
 
-void rsub_scalar_op(float a, Tensor *b, Tensor *out) {
-  LOG_INFO("OP: rsub_scalar_op: Performing reverse scalar subtraction (scalar=%.2f)", a);
+void mul_scalar_op(Tensor* a, float b, Tensor* out) {
+    LOG_INFO("OP: mul_scalar_op: Performing scalar multiplication (scalar=%.2f)", b);
 
-  // Error checking for null tensors
-  if (!b || !out) {
-    LOG_ERROR(
-        "rsub_scalar_op ERROR: Input or output tensor is NULL! b=%p, out=%p",
-        (void *)b, (void *)out);
-    return;
-  }
+    int size = numel(a->shape, a->ndim);
+    float* data = malloc(sizeof(float) * size);
 
-  reconfigure_scalar_output(b, out);
-  if (!out->data->elems) {
-    LOG_ERROR("rsub_scalar_op ERROR: Output tensor data pointer is NULL "
-                "after reconfiguration.");
-    return;
-  }
+    if (!is_contiguous(a) || !is_contiguous(out)) {
+        for (int idx = 0; idx < size; ++idx) {
+            int offset_a = 0;
+            int offset_out = 0;
+            int tmp = idx;
 
-  int size = numel(b->shape, b->ndim);
+            for (int d = a->ndim - 1; d >= 0; --d) {
+                int coord = tmp % a->shape[d];
+                tmp /= a->shape[d];
+                offset_a += coord * a->strides[d];
+                offset_out += coord * out->strides[d];
+            }
 
-  if (!is_contiguous(b) || !is_contiguous(out)) {
-    for (int idx = 0; idx < size; ++idx) {
-      int b_offset = 0;
-      int out_offset = 0;
-      int tmp = idx;
+            data[offset_out] = a->data->data[offset_a] * b;
+        }
+    } else {
+        int i = 0;
+        __m256 scalar = _mm256_set1_ps(b);
 
-      for (int d = b->ndim - 1; d >= 0; --d) {
-        int coord = tmp % b->shape[d];
-        tmp /= b->shape[d];
+        for (; i + SIMD_WIDTH < size; i += SIMD_WIDTH) {
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 z = _mm256_mul_ps(x, scalar);
+            _mm256_storeu_ps(data + i, z);
+        }
 
-        b_offset += coord * b->strides[d];
-        out_offset += coord * out->strides[d];
-      }
-
-      ((float*)out->data->elems)[out_offset] = a - ((float*)b->data->elems)[b_offset];
+        for (; i < size; ++i) {
+            data[i] = a->data->data[i] * b;
+        }
     }
-  } else {
-    int i = 0;
-    __m256 scalar = _mm256_set1_ps(a);
-
-    for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(((float*)b->data->elems) + i);
-      __m256 z = _mm256_sub_ps(scalar, x);
-      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
-    }
-
-    for (; i < size; ++i) {
-      ((float*)out->data->elems)[i] = a - ((float*)b->data->elems)[i];
-    }
-  }
+    from_data(out, data);
 }
 
-void mul_scalar_op(Tensor *a, float b, Tensor *out) {
-  LOG_INFO("OP: mul_scalar_op: Performing scalar multiplication (scalar=%.2f)", b);
+void div_scalar_op(Tensor* a, float b, Tensor* out) {
+    LOG_INFO("OP: div_scalar_op: Performing scalar division (scalar=%.2f)", b);
 
-  reconfigure_scalar_output(a, out);
-  if (!out->data->elems) {
-    return;
-  }
+    int size = numel(a->shape, a->ndim);
+    float* data = malloc(sizeof(float) * size);
 
-  int size = numel(a->shape, a->ndim);
+    if (!is_contiguous(a) || !is_contiguous(out)) {
+        for (int idx = 0; idx < size; ++idx) {
+            int offset_a = 0;
+            int offset_out = 0;
+            int tmp = idx;
 
-  if (!is_contiguous(a) || !is_contiguous(out)) {
-    for (int idx = 0; idx < size; ++idx) {
-      int offset_a = 0;
-      int offset_out = 0;
-      int tmp = idx;
+            for (int d = a->ndim - 1; d >= 0; --d) {
+                int coord = tmp % a->shape[d];
+                tmp /= a->shape[d];
+                offset_a += coord * a->strides[d];
+                offset_out += coord * out->strides[d];
+            }
 
-      for (int d = a->ndim - 1; d >= 0; --d) {
-        int coord = tmp % a->shape[d];
-        tmp /= a->shape[d];
-        offset_a += coord * a->strides[d];
-        offset_out += coord * out->strides[d];
-      }
+            if (b == 0.0f) {
+                LOG_WARN("Division by zero in div_scalar_op at index %d. "
+                         "Result will be +/-INF or NaN.",
+                         idx);
+                data[offset_out] = a->data->data[offset_a] / b; // Will result in INF/NaN
+            } else {
+                data[offset_out] = a->data->data[offset_a] / b;
+            }
+        }
+    } else {
+        int i = 0;
+        __m256 scalar = _mm256_set1_ps(b);
+        if (b == 0.0f) {
+            LOG_WARN("Division by zero in div_scalar_op (SIMD path). "
+                     "Results will be +/-INF or NaN.");
+        }
 
-      ((float*)out->data->elems)[offset_out] = ((float*)a->data->elems)[offset_a] * b;
+        for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 z = _mm256_div_ps(x, scalar);
+            _mm256_storeu_ps(data + i, z);
+        }
+
+        for (; i < size; ++i) {
+            if (b == 0.0f) {
+                data[i] = a->data->data[i] / b;
+            } else {
+                data[i] = a->data->data[i] / b;
+            }
+        }
     }
-  } else {
-    int i = 0;
-    __m256 scalar = _mm256_set1_ps(b);
-
-    for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-      __m256 z = _mm256_mul_ps(x, scalar);
-      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
-    }
-
-    for (; i < size; ++i) {
-      ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] * b;
-    }
-  }
+    from_data(out, data);
 }
 
-void div_scalar_op(Tensor *a, float b, Tensor *out) {
-  LOG_INFO("OP: div_scalar_op: Performing scalar division (scalar=%.2f)", b);
+void rdiv_scalar_op(Tensor* a, float b, Tensor* out) {
+    LOG_INFO("OP: rdiv_scalar_op: Performing reverse scalar division (scalar=%.2f)", b);
 
-  reconfigure_scalar_output(a, out);
-  if (!out->data->elems) {
-    return;
-  }
+    int size = numel(a->shape, a->ndim);
+    float* data = malloc(sizeof(float) * size);
 
-  int size = numel(a->shape, a->ndim);
+    if (!is_contiguous(a) || !is_contiguous(out)) {
+        for (int idx = 0; idx < size; ++idx) {
+            int offset_a = 0;
+            int offset_out = 0;
+            int tmp = idx;
 
-  if (!is_contiguous(a) || !is_contiguous(out)) {
-    for (int idx = 0; idx < size; ++idx) {
-      int offset_a = 0;
-      int offset_out = 0;
-      int tmp = idx;
+            for (int d = a->ndim - 1; d >= 0; --d) {
+                int coord = tmp % a->shape[d];
+                tmp /= a->shape[d];
+                offset_a += coord * a->strides[d];
+                offset_out += coord * out->strides[d];
+            }
 
-      for (int d = a->ndim - 1; d >= 0; --d) {
-        int coord = tmp % a->shape[d];
-        tmp /= a->shape[d];
-        offset_a += coord * a->strides[d];
-        offset_out += coord * out->strides[d];
-      }
+            if (a->data->data[offset_a] == 0.0f) {
+                LOG_WARN("Division by zero in rdiv_scalar_op at index %d. "
+                         "Result will be +/-INF or NaN.",
+                         idx);
+                data[offset_out] = b / a->data->data[offset_a]; // Will result in INF/NaN
+            } else {
+                data[offset_out] = b / a->data->data[offset_a];
+            }
+        }
+    } else {
+        int i = 0;
+        __m256 scalar = _mm256_set1_ps(b);
 
-      if (b == 0.0f) {
-        LOG_WARN("Division by zero in div_scalar_op at index %d. "
-                      "Result will be +/-INF or NaN.",
-                      idx);
-        ((float*)out->data->elems)[offset_out] =
-            ((float*)a->data->elems)[offset_a] / b; // Will result in INF/NaN
-      } else {
-        ((float*)out->data->elems)[offset_out] = ((float*)a->data->elems)[offset_a] / b;
-      }
+        for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 z = _mm256_div_ps(scalar, x);
+            _mm256_storeu_ps(data + i, z);
+        }
+
+        for (; i < size; ++i) {
+            if (a->data->data[i] == 0.0f) {
+                LOG_WARN("Division by zero in rdiv_scalar_op at index %d. "
+                         "Result will be +/-INF or NaN.",
+                         i);
+                out->data->data[i] = b / a->data->data[i];
+            } else {
+                data[i] = b / a->data->data[i];
+            }
+        }
     }
-  } else {
-    int i = 0;
-    __m256 scalar = _mm256_set1_ps(b);
-    if (b == 0.0f) {
-      LOG_WARN("Division by zero in div_scalar_op (SIMD path). "
-                    "Results will be +/-INF or NaN.");
-    }
-
-    for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-      __m256 z = _mm256_div_ps(x, scalar);
-      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
-    }
-
-    for (; i < size; ++i) {
-      if (b == 0.0f) {
-        ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] / b;
-      } else {
-        ((float*)out->data->elems)[i] = ((float*)a->data->elems)[i] / b;
-      }
-    }
-  }
+    from_data(out, data);
 }
 
-void rdiv_scalar_op(Tensor *a, float b, Tensor *out) {
-  LOG_INFO("OP: rdiv_scalar_op: Performing reverse scalar division (scalar=%.2f)", b);
+void pow_scalar_op(Tensor* a, float b, Tensor* out) {
+    LOG_INFO("OP: pow_scalar_op: Performing scalar power (exponent=%.2f)", b);
 
-  reconfigure_scalar_output(a, out);
-  if (!out->data->elems) {
-    return;
-  }
+    int size = numel(a->shape, a->ndim);
+    float* data = malloc(sizeof(float) * size);
 
-  int size = numel(a->shape, a->ndim);
+    if (!is_contiguous(a) || !is_contiguous(out)) {
+        for (int idx = 0; idx < size; ++idx) {
+            int offset_a = 0;
+            int offset_out = 0;
+            int tmp = idx;
 
-  if (!is_contiguous(a) || !is_contiguous(out)) {
-    for (int idx = 0; idx < size; ++idx) {
-      int offset_a = 0;
-      int offset_out = 0;
-      int tmp = idx;
+            for (int d = a->ndim - 1; d >= 0; --d) {
+                int coord = tmp % a->shape[d];
+                tmp /= a->shape[d];
+                offset_a += coord * a->strides[d];
+                offset_out += coord * out->strides[d];
+            }
 
-      for (int d = a->ndim - 1; d >= 0; --d) {
-        int coord = tmp % a->shape[d];
-        tmp /= a->shape[d];
-        offset_a += coord * a->strides[d];
-        offset_out += coord * out->strides[d];
-      }
+            data[offset_out] = powf(a->data->data[offset_a], b);
+        }
+    } else {
+        int i = 0;
+        __m256 scalar = _mm256_set1_ps(b);
 
-      if (((float*)a->data->elems)[offset_a] == 0.0f) {
-        LOG_WARN("Division by zero in rdiv_scalar_op at index %d. "
-                      "Result will be +/-INF or NaN.",
-                      idx);
-        ((float*)out->data->elems)[offset_out] =
-            b / ((float*)a->data->elems)[offset_a]; // Will result in INF/NaN
-      } else {
-        ((float*)out->data->elems)[offset_out] = b / ((float*)a->data->elems)[offset_a];
-      }
+        for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+            __m256 x = _mm256_loadu_ps(a->data->data + i);
+            __m256 y = Sleef_powf8_u10avx2(x, scalar);
+            _mm256_storeu_ps(data + i, y);
+        }
+
+        for (; i < size; ++i) {
+            data[i] = powf(a->data->data[i], b);
+        }
     }
-  } else {
-    int i = 0;
-    __m256 scalar = _mm256_set1_ps(b);
-
-    for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-      __m256 z = _mm256_div_ps(scalar, x);
-      _mm256_storeu_ps(((float*)out->data->elems) + i, z);
-    }
-
-    for (; i < size; ++i) {
-      if (((float*)a->data->elems)[i] == 0.0f) {
-        LOG_WARN("Division by zero in rdiv_scalar_op at index %d. "
-                      "Result will be +/-INF or NaN.",
-                      i);
-        ((float*)out->data->elems)[i] = b / ((float*)a->data->elems)[i];
-      } else {
-        ((float*)out->data->elems)[i] = b / ((float*)a->data->elems)[i];
-      }
-    }
-  }
+    from_data(out, data);
 }
 
-void pow_scalar_op(Tensor *a, float b, Tensor *out) {
-  LOG_INFO("OP: pow_scalar_op: Performing scalar power (exponent=%.2f)", b);
-
-  reconfigure_scalar_output(a, out);
-  if (!out->data->elems) {
-    return;
-  }
-
-  int size = numel(a->shape, a->ndim);
-
-  if (!is_contiguous(a) || !is_contiguous(out)) {
-    for (int idx = 0; idx < size; ++idx) {
-      int offset_a = 0;
-      int offset_out = 0;
-      int tmp = idx;
-
-      for (int d = a->ndim - 1; d >= 0; --d) {
-        int coord = tmp % a->shape[d];
-        tmp /= a->shape[d];
-        offset_a += coord * a->strides[d];
-        offset_out += coord * out->strides[d];
-      }
-
-      ((float*)out->data->elems)[offset_out] = powf(((float*)a->data->elems)[offset_a], b);
-    }
-  } else {
-    int i = 0;
-    __m256 scalar = _mm256_set1_ps(b);
-
-    for (; i + 7 < size; i += 8) {
-      __m256 x = _mm256_loadu_ps(((float*)a->data->elems) + i);
-      __m256 y = Sleef_powf8_u10avx2(x, scalar);
-      _mm256_storeu_ps(((float*)out->data->elems) + i, y);
-    }
-
-    for (; i < size; ++i) {
-      ((float*)out->data->elems)[i] = powf(((float*)a->data->elems)[i], b);
-    }
-  }
-}
