@@ -23,7 +23,7 @@ typedef struct {
 Storage* smalloc(float* data, int size);
 void sfree(Storage* s);
 
-typedef struct {
+typedef struct Tensor {
     Storage* data;
     struct Tensor* grad;
     int* shape;
@@ -35,6 +35,9 @@ typedef struct {
 
 Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad);
 void tfree(Tensor* t);
+
+Tensor* gmalloc(Tensor* t, float init);
+void gfree(Tensor* t);
 
 int numel(const int* shape, int ndim);
 int* compute_strides(const int* shape, int ndim);

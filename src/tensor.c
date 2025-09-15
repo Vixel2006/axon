@@ -78,7 +78,7 @@ Storage* smalloc(float* data, int size) {
         return NULL;
     }
 
-    s->data = data;
+    memcpy(s->data, data, sizeof(float) * size);
 
     s->counter = 1;
 
@@ -97,6 +97,34 @@ void sfree(Storage* s) {
             LOG_INFO("Storage data freed at %p", s->data);
         }
         free(s);
+    }
+}
+
+Tensor* gmalloc(Tensor* t, float init) {
+    Tensor* g = malloc(sizeof(Tensor));
+    g->shape = t->shape;
+    g->ndim = t->ndim;
+    g->device = t->device;
+    g->requires_grad = t->requires_grad;
+
+    int size = numel(g->shape, g->ndim);
+    float* data = malloc(sizeof(float) * size);
+
+    for (int i = 0; i < size; ++i) {
+        data[i] = init;
+    }
+
+    g->data = smalloc(data, size);
+
+    return g;
+}
+
+void gfree(Tensor* g) {
+    if (g) {
+        if (g->data) {
+            SAFE_FREE(g->data, sfree);
+        }
+        free(g);
     }
 }
 
@@ -121,7 +149,8 @@ Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad) {
     t->strides = compute_strides(t->shape, t->ndim);
     t->device = device;
     t->requires_grad = requires_grad;
-    t->data = NULL; // initialize pointer to NULL
+    t->data = NULL;
+    t->grad = NULL;
 
     LOG_INFO("Tensor allocated at %p (ndim=%d, device=%d, requires_grad=%d)", t, t->ndim, t->device, t->requires_grad);
     return t;
@@ -145,6 +174,10 @@ void tfree(Tensor* t) {
 
     if (t->data) {
         sfree(t->data);
+    }
+
+    if (t->grad) {
+        gfree(t->grad);
     }
 
     free(t);
