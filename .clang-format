@@ -1,0 +1,10 @@
+BasedOnStyle: LLVM
+IndentWidth: 4           # 4 spaces instead of 2
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 300
+AllowShortFunctionsOnASingleLine: false
+AllowShortBlocksOnASingleLine: false
+PointerAlignment: Left   # `int* ptr` style
+DerivePointerAlignment: false
+
