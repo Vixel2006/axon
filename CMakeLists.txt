@@ -18,10 +18,10 @@ else()
 endif()
 
 add_library(idrak SHARED
-  src/tensor.c src/node.c src/ops/cpu/unary_ops_cpu.c src/ops/cpu/reduction_ops_cpu.c
+  src/tensor.c src/ops/cpu/unary_ops_cpu.c src/ops/cpu/reduction_ops_cpu.c
   src/ops/cpu/binary_ops_cpu.c src/ops/cpu/binary_ops_scalar_cpu.c src/ops/cpu/movement_ops_cpu.c
   src/autograd/cpu/binary_ops_grad_cpu.c src/autograd/cpu/unary_ops_grad_cpu.c
-  src/autograd/cpu/reduction_ops_grad_cpu.c src/utils.c src/autograd/autograd_utils.c src/ops/ops_utils.c
+  src/autograd/cpu/reduction_ops_grad_cpu.c src/utils.c src/autograd/autograd_utils.c 
   src/optimizers/sgd.c src/optimizers/adam.c src/optimizers/zero_grad.c src/autograd/cpu/movement_ops_grad_cpu.c
 )
 
