@@ -1,12 +1,4 @@
-#include "ops/init_ops.h"
-#include "utils.h"
-#include <immintrin.h>
-#include <math.h>
-#include <sleef.h>
-#include <string.h>
-
-#include "autograd/autograd.h"
-#include "logger.h"
+#include "autograd/autograd_binary.h"
 
 #define SIMD_WIDTH 8
 
@@ -791,18 +783,6 @@ void matmul_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
     LOG_INFO("GRAD: matmul_grad_op: Gradient computation completed "
              "successfully");
 }
-
-typedef struct {
-    int padding;
-    int H_in;
-    int W_in;
-    int Kh;
-    int Kw;
-    int Sh;
-    int Sw;
-    int Hout;
-    int Wout;
-} BackwardConvExtras;
 
 void conv2d_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
     LOG_INFO("GRAD: conv2d_grad_op: Computing gradient for 2D convolution");
