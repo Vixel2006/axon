@@ -7,6 +7,11 @@
 #include <sleef.h>
 #include <string.h>
 
+typedef struct {
+    float min_val;
+    float max_val;
+} ClipExtras;
+
 void relu_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
 void abs_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
 void log_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
