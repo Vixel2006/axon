@@ -1,12 +1,4 @@
-#include "utils.h"
-#include <immintrin.h>
-#include <stdio.h> // For printf
-#include <stdlib.h>
-
-#include "autograd/autograd.h"
-#include "autograd/autograd_utils.h"
-#include "logger.h"
-#include "ops/init_ops.h"
+#include "autograd/autograd_reduction.h"
 
 #define SIMD_WIDTH 8
 
