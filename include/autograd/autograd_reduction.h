@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "autograd/autograd.h"
 #include "autograd/autograd_utils.h"
 #include "logger.h"
 #include "ops/init_ops.h"
