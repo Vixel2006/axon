@@ -28,12 +28,12 @@ void adam(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int num_p
         LOG_INFO("DEBUG: adam: Updating parameter %d", i);
         int num_elements = numel(params[i]->shape, params[i]->ndim);
 
-        float* current_m_estimates = (float*)m_estimates[i]->data->elems;
-        float* current_v_estimates = (float*)v_estimates[i]->data->elems;
+        float* current_m_estimates = m_estimates[i]->data->data;
+        float* current_v_estimates = v_estimates[i]->data->data;
 
         if (is_contiguous(params[i])) {
-            float* param_data = (float*)params[i]->data->elems;
-            float* param_grad = (float*)params[i]->grad->elems;
+            float* param_data = params[i]->data->data;
+            float* param_grad = params[i]->grad->data->data;
 
             int j = 0;
             for (; j + SIMD_WIDTH - 1 < num_elements; j += SIMD_WIDTH) {
@@ -82,7 +82,7 @@ void adam(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int num_p
                 LOG_INFO("DEBUG: adam: Scalar - Updated param_data[%d] for param %d", j, i);
             }
         } else {
-            int* current_indices = (int*)calloc(params[i]->ndim, sizeof(int));
+            int* current_indices = calloc(params[i]->ndim, sizeof(int));
             if (!current_indices) {
                 LOG_ERROR("adam: Failed to allocate current_indices "
                           "for param %d",
@@ -93,10 +93,10 @@ void adam(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int num_p
             for (int k = 0; k < num_elements; ++k) {
                 int flat_idx = get_flat_index(params[i], current_indices);
 
-                current_m_estimates[flat_idx] = beta1 * current_m_estimates[flat_idx] + (1.0f - beta1) * ((float*)params[i]->grad->elems)[flat_idx];
+                current_m_estimates[flat_idx] = beta1 * current_m_estimates[flat_idx] + (1.0f - beta1) * params[i]->grad->data->data[flat_idx];
                 LOG_INFO("DEBUG: adam: Non-contiguous - Updated m_estimates[%d] for param %d", flat_idx, i);
 
-                current_v_estimates[flat_idx] = beta2 * current_v_estimates[flat_idx] + (1.0f - beta2) * (((float*)params[i]->grad->elems)[flat_idx] * ((float*)params[i]->grad->elems)[flat_idx]);
+                current_v_estimates[flat_idx] = beta2 * current_v_estimates[flat_idx] + (1.0f - beta2) * params[i]->grad->data->data[flat_idx] * params[i]->grad->data->data[flat_idx];
                 LOG_INFO("DEBUG: adam: Non-contiguous - Updated v_estimates[%d] for param %d", flat_idx, i);
 
                 float m_hat = current_m_estimates[flat_idx] / (1.0f - beta1_pow_t);
@@ -105,7 +105,7 @@ void adam(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int num_p
 
                 float update_term = learning_rate * m_hat / (sqrtf(v_hat) + epsilon);
 
-                ((float*)params[i]->data->elems)[flat_idx] -= update_term;
+                params[i]->data->data[flat_idx] -= update_term;
                 LOG_INFO("DEBUG: adam: Non-contiguous - Updated param_data[%d] for param %d", flat_idx, i);
 
                 for (int dim = params[i]->ndim - 1; dim >= 0; --dim) {

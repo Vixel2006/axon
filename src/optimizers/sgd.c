@@ -9,7 +9,7 @@ void sgd(Tensor** params, int num_params, float lr) {
     __m256 lr_vec = _mm256_set1_ps(lr);
 
     for (int i = 0; i < num_params; ++i) {
-        if (!params[i] || !params[i]->requires_grad || !params[i]->grad->elems || !params[i]->data->elems) {
+        if (!params[i] || !params[i]->requires_grad || !params[i]->grad->data->data || !params[i]->data->data) {
             LOG_WARN("sgd: Skipping parameter %d due to invalid tensor, missing grad, or missing data.", i);
             continue;
         }
@@ -22,8 +22,8 @@ void sgd(Tensor** params, int num_params, float lr) {
 
         // --- Contiguous Path ---
         if (is_contiguous(params[i])) {
-            float* data_ptr = (float*)params[i]->data->elems;
-            float* grad_ptr = (float*)params[i]->grad->elems;
+            float* data_ptr = params[i]->data->data;
+            float* grad_ptr = params[i]->grad->data->data;
 
             int j = 0;
             for (; j + SIMD_WIDTH - 1 < num_elements; j += SIMD_WIDTH) {
@@ -46,7 +46,7 @@ void sgd(Tensor** params, int num_params, float lr) {
         // --- Non-Contiguous Path ---
         else {
             // Use separate index calculations for data and grad
-            int* indices = (int*)calloc(params[i]->ndim, sizeof(int));
+            int* indices = calloc(params[i]->ndim, sizeof(int));
             if (!indices) {
                 LOG_ERROR("sgd: Failed to allocate memory for indices for parameter %d.", i);
                 continue;
@@ -55,8 +55,8 @@ void sgd(Tensor** params, int num_params, float lr) {
             for (int k = 0; k < num_elements; ++k) {
                 size_t data_idx = get_flat_index(params[i], indices);
                 // Assuming grad has same layout - if not, calculate separately
-                ((float*)params[i]->data->elems)[data_idx] -= lr * ((float*)params[i]->grad->elems)[data_idx];
-                ((float*)params[i]->grad->elems)[data_idx] = 0.0f; // Zero gradient
+                params[i]->data->data[data_idx] -= lr * params[i]->grad->data->data[data_idx];
+                params[i]->grad->data->data[data_idx] = 0.0f; // Zero gradient
 
                 // Increment indices (your existing logic is fine)
                 int carry = 1;
