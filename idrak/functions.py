@@ -1,4 +1,4 @@
-from idrak.core.tensor import Tensor, dtype, Device
+from idrak.core.tensor import Tensor
 from idrak.ops.uop import *
 from idrak.ops.bop import *
 from idrak.ops.mop import *
@@ -7,16 +7,16 @@ from idrak.ops.bop import Conv2D
 from idrak.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
 
 # =========== Initialization Operations ============
-def zeros(shape: tuple[int, ...] | list[int], requires_grad: bool = True, dtype: dtype = dtype.FLOAT32, device: Device = Device.CPU) -> Tensor:
+def zeros(shape: tuple[int, ...] | list[int], requires_grad: bool = True, device: str = "str") -> Tensor:
     return Tensor(_c_tensor_ptr=c_zeros(shape, len(shape), requires_grad, dtype.value, device.value))
 
-def ones(shape: tuple[int, ...] | list[int], requires_grad: bool = True, dtype: dtype = dtype.FLOAT32, device: Device = Device.CPU) -> Tensor:
+def ones(shape: tuple[int, ...] | list[int], requires_grad: bool = True, device: str = "str") -> Tensor:
     return Tensor(_c_tensor_ptr=c_ones(shape, len(shape), requires_grad, dtype.value, device.value))
 
-def randn(shape: tuple[int, ...] | list[int], requires_grad: bool = True, seed: int = 42, dtype: dtype = dtype.FLOAT32, device: Device = Device.CPU) -> Tensor:
+def randn(shape: tuple[int, ...] | list[int], requires_grad: bool = True, seed: int = 42, device: str = "str") -> Tensor:
     return Tensor(_c_tensor_ptr=c_randn(shape, len(shape), dtype, device, seed, requires_grad))
 
-def uniform(shape: tuple[int, ...] | list[int], requires_grad: bool = True, low: int = 0, high: int = 1, dtype: dtype = dtype.FLOAT32, device: Device = Device.CPU) -> Tensor:
+def uniform(shape: tuple[int, ...] | list[int], requires_grad: bool = True, low: int = 0, high: int = 1, device: str = "str") -> Tensor:
     return Tensor(_c_tensor_ptr=c_uniform(shape, len(shape), dtype, device, low, high, requires_grad))
 
 # ========== Movment Operations ============
