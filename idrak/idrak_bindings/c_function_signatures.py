@@ -1,15 +1,9 @@
 import ctypes
 from .c_library_loader import tensor_lib
-from .ctypes_definitions import CTensor, CNode, CSharedPtr, CDtype, CDevice
+from .ctypes_definitions import CTensor, CDevice, CStorage
 
 if tensor_lib:
     # Define the C function signatures
-    tensor_lib.palloc.argtypes = [ctypes.c_void_p, ctypes.c_int, CDtype, CDevice]
-    tensor_lib.palloc.restype = ctypes.POINTER(CSharedPtr)
-
-    tensor_lib.pfree.argtypes = [CSharedPtr]
-    tensor_lib.pfree.restype = None
-
     tensor_lib.numel.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.numel.restype = ctypes.c_int
 
@@ -19,84 +13,73 @@ if tensor_lib:
     tensor_lib.compute_strides.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.compute_strides.restype = ctypes.POINTER(ctypes.c_int)
 
-    
+    tensor_lib.smalloc.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_int
+    ]
+    tensor_lib.smalloc.restype = None
 
-    tensor_lib.tmalloc_shape.argtypes = [
+    tensor_lib.sfree.argtypes = [
+        ctypes.POINTER(CStorage)
+    ]
+    tensor_lib.sfree.restype = None
+ 
+    tensor_lib.gmalloc.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float
+    ]
+    tensor_lib.gmalloc.restype = None
+
+    tensor_lib.gfree.argtypes = [ctypes.POINTER(CTensor)]
+    tensor_lib.gfree.restype = None
+    
+    tensor_lib.tmalloc.argtypes = [
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,
-        CDtype,
         CDevice,
         ctypes.c_bool,
     ]
     tensor_lib.tmalloc_shape.restype = ctypes.POINTER(CTensor)
 
-    tensor_lib.tmalloc_full.argtypes = [
-        ctypes.POINTER(ctypes.c_int),
-        ctypes.c_int,
-        ctypes.POINTER(ctypes.c_int),
-        CDtype,
-        CDevice,
-        CSharedPtr,
-        ctypes.c_bool,
-        CSharedPtr,
-    ]
-    tensor_lib.tmalloc_full.restype = ctypes.POINTER(CTensor)
-
     tensor_lib.tfree.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor))]
     tensor_lib.tfree.restype = None
 
+    tensor_lib.gmalloc.argtypes = []
+
     tensor_lib.zeros.argtypes = [
-        ctypes.POINTER(ctypes.c_int),
-        ctypes.c_int,
-        ctypes.c_bool,
-        ctypes.c_int,
-        ctypes.c_int,
+        ctypes.POINTER(CTensor),
     ]
-    tensor_lib.zeros.restype = ctypes.POINTER(CTensor)
+    tensor_lib.zeros.restype = None
 
     tensor_lib.ones.argtypes = [
-        ctypes.POINTER(ctypes.c_int),
-        ctypes.c_int,
-        ctypes.c_bool,
-        ctypes.c_int,
-        ctypes.c_int,
+        ctypes.POINTER(CTensor),
     ]
-    tensor_lib.ones.restype = ctypes.POINTER(CTensor)
+    tensor_lib.ones.restype = None
 
     tensor_lib.randn.argtypes = [
         ctypes.POINTER(ctypes.c_int),
-        ctypes.c_int,
-        CDtype,
-        CDevice,
-        ctypes.c_int,
-        ctypes.c_bool,
     ]
-    tensor_lib.randn.restype = ctypes.POINTER(CTensor)
+    tensor_lib.randn.restype = None 
 
     tensor_lib.uniform.argtypes = [
-        ctypes.POINTER(ctypes.c_int),
-        ctypes.c_int,
-        CDtype,
-        CDevice,
+        ctypes.POINTER(CTensor),
         ctypes.c_float,
         ctypes.c_float,
-        ctypes.c_bool,
     ]
     tensor_lib.uniform.restype = ctypes.POINTER(CTensor)
 
-    tensor_lib.nmalloc.argtypes = [
+    tensor_lib.from_data.argtypes = [
         ctypes.POINTER(CTensor),
-        ctypes.POINTER(ctypes.POINTER(CTensor)),
-        ctypes.c_int,
-        ctypes.c_void_p,
-        ctypes.c_void_p,
-        ctypes.c_void_p,
+        ctypes.c_float
     ]
+    tensor_lib.from_data.restype = None
 
-    tensor_lib.nmalloc.restype = ctypes.POINTER(CNode)
+    tensor_lib.borrow.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CStorage),
 
-    tensor_lib.nfree.argtypes = [ctypes.POINTER(CNode)]
-    tensor_lib.nfree.restype = None
+    ]
+    tensor_lib.borrow.restype = None
 
     tensor_lib.add_grad_op.argtypes = [
         ctypes.POINTER(CTensor),

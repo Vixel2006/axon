@@ -3,10 +3,9 @@ from os import wait
 from typing import Any
 import ctypes
 from .op import LazyOp
-from idrak.idrak_bindings.ctypes_definitions import CTensor, StackExtras, ConcatExtras
+from idrak.idrak_bindings.ctypes_definitions import CTensor
 from idrak.idrak_bindings.c_wrapper_functions import (
     c_concat_grad_op,
-    c_stack_grad_op,
     c_view,
     c_unsqueeze,
     c_squeeze,
@@ -14,7 +13,6 @@ from idrak.idrak_bindings.c_wrapper_functions import (
     c_broadcast,
     c_transpose,
     c_concat,
-    c_stack
 )
 
 class View(LazyOp):
@@ -131,11 +129,6 @@ class Broadcast(LazyOp):
 
 
 class Concat(LazyOp):
-    @staticmethod
-    def create_ctx_struct(a: list["Tensor"], axis: int):
-        extras = ConcatExtras(axis=axis)
-        ctx = ctypes.pointer(extras)
-        return ctx
 
     @staticmethod
     def calc_out_shape(a: list["Tensor"], axis: int) -> tuple[int, ...]:
@@ -171,15 +164,6 @@ class Concat(LazyOp):
     def backward(out: ctypes.POINTER(CTensor), a: ctypes.POINTER(ctypes.POINTER(Tensor)), n_prev: int, extras): c_concat_grad_op(out, a, n_prev, extras)
 
 class Stack(LazyOp):
-    @staticmethod
-    def create_ctx_struct(a: list["Tensor"], axis: int):
-        if axis < 0:
-            axis = a[0].ndim + axis + 1
-        extras = StackExtras(axis=axis)
-
-        ctx = ctypes.pointer(extras)
-
-        return ctx
 
     @staticmethod
     def calc_out_shape(a: list["Tensor"], axis: int) -> tuple[int, ...]:
@@ -219,7 +203,7 @@ class Stack(LazyOp):
         inputs = []
         for t in a:
             inputs.append(t._c_tensor)
-        c_stack(inputs, out._c_tensor, len(inputs), axis)
+        c_concat(inputs, out._c_tensor, len(inputs), axis)
 
     @staticmethod
-    def backward(out_ptr: ctypes.POINTER(CTensor), in_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_stack_grad_op(out_ptr, in_ptrs, n_prev, extras)
+    def backward(out_ptr: ctypes.POINTER(CTensor), in_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras): c_concat_grad_op(out_ptr, in_ptrs, n_prev, extras)

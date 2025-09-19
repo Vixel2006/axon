@@ -1,6 +1,5 @@
 #include "tensor.h"
 #include "logger.h"
-#include "utils.h"
 #include <immintrin.h>
 #include <math.h>
 #include <stdbool.h>
