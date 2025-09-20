@@ -34,7 +34,8 @@ if tensor_lib:
         return tensor_lib.gfree(tensor_ptr)
 
     def c_tmalloc(shape, ndim, device, requires_grad):
-        return tensor_lib.tmalloc(shape, ndim, device, requires_grad)
+        c_shape = (ctypes.c_int * ndim)(*shape)
+        return tensor_lib.tmalloc(c_shape, ndim, device, requires_grad)
 
     def c_tfree(tensor_ptr):
         tensor_lib.tfree(tensor_ptr)
@@ -263,6 +264,11 @@ if tensor_lib:
         m_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*m_estimates)
         v_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*v_estimates)
         tensor_lib.adam(in_param_ptrs, m_estimates_ptrs, v_estimates_ptrs, num_params, time_step, lr, beta1, beta2, epsilon)
+
+
+    def c_zero_grad(params, num_params):
+        in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
+        tensor_lib.zero_grad(in_param_ptrs, num_params)
 
 
     def c_set_debug_mode(enable):
