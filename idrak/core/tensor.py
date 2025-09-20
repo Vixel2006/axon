@@ -23,31 +23,42 @@ from enum import Enum
 
 class Tensor:
     def __init__(self, shape: Tuple[int], device: str = "cpu", requires_grad: bool = True):
-        device_ = CDevice.CPU if device == "cpu" else CDevice.CUDA
+        device_ = 0 if device == "cpu" else 1
         ndim = len(shape)
-        c_shape = (ctypes.c_int * ndim)(*shape)
-        self.c_tensor_ptr = c_tmalloc(c_shape, ndim, device_, requires_grad)
+        self.c_tensor_ptr = c_tmalloc(shape, ndim, device_, requires_grad)
         if not self.c_tensor_ptr:
             raise RuntimeError("tmalloc failed to allocate tensor")
 
     @property
     def shape(self) -> Tuple[int]:
-        return tuple(self.c_tensor_ptr.shape)
+        return tuple(self.c_tensor_ptr.contents.shape[i] for i in range(self.c_tensor_ptr.contents.ndim))
 
     @property
     def ndim(self) -> int:
-        return len(self.c_tensor_ptr.ndim)
+        return self.c_tensor_ptr.ndim
 
     @property
-    def requries_grad(self) -> bool:
-        return self.c_tensor_ptr.requires_grad
+    def device(self) -> str:
+        if self.c_tensor_ptr.contents.device == 0:
+            return "cpu"
+        else:
+            return "cuda"
+
+    @property
+    def requires_grad(self) -> bool:
+        return self.c_tensor_ptr.contents.requires_grad
 
 
     def __str__(self):
-        return f"Tensor(shape={self.shape}, device={self.device}, requires_grad={self.requires_grad}"
+        return f"Tensor(shape={self.shape}, device={self.device}, requires_grad={self.requires_grad})"
+
+    def __del__(self):
+        if self.c_tensor_ptr:
+            c_tfree(self.c_tensor_ptr)
+            self.c_tensor_ptr = None
 
 if __name__ == "__main__":
-    t = Tensor((2,2))
+    t = Tensor((1,2))
 
     print(t)
 

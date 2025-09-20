@@ -1,9 +1,8 @@
 import ctypes
 
-class CDevice(ctypes.c_int):
-    CPU = 0
-    CUDA = 1
-
+CDevice = ctypes.c_int
+CPU = 0
+CUDA = 1
 
 class CStorage(ctypes.Structure):
     _fields_ = [
