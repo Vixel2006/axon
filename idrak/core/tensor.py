@@ -30,7 +30,37 @@ class Tensor:
             raise RuntimeError("tmalloc failed to allocate tensor")
 
     @property
+    def data(self) -> np.ndarray:
+        size = 1
+        for d in self.shape:
+            size *= d
+
+        buf = np.ctypeslib.as_array(
+            self.c_tensor_ptr.contents.data.contents.data,
+            shape=(size,)
+        )
+
+        return buf.copy().reshape(self.shape)
+
+    @property
+    def grad(self) -> np.ndarray:
+        size = 1
+        for d in self.shape:
+            size *= d
+
+        buf = np.ctypeslib.as_array(
+            self.c_tensor_ptr.contents.grad.contents.data.contents.data,
+            shape=(size,)
+        )
+
+        return buf.copy().reshape(self.shape)
+
+    @property
     def shape(self) -> Tuple[int]:
+        return tuple(self.c_tensor_ptr.contents.shape[i] for i in range(self.c_tensor_ptr.contents.ndim))
+
+    @property
+    def strides(self) -> Tuple[int]:
         return tuple(self.c_tensor_ptr.contents.shape[i] for i in range(self.c_tensor_ptr.contents.ndim))
 
     @property
@@ -50,15 +80,10 @@ class Tensor:
 
 
     def __str__(self):
-        return f"Tensor(shape={self.shape}, device={self.device}, requires_grad={self.requires_grad})"
+        return f"Tensor(shape={self.shape}, data={self.data}, device={self.device}, requires_grad={self.requires_grad})"
 
     def __del__(self):
         if self.c_tensor_ptr:
             c_tfree(self.c_tensor_ptr)
             self.c_tensor_ptr = None
-
-if __name__ == "__main__":
-    t = Tensor((1,2))
-
-    print(t)
 
