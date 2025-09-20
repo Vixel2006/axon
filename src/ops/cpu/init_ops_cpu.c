@@ -62,7 +62,7 @@ void randn(Tensor* t) {
     }
 }
 
-void uniform(Tensor* t, int low, int high) {
+void uniform(Tensor* t, float low, float high) {
     int size;
     float* data;
     PREP(t->shape, t->ndim, data, size);
