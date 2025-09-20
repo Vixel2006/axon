@@ -7,9 +7,6 @@ if tensor_lib:
     tensor_lib.numel.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.numel.restype = ctypes.c_int
 
-    tensor_lib.set_ones_grad.argtypes = [ctypes.POINTER(CTensor)]
-    tensor_lib.set_ones_grad.restype = None
-
     tensor_lib.compute_strides.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.compute_strides.restype = ctypes.POINTER(ctypes.c_int)
 
@@ -39,9 +36,9 @@ if tensor_lib:
         CDevice,
         ctypes.c_bool,
     ]
-    tensor_lib.tmalloc_shape.restype = ctypes.POINTER(CTensor)
+    tensor_lib.tmalloc.restype = ctypes.POINTER(CTensor)
 
-    tensor_lib.tfree.argtypes = [ctypes.POINTER(ctypes.POINTER(CTensor))]
+    tensor_lib.tfree.argtypes = [ctypes.POINTER(CTensor)]
     tensor_lib.tfree.restype = None
 
     tensor_lib.gmalloc.argtypes = []
@@ -185,14 +182,6 @@ if tensor_lib:
     ]
     tensor_lib.exp_grad_op.restype = None
 
-    tensor_lib.softmax_grad_op.argtypes = [
-        ctypes.POINTER(CTensor),
-        ctypes.POINTER(ctypes.POINTER(CTensor)),
-        ctypes.c_int,
-        ctypes.c_void_p,
-    ]
-    tensor_lib.softmax_grad_op.restype = None
-
     tensor_lib.abs_grad_op.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
@@ -238,14 +227,6 @@ if tensor_lib:
     tensor_lib.max_grad_op.restype = None
 
     # Movement operations grad
-    tensor_lib.stack_grad_op.argtypes = [
-        ctypes.POINTER(CTensor),
-        ctypes.POINTER(ctypes.POINTER(CTensor)),
-        ctypes.c_int,
-        ctypes.c_void_p,
-    ]
-    tensor_lib.stack_grad_op.restype = None
-
     tensor_lib.concat_grad_op.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
@@ -263,9 +244,6 @@ if tensor_lib:
 
     tensor_lib.exp_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.exp_op.restype = None
-
-    tensor_lib.softmax_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.softmax_op.restype = None
 
     tensor_lib.abs_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.abs_op.restype = None
@@ -313,7 +291,7 @@ if tensor_lib:
     tensor_lib.max_full_op.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
-    ]
+   ]
     tensor_lib.max_full_op.restype = None
 
     tensor_lib.sum_full_grad_op.argtypes = [
@@ -501,14 +479,6 @@ if tensor_lib:
     ]
     tensor_lib.concat_op.restype = None
 
-
-    tensor_lib.stack_op.argtypes = [
-        ctypes.POINTER(ctypes.POINTER(CTensor)),
-        ctypes.POINTER(CTensor),
-        ctypes.c_int,
-        ctypes.c_int,
-    ]
-    tensor_lib.stack_op.restype = None
 
     # Optimizers
     tensor_lib.sgd.argtypes = [
