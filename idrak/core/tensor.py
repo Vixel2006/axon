@@ -22,6 +22,8 @@ from typing import List, Optional, Tuple, Union
 from enum import Enum
 
 class Tensor:
+    _lazy_buffer: Optional[Any]
+    
     def __init__(self, shape: Tuple[int], device: str = "cpu", requires_grad: bool = True):
         device_ = 0 if device == "cpu" else 1
         ndim = len(shape)
@@ -79,7 +81,12 @@ class Tensor:
         return self.c_tensor_ptr.contents.requires_grad
 
 
-    def __str__(self):
+    def realize(self) -> Tensor:
+        if self._lazy_buffer is not None:
+            return self._lazy_buffer.realize()
+        return self
+
+    def __str__(self) -> str:
         return f"Tensor(shape={self.shape}, data={self.data}, device={self.device}, requires_grad={self.requires_grad})"
 
     def __del__(self):

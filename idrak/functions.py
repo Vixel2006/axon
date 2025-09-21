@@ -3,28 +3,19 @@ from idrak.ops.uop import *
 from idrak.ops.bop import *
 from idrak.ops.mop import *
 from idrak.ops.rop import *
+from idrak.ops.iop import *
 from idrak.ops.bop import Conv2D
 from idrak.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
 
 # =========== Initialization Operations ============
-def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor:
-    t = Tensor(shape=shape, requires_grad=requires_grad, device=device)
-    c_zeros(t.c_tensor_ptr)
-    return t
+def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor: return Zeros.create_node(shape, requires_grad)
 
-def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True,) -> Tensor:
-    t = Tensor(shape=shape, requires_grad=requires_grad, device=device)
-    c_ones(t.c_tensor_ptr)
-    return t
+def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True,) -> Tensor: return Ones.create_node(shape, requires_grad)
 
-def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str = "cpu", requires_grad: bool = True) -> Tensor:
-    t = Tensor(shape=shape, requires_grad=requires_grad, device=device)
-    return t
+def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str = "cpu", requires_grad: bool = True) -> Tensor: return Randn.create_node(shape, requires_grad)
 
 def uniform(shape: tuple[int, ...] | list[int], low: float = 0.0, high: float = 1.0, device: str = "cpu", requires_grad: bool = True) -> Tensor:
-    t = Tensor(shape=shape, requires_grad=requires_grad, device=device)
-    c_uniform(t.c_tensor_ptr, low, high)
-    return t
+    return Uniform.create_node(shape, requires_grad, low=low, high=high)
 
 # ========== Movment Operations ============
 def view(a: Tensor, shape: tuple[int, ...]) -> Tensor: return View.create_node(a, shape=shape)
@@ -49,6 +40,7 @@ def log_softmax(a: Tensor, dim: int = -1) -> Tensor:
     exp_a = exp(a - max_val)
     sum_exp_a = sum(exp_a, dim=dim, keepdim=True)
     return a - max_val - log(sum_exp_a)
+
 def log(a: Tensor) -> Tensor: return Log.create_node(a)
 def exp(a: Tensor) -> Tensor: return Exp.create_node(a)
 def abs(a: Tensor) -> Tensor: return Abs.create_node(a)
@@ -84,6 +76,8 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: ret
 
 if __name__ == "__main__":
     from idrak.metrics import bce
-    a = uniform((2,2), 0.0, 1.0)
+    a = uniform((2,2), 4.0, 5.0)
+
+    a.realize()
 
     print(a)
