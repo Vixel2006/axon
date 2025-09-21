@@ -101,7 +101,12 @@ void sfree(Storage* s) {
 
 Tensor* gmalloc(Tensor* t, float init) {
     Tensor* g = malloc(sizeof(Tensor));
-    g->shape = t->shape;
+    g->shape = malloc(sizeof(int) * t->ndim);
+
+    for (int i = 0; i < t->ndim; ++i) {
+        g->shape[i] = t->shape[i];
+    }
+
     g->ndim = t->ndim;
     g->device = t->device;
     g->requires_grad = t->requires_grad;
