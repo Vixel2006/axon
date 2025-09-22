@@ -71,4 +71,4 @@ if __name__ == "__main__":
 
     c.realize()
 
-    print(a);print(b);print(c)
+    print(a);print(c)
