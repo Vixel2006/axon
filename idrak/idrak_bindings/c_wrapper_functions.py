@@ -246,7 +246,7 @@ if tensor_lib:
         c_shape = (ctypes.c_int * ndim)(*shape)
         tensor_lib.expand_op(in_tensor_ptr, out_tensor_ptr, c_shape)
 
-    def c_broadcast(in_tensor_ptr, out_tensor_ptr, ndim, shape):
+    def c_broadcast(in_tensor_ptr, out_tensor_ptr, shape, ndim):
         c_shape = (ctypes.c_int * ndim)(*shape)
         tensor_lib.broadcast_op(in_tensor_ptr, out_tensor_ptr, ndim, c_shape)
 
