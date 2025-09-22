@@ -33,17 +33,25 @@ class Tensor:
 
     @property
     def data(self) -> np.ndarray:
-        # TODO: extend this function to work with broadcasted tensors and non-contiguous data
-        size = 1
-        for d in self.shape:
-            size *= d
+        out_array = np.empty(self.shape, dtype=np.float32)
 
-        buf = np.ctypeslib.as_array(
-            self.c_tensor_ptr.contents.data.contents.data,
-            shape=(size,)
-        )
+        c_raw_data_ptr = self.c_tensor_ptr.contents.data.contents.data
+        c_strides_ptr = self.c_tensor_ptr.contents.strides
 
-        return buf.copy().reshape(self.shape)
+        it = np.nditer(out_array, flags=['multi_index'], op_flags=['writeonly'])
+        while not it.finished:
+            logical_coords = it.multi_index
+            
+            c_memory_offset_elements = 0
+            for i, coord in enumerate(logical_coords):
+                c_memory_offset_elements += coord * c_strides_ptr[i]
+
+            value = c_raw_data_ptr[c_memory_offset_elements]
+            
+            out_array[logical_coords] = value
+            it.iternext()
+
+        return out_array.copy()
 
 
     @property
