@@ -12,7 +12,7 @@ class LazyOp(ABC):
         pass
 
     @abstractmethod
-    def forward(self, out: "Tensor", *args, **kwargs): # Added 'out' as first positional arg
+    def forward(self, out: "Tensor", *args, **kwargs):
         pass
 
     @abstractmethod
@@ -21,25 +21,22 @@ class LazyOp(ABC):
 
     @classmethod
     def create_node(cls, *args, **kwargs):
-        from idrak.core.tensor import Tensor # Ensure Tensor is imported
-        from idrak.core.buffer import LazyBuffer # Ensure LazyBuffer is imported
-        from idrak.idrak_bindings.ctypes_definitions import CTensor # Ensure CTensor is imported
+        from idrak.core.tensor import Tensor
+        from idrak.core.buffer import LazyBuffer
+        from idrak.idrak_bindings.ctypes_definitions import CTensor
 
-        # Calculate output shape
         out_shape = cls.calc_out_shape(*args, **kwargs)
 
-        # Process inputs and determine if gradients are needed
         processed_inputs_for_node = []
         requires_grad_flag = False
 
-        # This loop correctly identifies actual Tensor dependencies
         for arg in args:
             if isinstance(arg, Tensor):
                 processed_inputs_for_node.append(arg)
                 if arg.requires_grad:
                     requires_grad_flag = True
-            elif isinstance(arg, CTensor): # If CTensor can be a direct input
-                temp_tensor = Tensor._wrap_c_tensor_ptr(arg) # Use wrapper
+            elif isinstance(arg, CTensor):
+                temp_tensor = Tensor._wrap_c_tensor_ptr(arg)
                 processed_inputs_for_node.append(temp_tensor)
                 if temp_tensor.requires_grad:
                     requires_grad_flag = True
@@ -50,23 +47,17 @@ class LazyOp(ABC):
                         if item.requires_grad:
                             requires_grad_flag = True
                     elif isinstance(item, CTensor):
-                        temp_tensor = Tensor._wrap_c_tensor_ptr(item) # Use wrapper
+                        temp_tensor = Tensor._wrap_c_tensor_ptr(item)
                         processed_inputs_for_node.append(temp_tensor)
                         if temp_tensor.requires_grad:
                             requires_grad_flag = True
         
-        # Determine if the *output* tensor should require gradients
-        # Usually, this is explicitly passed as a kwarg, or inferred from inputs
-        output_requires_grad = kwargs.pop('requires_grad', requires_grad_flag) # Allow explicit override
+        output_requires_grad = kwargs.pop('requires_grad', requires_grad_flag)
 
-        # Create output tensor
         out = Tensor(shape=out_shape, requires_grad=output_requires_grad)
 
-        # Create context: now returns (forward_kwargs, backward_ctx)
         forward_kwargs, backward_ctx = cls.create_ctx_struct(*args, **kwargs)
 
-        # Create lazy buffer - this is the only computation tracking mechanism
-        # For CreationOps, processed_inputs_for_node will be empty, which is correct.
         lazy_buffer = LazyBuffer(out, cls(), processed_inputs_for_node, forward_kwargs, backward_ctx)
         out._lazy_buffer = lazy_buffer
 
