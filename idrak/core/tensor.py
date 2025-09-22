@@ -33,6 +33,7 @@ class Tensor:
 
     @property
     def data(self) -> np.ndarray:
+        # TODO: extend this function to work with broadcasted tensors and non-contiguous data
         size = 1
         for d in self.shape:
             size *= d
@@ -44,18 +45,6 @@ class Tensor:
 
         return buf.copy().reshape(self.shape)
 
-    @property
-    def grad(self) -> np.ndarray:
-        size = 1
-        for d in self.shape:
-            size *= d
-
-        buf = np.ctypeslib.as_array(
-            self.c_tensor_ptr.contents.grad.contents.data.contents.data,
-            shape=(size,)
-        )
-
-        return buf.copy().reshape(self.shape)
 
     @property
     def shape(self) -> Tuple[int]:
@@ -67,7 +56,7 @@ class Tensor:
 
     @property
     def ndim(self) -> int:
-        return self.c_tensor_ptr.ndim
+        return self.c_tensor_ptr.contents.ndim
 
     @property
     def device(self) -> str:
@@ -79,6 +68,9 @@ class Tensor:
     @property
     def requires_grad(self) -> bool:
         return self.c_tensor_ptr.contents.requires_grad
+
+    def broadcast(self, shape):
+        return Broadcast.create_node(self, shape)
 
 
     def realize(self) -> Tensor:
