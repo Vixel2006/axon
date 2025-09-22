@@ -44,7 +44,7 @@ static inline bool check_tensors_unary_or_dot(Tensor* a, Tensor* out, const char
 }
 
 static inline float* alloc_tensor_data(int size, const char* op_name) {
-    float* data = (float*)malloc(sizeof(float) * size);
+    float* data = malloc(sizeof(float) * size);
     if (!data) {
         LOG_ERROR("%s ERROR: Failed to allocate memory for %d floats", op_name, size);
         return NULL;
@@ -117,6 +117,7 @@ void sub_op(Tensor* a, Tensor* b, Tensor* out) {
             data[i] = a->data->data[i] - b->data->data[i];
         }
     }
+
     from_data(out, data);
 }
 
