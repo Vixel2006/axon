@@ -67,7 +67,7 @@ if tensor_lib:
 
     tensor_lib.from_data.argtypes = [
         ctypes.POINTER(CTensor),
-        ctypes.c_float
+        ctypes.POINTER(ctypes.c_float)
     ]
     tensor_lib.from_data.restype = None
 
