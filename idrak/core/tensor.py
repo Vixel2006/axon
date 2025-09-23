@@ -80,11 +80,13 @@ class Tensor:
     def broadcast(self, shape):
         return Broadcast.create_node(self, shape)
 
-
     def realize(self) -> Tensor:
         if self._lazy_buffer is not None:
             return self._lazy_buffer.realize()
         return self
+
+    def numel(self):
+        return c_numel(self.shape, self.ndim)
 
     def __str__(self) -> str:
         return f"Tensor(shape={self.shape}, data={self.data}, device={self.device}, requires_grad={self.requires_grad})"
