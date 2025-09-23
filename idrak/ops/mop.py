@@ -1,5 +1,5 @@
 from __future__ import annotations
-from os import wait
+import math
 from typing import Any
 import ctypes
 from .op import LazyOp
@@ -131,6 +131,9 @@ class Unsqueeze(ViewOp):
         if not isinstance(dim, int):
             raise TypeError("Dim must be an integer.")
 
+        if dim < 0:
+            dim = args[0].ndim + dim
+        
         forward_kwargs = {"dim": dim}
         return forward_kwargs, dim
 
@@ -183,13 +186,14 @@ class Squeeze(ViewOp):
         elif len(args) > 1 and isinstance(args[1], int):
             dim = args[1]
 
+        if dim < 0:
+            dim = args[0].ndim + dim
+        
         forward_kwargs = {"dim": dim}
         return forward_kwargs, dim
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", dim: Optional[int] = None):
-        # Assuming c_squeeze handles dim=-1 for squeezing all 1-sized dimensions.
-        # If the C `squeeze_op` does not support `dim=-1` for "all", this would need a custom C function or iterative Python calls.
         c_squeeze(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim if dim is not None else -1)
 
     @staticmethod
@@ -231,6 +235,11 @@ class Transpose(ViewOp):
         dim0, dim1 = args[1], args[2]
         if not isinstance(dim0, int) or not isinstance(dim1, int):
             raise TypeError("Dim0 and Dim1 must be integers.")
+
+        if dim0 < 0:
+            dim0 = args[0].ndim + dim0
+        if dim1 < 0:
+            dim1 = args[0].ndim + dim1
 
         forward_kwargs = {"dim0": dim0, "dim1": dim1}
         return forward_kwargs, (dim0, dim1)
@@ -289,7 +298,7 @@ class Expand(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", shape: tuple[int, ...]):
-        c_expand(a_tensor.c_tensor_ptr, out.c_tensor_ptr, (ctypes.c_int * len(shape))(*shape), len(shape))
+        c_expand(a_tensor.c_tensor_ptr, out.c_tensor_ptr, (ctypes.c_int * len(shape))(*shape))
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
@@ -345,7 +354,6 @@ class Broadcast(ViewOp):
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
         pass
 
-
 class Concat(LazyOp):
     @staticmethod
     def calc_out_shape(*args: Any, **kwargs: Any) -> tuple[int, ...]:
@@ -376,7 +384,7 @@ class Concat(LazyOp):
             if tensors[i].ndim != first_tensor_ndim:
                 raise ValueError("All tensors for concat must have the same number of dimensions.")
             shape[axis] += tensors[i].shape[axis]
-            for j in range(first_tensor_ndim): # Use first_tensor_ndim for loop range
+            for j in range(first_tensor_ndim):
                 if j != axis and tensors[i].shape[j] != tensors[0].shape[j]:
                     raise ValueError(f"Can't concat: dimension {j} mismatch ({tensors[i].shape[j]} vs {tensors[0].shape[j]}).")
         return tuple(shape)
@@ -391,7 +399,7 @@ class Concat(LazyOp):
         return forward_kwargs, backward_ctx
 
     @staticmethod
-    def forward(out: "Tensor", a_tensors: List["Tensor"], axis: int):
+    def forward(out: "Tensor", *a_tensors: "Tensor", axis: int):
         inputs_c_ptrs = []
         for t in a_tensors:
             inputs_c_ptrs.append(t.c_tensor_ptr)
@@ -403,7 +411,6 @@ class Concat(LazyOp):
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
         c_concat_grad_op(out_ptr, prev_ptrs, n_prev, extras)
-
 
 class Stack(LazyOp):
     @staticmethod
@@ -440,7 +447,6 @@ class Stack(LazyOp):
 
     @staticmethod
     def create_ctx_struct(*args: Any, **kwargs: Any) -> Tuple[Dict[str, Any], Any]:
-        from idrak.core.tensor import Tensor
         axis = kwargs.get("axis", 0)
         forward_kwargs = {"axis": axis}
         input_shape = args[0][0].shape if args[0] else ()
@@ -448,21 +454,27 @@ class Stack(LazyOp):
         return forward_kwargs, backward_ctx
 
     @staticmethod
-    def forward(out: "Tensor", a_tensors: List["Tensor"], axis: int):
+    def forward(out: "Tensor", *a_tensors: "Tensor", axis: int):
         from idrak.core.tensor import Tensor
-
         temp_unsqueezed_ptrs: List[ctypes.POINTER(CTensor)] = []
+
         temp_unsqueezed_tensors: List[Tensor] = []
 
         for t in a_tensors:
+            if axis < 0:
+                normalized_axis_for_unsqueeze = t.ndim + axis + 1
+            else:
+                normalized_axis_for_unsqueeze = axis
+
             unsqueezed_shape = list(t.shape)
-            unsqueezed_shape.insert(axis, 1)
+            unsqueezed_shape.insert(normalized_axis_for_unsqueeze, 1)
             unsqueezed_shape_tuple = tuple(unsqueezed_shape)
 
             temp_t = Tensor(shape=unsqueezed_shape_tuple, requires_grad=t.requires_grad)
-            c_unsqueeze(t.c_tensor_ptr, temp_t.c_tensor_ptr, axis)
-            temp_unsqueezed_tensors.append(temp_t)
+            c_unsqueeze(t.c_tensor_ptr, temp_t.c_tensor_ptr, normalized_axis_for_unsqueeze)
+            
             temp_unsqueezed_ptrs.append(temp_t.c_tensor_ptr)
+            temp_unsqueezed_tensors.append(temp_t)
 
         c_inputs_array = (ctypes.POINTER(CTensor) * len(temp_unsqueezed_ptrs))(*temp_unsqueezed_ptrs)
         c_concat(c_inputs_array, out.c_tensor_ptr, len(temp_unsqueezed_ptrs), axis)
