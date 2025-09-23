@@ -52,6 +52,9 @@ if tensor_lib:
     def c_uniform(tensor_ptr, low, high):
         return tensor_lib.uniform(tensor_ptr, low, high)
 
+    def c_from_data(tensor_ptr, data):
+        return tensor_lib.from_data(tensor_ptr, data)
+
     def c_add_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.add_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
 
