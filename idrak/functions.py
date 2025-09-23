@@ -12,6 +12,8 @@ def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad
 def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True,) -> Tensor: return Ones.create_node(shape, requires_grad)
 def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str = "cpu", requires_grad: bool = True) -> Tensor: return Randn.create_node(shape, requires_grad)
 def uniform(shape: tuple[int, ...] | list[int], low: float = 0.0, high: float = 1.0, device: str = "cpu", requires_grad: bool = True) -> Tensor: return Uniform.create_node(shape, requires_grad, low=low, high=high)
+def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] | np.ndarray, device: str = "cpu", requires_grad: bool = True) -> Tensor: return FromData.create_node(shape, data=data, requires_grad=requires_grad)
+
 
 # ========== Movement Operations ============
 def view(a: Tensor, shape: tuple[int, ...]) -> Tensor: return View.create_node(a, shape)
@@ -58,13 +60,3 @@ def sum(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: ret
 def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(a, dim, keepdim)
 def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim, keepdim)
 
-if __name__ == "__main__":
-    a = ones((2, 3))
-    b = zeros((2, 3))
-
-    c = transpose(a, -1, -2)
-
-
-    c.realize()
-
-    print(a);print(c)
