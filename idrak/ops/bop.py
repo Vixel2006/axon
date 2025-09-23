@@ -87,12 +87,12 @@ class BOp(LazyOp):
             b_operand = args[1]
         elif 'scalar_val' in kwargs:
             b_operand = kwargs['scalar_val']
-        elif 'r_scalar_val' in kwargs: # For reverse scalar ops like RSub/RDiv
-            b_operand = kwargs['r_scalar_val'] # In this case, args[0] would be the scalar.
+        elif 'r_scalar_val' in kwargs:
+            b_operand = kwargs['r_scalar_val']
 
-        if isinstance(a_operand, Tensor):
+        if isinstance(a_operand, (Tensor, CTensor)):
             if isinstance(b_operand, (Tensor, CTensor)):
-                b_tensor_shape = Tensor._wrap_c_tensor_ptr(b_operand).shape if isinstance(b_operand, CTensor) else b_operand.shape
+                b_tensor_shape = b_operand.shape
                 return BOp.compute_broadcasted_shape(a_operand.shape, b_tensor_shape)
             elif isinstance(b_operand, (float, int)):
                 return a_operand.shape
@@ -115,12 +115,13 @@ class Add(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
-            a_broadcasted = a_tensor.broadcast(out.shape)
-            b_broadcasted = b_tensor.broadcast(out.shape)
+            a_broadcasted = a_tensor.broadcast(out.shape).realize()
+            b_broadcasted = b_tensor.broadcast(out.shape).realize()
             c_add(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
+            a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_add_scalar(a_tensor.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            c_add_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Add operation requires either a Tensor or a scalar for its second operand.")
 
@@ -137,12 +138,13 @@ class Sub(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
-            a_broadcasted = a_tensor.broadcast(out.shape)
-            b_broadcasted = b_tensor.broadcast(out.shape)
+            a_broadcasted = a_tensor.broadcast(out.shape).realize()
+            b_broadcasted = b_tensor.broadcast(out.shape).realize()
             c_sub(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
+            a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_sub_scalar(a_tensor.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            c_sub_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Sub operation requires either a Tensor or a scalar for its second operand.")
 
@@ -169,8 +171,9 @@ class RSub(BOp):
 
     @staticmethod
     def forward(out: "Tensor", b_tensor: "Tensor", r_scalar_val: float):
+        b_realized = b_tensor.realize()
         scalar = ctypes.c_float(r_scalar_val)
-        c_rsub_scalar(scalar, b_tensor.c_tensor_ptr, out.c_tensor_ptr)
+        c_rsub_scalar(scalar, b_realized.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
@@ -185,12 +188,13 @@ class Mul(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
-            a_broadcasted = a_tensor.broadcast(out.shape)
-            b_broadcasted = b_tensor.broadcast(out.shape)
+            a_broadcasted = a_tensor.broadcast(out.shape).realize()
+            b_broadcasted = b_tensor.broadcast(out.shape).realize()
             c_mul(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
+            a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_mul_scalar(a_tensor.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            c_mul_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Mul operation requires either a Tensor or a scalar for its second operand.")
 
@@ -207,12 +211,13 @@ class Div(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
-            a_broadcasted = a_tensor.broadcast(out.shape)
-            b_broadcasted = b_tensor.broadcast(out.shape)
+            a_broadcasted = a_tensor.broadcast(out.shape).realize()
+            b_broadcasted = b_tensor.broadcast(out.shape).realize()
             c_div(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
+            a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_div_scalar(a_tensor.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            c_div_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Div operation requires either a Tensor or a scalar for its second operand.")
 
@@ -238,8 +243,9 @@ class RDiv(BOp):
 
     @staticmethod
     def forward(out: "Tensor", b_tensor: "Tensor", r_scalar_val: float):
+        b_realized = b_tensor.realize()
         scalar = ctypes.c_float(r_scalar_val)
-        c_rdiv_scalar(scalar, b_tensor.c_tensor_ptr, out.c_tensor_ptr)
+        c_rdiv_scalar(scalar, b_realized.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
@@ -254,12 +260,13 @@ class Pow(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
-            a_broadcasted = a_tensor.broadcast(out.shape)
-            b_broadcasted = b_tensor.broadcast(out.shape)
+            a_broadcasted = a_tensor.broadcast(out.shape).realize()
+            b_broadcasted = b_tensor.broadcast(out.shape).realize()
             c_pow(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
+            a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_pow_scalar(a_tensor.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            c_pow_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Pow operation requires either a Tensor or a scalar for its second operand.")
 
@@ -351,8 +358,8 @@ class MatMul(BOp):
 
         # Explicit broadcasting must happen if c_matmul does not handle it internally
         # (It's generally better for the Python wrapper to prepare broadcasted inputs)
-        a_broadcasted = a_tensor.broadcast(out.shape[:-2] + (N_final, K_final)) if a_tensor.ndim >= 2 else a_tensor.broadcast(out.shape[:-1] + (K_final,))
-        b_broadcasted = b_tensor.broadcast(out.shape[:-2] + (K_final, M_final)) if b_tensor.ndim >= 2 else b_tensor.broadcast(out.shape[:-1] + (K_final,))
+        a_broadcasted = a_tensor.broadcast(out.shape[:-2] + (N_final, K_final)).realize() if a_tensor.ndim >= 2 else a_tensor.broadcast(out.shape[:-1] + (K_final,)).realize()
+        b_broadcasted = b_tensor.broadcast(out.shape[:-2] + (K_final, M_final)).realize() if b_tensor.ndim >= 2 else b_tensor.broadcast(out.shape[:-1] + (K_final,)).realize()
 
         if a_broadcasted.shape[-1] != (b_broadcasted.shape[-2] if b_broadcasted.ndim >= 2 else b_broadcasted.shape[-1]):
              raise RuntimeError(f"Internal error: Matmul broadcasted dimensions incompatible: {a_broadcasted.shape} and {b_broadcasted.shape}")
@@ -456,9 +463,11 @@ class Conv2D(BOp):
         out: "Tensor", a_tensor: "Tensor", b_tensor: "Tensor",
         kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int
         ):
+        a_realized = a_tensor.realize()
+        b_realized = b_tensor.realize()
         c_conv(
-            a_tensor.c_tensor_ptr,
-            b_tensor.c_tensor_ptr,
+            a_realized.c_tensor_ptr,
+            b_realized.c_tensor_ptr,
             out.c_tensor_ptr,
             (ctypes.c_int * 2)(*kernel_size), # Convert tuple to C array pointer
             (ctypes.c_int * 2)(*stride),     # Convert tuple to C array pointer
@@ -485,7 +494,7 @@ class Dot(BOp):
         if a_tensor.ndim == 1 and b_tensor.ndim == 1:
             if a_tensor.shape[0] != b_tensor.shape[0]:
                 raise ValueError(f"Dot product of 1D tensors requires matching dimensions: {a_tensor.shape[0]} vs {b_tensor.shape[0]}")
-            return (1,)
+            return ()
 
         if a_tensor.shape[-1] != b_tensor.shape[-1]:
             raise ValueError(f"Last dimensions must match for dot product contraction: {a_tensor.shape[-1]} vs {b_tensor.shape[-1]}")
@@ -508,7 +517,7 @@ class Dot(BOp):
             else:
                 raise ValueError(f"Batch shapes are not broadcastable for dot product: {a_tensor.shape} and {b_tensor.shape}")
 
-        return tuple(result_batch_shape) if result_batch_shape else (1,)
+        return tuple(result_batch_shape)
 
     @staticmethod
     def create_ctx_struct(*args: Any, **kwargs: Any) -> Tuple[Dict[str, Any], Any]:
@@ -516,7 +525,13 @@ class Dot(BOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: "Tensor"):
-        c_dot(a_tensor.c_tensor_ptr, b_tensor.c_tensor_ptr, out.c_tensor_ptr)
+        batch_shape = out.shape
+        K = a_tensor.shape[-1]
+        a_target_shape = batch_shape + (K,)
+        b_target_shape = batch_shape + (K,)
+        a_broadcasted = a_tensor.broadcast(a_target_shape).realize()
+        b_broadcasted = b_tensor.broadcast(b_target_shape).realize()
+        c_dot(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
