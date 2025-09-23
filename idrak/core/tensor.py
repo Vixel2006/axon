@@ -88,6 +88,23 @@ class Tensor:
     def numel(self):
         return c_numel(self.shape, self.ndim)
 
+    def exp(self) -> Tensor: return Exp.create_node(self)
+    def log(self) -> Tensor: return Log.create_node(self)
+    def abs(self) -> Tensor: return Abs.create_node(self)
+    def relu(self) -> Tensor: return ReLU.create_node(self)
+
+    def __add__(self, other: Tensor | float) -> Tensor: return Add.create_node(self, other)
+    def __sub__(self, other: Tensor | float) -> Tensor: return Sub.create_node(self, other)
+    def __mul__(self, other: Tensor | float) -> Tensor: return Mul.create_node(self, other)
+    def __truediv__(self, other: Tensor | float) -> Tensor: return Div.create_node(self, other)
+    def __pow__(self, other: Tensor | float) -> Tensor: return Pow.create_node(self, other)
+    def __matmul__(self, other: Tensor) -> Tensor: return MatMul.create_node(self, other)
+    def __radd__(self, other: float) -> Tensor: return Add.create_node(other, self)
+    def __rmul__(self, other: float) -> Tensor: return Mul.create_node(other, self)
+    def __rsub__(self, other: float) -> Tensor: return RSub.create_node(other, self)
+    def __rtruediv__(self, other: float) -> Tensor: return RDiv.create_node(other, self)
+    def __neg__(self) -> Tensor: return Neg.create_node(self)
+
     def __str__(self) -> str:
         return f"Tensor(shape={self.shape}, data={self.data}, device={self.device}, requires_grad={self.requires_grad})"
 

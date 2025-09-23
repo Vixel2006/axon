@@ -54,7 +54,7 @@ if tensor_lib:
     tensor_lib.ones.restype = None
 
     tensor_lib.randn.argtypes = [
-        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(CTensor),
     ]
     tensor_lib.randn.restype = None 
 
