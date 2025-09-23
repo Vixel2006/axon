@@ -250,8 +250,7 @@ if tensor_lib:
         c_shape = (ctypes.c_int * ndim)(*shape)
         tensor_lib.broadcast_op(in_tensor_ptr, out_tensor_ptr, ndim, c_shape)
 
-    def c_concat(in_tensors, out_tensor_ptr, num_tensors, axis):
-        in_tensor_ptrs = (ctypes.POINTER(CTensor) * num_tensors)(*in_tensors)
+    def c_concat(in_tensor_ptrs, out_tensor_ptr, num_tensors, axis):
         tensor_lib.concat_op(in_tensor_ptrs, out_tensor_ptr, num_tensors, axis)
 
     # Optimizers
