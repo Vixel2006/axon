@@ -63,12 +63,11 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: ret
 
 if __name__ == "__main__":
     from idrak.metrics import bce
-    a = ones((2,2))
+    a = ones((2, 2,2))
     b = ones((2,2))
 
-    # FIX: adding two tensors from python returns a segment fault most propable that it's because of broadcasting
-    c = add(a, b)
+    c = matmul(a, b)
 
     c.realize()
 
-    print(a);print(c)
+    print(a);print(b);print(c)
