@@ -36,7 +36,7 @@ typedef struct Tensor {
 Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad);
 void tfree(Tensor* t);
 
-Tensor* gmalloc(Tensor* t, float init);
+void gmalloc(Tensor* t, float init);
 void gfree(Tensor* t);
 
 int numel(const int* shape, int ndim);
