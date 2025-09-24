@@ -30,6 +30,11 @@ class Tensor:
         self.c_tensor_ptr = c_tmalloc(shape, ndim, device_, requires_grad)
         if not self.c_tensor_ptr:
             raise RuntimeError("tmalloc failed to allocate tensor")
+        
+        if self.requires_grad:
+            c_gmalloc(self.c_tensor_ptr, ctypes.c_float(0.0))
+            if not self.c_tensor_ptr.contents.grad:
+                raise RuntimeError("gmalloc failed to allocate tensor grad")
 
     @property
     def data(self) -> np.ndarray:
@@ -53,6 +58,27 @@ class Tensor:
 
         return out_array.copy()
 
+    @property
+    def grad(self) -> np.ndarray:
+        out_array = np.empty(self.shape, dtype=np.float32)
+
+        c_raw_data_ptr = self.c_tensor_ptr.contents.grad.contents.data.contents.data
+        c_strides_ptr = self.c_tensor_ptr.contents.strides
+
+        it = np.nditer(out_array, flags=['multi_index'], op_flags=['writeonly'])
+        while not it.finished:
+            logical_coords = it.multi_index
+            
+            c_memory_offset_elements = 0
+            for i, coord in enumerate(logical_coords):
+                c_memory_offset_elements += coord * c_strides_ptr[i]
+
+            value = c_raw_data_ptr[c_memory_offset_elements]
+            
+            out_array[logical_coords] = value
+            it.iternext()
+
+        return out_array.copy()
 
     @property
     def shape(self) -> Tuple[int]:
@@ -77,17 +103,28 @@ class Tensor:
     def requires_grad(self) -> bool:
         return self.c_tensor_ptr.contents.requires_grad
 
-    def broadcast(self, shape):
-        return Broadcast.create_node(self, shape)
+    @property
+    def T(self) -> Tensor:
+        return Transpose.create_node(self, -2, -1)
 
     def realize(self) -> Tensor:
         if self._lazy_buffer is not None:
             return self._lazy_buffer.realize()
         return self
 
-    def numel(self):
-        return c_numel(self.shape, self.ndim)
+    def backward(self):
+        if self._lazy_buffer is not None:
+            self._lazy_buffer.backward()
 
+    def numel(self) -> int: return c_numel(self.shape, self.ndim)
+
+    def view(self, shape: tuple[int, ...]) -> Tensor: return View.create_node(self, shape)
+    def unsqueeze(self, dim: int = -1) -> Tensor: return Unsqueeze.create_node(self, dim)
+    def squeeze(self, dim: int = -1) -> Tensor: return Squeeze.create_node(self, dim)
+    def expand(self, shape: tuple[int, ...]) -> Tensor: return Expand.create_node(self, shape)
+    def broadcast(self, shape: tuple[int, ...]) -> Tensor: return Broadcast.create_node(self, shape)
+    def transpose(self, n: int = -2, m: int = -1) -> Tensor: return Transpose.create_node(self, n, m)
+    
     def exp(self) -> Tensor: return Exp.create_node(self)
     def log(self) -> Tensor: return Log.create_node(self)
     def abs(self) -> Tensor: return Abs.create_node(self)
@@ -112,4 +149,17 @@ class Tensor:
         if self.c_tensor_ptr:
             c_tfree(self.c_tensor_ptr)
             self.c_tensor_ptr = None
+
+if __name__ == "__main__":
+    from idrak.functions import *
+    a = from_data((2, 3), [[1,2,3], [4,5,6]])
+    b = from_data((2, 3), [[2,3,4], [5,6,7]])
+
+    c = a + b
+
+    c.backward()
+
+    print(c.grad)
+    print(b.grad)
+    print(a.grad)
 

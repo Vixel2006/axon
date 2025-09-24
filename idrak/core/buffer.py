@@ -1,7 +1,13 @@
+from __future__ import annotations
 from os import wait
+
+from numpy import where
 from idrak.core.tensor import Tensor
 from idrak.ops.op import LazyOp
 from typing import List, Dict, Any
+import ctypes
+from idrak.idrak_bindings.ctypes_definitions import CTensor
+from idrak.idrak_bindings.c_wrapper_functions import c_gmalloc
 
 class LazyBuffer:
     def __init__(self, out: 'Tensor', op: 'LazyOp', prev: List['Tensor'], forward_kwargs: Dict[str, Any], backward_ctx: Any = None):
@@ -13,7 +19,7 @@ class LazyBuffer:
         self._realized = False
         self._topo_sorted = None
 
-    def topo_sort(self) -> List['LazyBuffer']:
+    def topo_sort(self) -> List[LazyBuffer]:
         if self._topo_sorted is not None:
             return self._topo_sorted
 
@@ -41,7 +47,7 @@ class LazyBuffer:
         self._topo_sorted = result
         return result
 
-    def realize(self):
+    def realize(self) -> Tensor:
         if self._realized:
             return self.out
 
@@ -60,3 +66,17 @@ class LazyBuffer:
                 buffer._realized = True
 
         return self.out
+
+    def backward(self):
+        self.realize()
+
+        execution_order = self.topo_sort()[::-1]
+
+        for i, buffer in enumerate(execution_order):
+            if i == 0:
+                c_gmalloc(buffer.out.c_tensor_ptr, ctypes.c_float(1.0))
+            out_grad_ptr = buffer.out.c_tensor_ptr
+            in_grad_ptrs_type = ctypes.POINTER(CTensor) * len(buffer.prev)
+            in_grad_ptrs = in_grad_ptrs_type(*(t.c_tensor_ptr for t in buffer.prev))
+            in_grad_ptrs_ptr = ctypes.cast(in_grad_ptrs, ctypes.POINTER(CTensor))
+            buffer.op.backward(out_grad_ptr, in_grad_ptrs_ptr, len(buffer.prev), buffer.backward_ctx)

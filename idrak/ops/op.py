@@ -46,11 +46,6 @@ class LazyOp(ABC):
                         processed_inputs_for_node.append(item)
                         if item.requires_grad:
                             requires_grad_flag = True
-                    elif isinstance(item, CTensor):
-                        temp_tensor = Tensor._wrap_c_tensor_ptr(item)
-                        processed_inputs_for_node.append(temp_tensor)
-                        if temp_tensor.requires_grad:
-                            requires_grad_flag = True
         
         output_requires_grad = kwargs.pop('requires_grad', requires_grad_flag)
 

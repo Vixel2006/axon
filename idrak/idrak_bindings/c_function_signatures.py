@@ -1,4 +1,6 @@
 import ctypes
+
+from numpy import where
 from .c_library_loader import tensor_lib
 from .ctypes_definitions import CTensor, CDevice, CStorage
 
