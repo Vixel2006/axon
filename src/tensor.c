@@ -99,13 +99,9 @@ void sfree(Storage* s) {
     }
 }
 
-Tensor* gmalloc(Tensor* t, float init) {
+void gmalloc(Tensor* t, float init) {
     Tensor* g = malloc(sizeof(Tensor));
-    g->shape = malloc(sizeof(int) * t->ndim);
-
-    for (int i = 0; i < t->ndim; ++i) {
-        g->shape[i] = t->shape[i];
-    }
+    g->shape = t->shape;
 
     g->ndim = t->ndim;
     g->device = t->device;
@@ -120,7 +116,7 @@ Tensor* gmalloc(Tensor* t, float init) {
 
     g->data = smalloc(data, size);
 
-    return g;
+    t->grad = g;
 }
 
 void gfree(Tensor* g) {
