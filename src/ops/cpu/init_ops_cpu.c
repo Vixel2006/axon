@@ -21,6 +21,9 @@ void zeros(Tensor* t) {
 
     t->data = smalloc(data, size);
 
+    if (t->requires_grad)
+        gmalloc(t, 0.0);
+
     if (!t->data) {
         SAFE_FREE(t, tfree);
         return;
@@ -37,6 +40,9 @@ void ones(Tensor* t) {
     }
 
     t->data = smalloc(data, size);
+
+    if (t->requires_grad)
+        gmalloc(t, 0.0);
 
     if (!t->data) {
         SAFE_FREE(t, tfree);
@@ -56,6 +62,9 @@ void randn(Tensor* t) {
 
     t->data = smalloc(data, size);
 
+    if (t->requires_grad)
+        gmalloc(t, 0.0);
+
     if (!t->data) {
         SAFE_FREE(t, tfree);
         return;
@@ -74,6 +83,9 @@ void uniform(Tensor* t, float low, float high) {
 
     t->data = smalloc(data, size);
 
+    if (t->requires_grad)
+        gmalloc(t, 0.0);
+
     if (!t->data) {
         SAFE_FREE(t, tfree);
         return;
@@ -85,13 +97,18 @@ void from_data(Tensor* t, float* data) {
 
     t->data = smalloc(data, size);
 
+    if (t->requires_grad)
+        gmalloc(t, 0.0);
+
     if (!t->data) {
         SAFE_FREE(t, tfree);
         return;
     }
 }
 
-void borrow(Tensor* t, Storage* data) {
+void borrow(Tensor* t, Storage* data, Storage* grad) {
     t->data = data;
     data->counter += 1;
+    t->grad = grad;
+    grad->counter += 1;
 }

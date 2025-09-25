@@ -24,7 +24,7 @@
 
 void view_op(Tensor* in, Tensor* out, int* shape, int ndim) {
     LOG_INFO("OP: view_op: Creating view from Tensor %p (ndim=%d)", (void*)in, ndim);
-    borrow(out, in->data);
+    borrow(out, in->data, in->grad);
 }
 
 void unsqueeze_op(Tensor* in, Tensor* out, int dim) {
@@ -49,7 +49,7 @@ void unsqueeze_op(Tensor* in, Tensor* out, int dim) {
         out->strides[dim] = 1;
     }
 
-    borrow(out, in->data);
+    borrow(out, in->data, in->grad);
 }
 
 void squeeze_op(Tensor* in, Tensor* out, int dim) {
@@ -66,7 +66,7 @@ void squeeze_op(Tensor* in, Tensor* out, int dim) {
         out->strides[i] = (i < dim) ? in->strides[i] : in->strides[i + 1];
     }
 
-    borrow(out, in->data);
+    borrow(out, in->data, in->grad);
 }
 
 void transpose_op(Tensor* in, Tensor* out, int N, int M) {
@@ -94,7 +94,7 @@ void transpose_op(Tensor* in, Tensor* out, int N, int M) {
         }
     }
 
-    borrow(out, in->data);
+    borrow(out, in->data, in->grad);
 }
 
 void expand_op(Tensor* in, Tensor* out, const int* shape) {
@@ -111,7 +111,7 @@ void expand_op(Tensor* in, Tensor* out, const int* shape) {
         }
         out->strides[i] = (in->shape[i] == 1) ? 0 : in->strides[i];
     }
-    borrow(out, in->data);
+    borrow(out, in->data, in->grad);
 }
 
 void broadcast_op(Tensor* in, Tensor* out, int ndim, const int* shape) {
@@ -144,7 +144,7 @@ void broadcast_op(Tensor* in, Tensor* out, int ndim, const int* shape) {
         }
     }
 
-    borrow(out, in->data);
+    borrow(out, in->data, in->grad);
 }
 
 void concat_op(Tensor** in, Tensor* out, int num_tensors, int axis) {

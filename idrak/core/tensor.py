@@ -1,10 +1,10 @@
 from __future__ import annotations
+from os import wait
 
 from idrak.idrak_bindings.c_wrapper_functions import (
     c_tmalloc,
     c_tfree,
     c_gmalloc,
-    c_gfree,
     c_numel,
     c_compute_strides,
 )
@@ -30,11 +30,6 @@ class Tensor:
         self.c_tensor_ptr = c_tmalloc(shape, ndim, device_, requires_grad)
         if not self.c_tensor_ptr:
             raise RuntimeError("tmalloc failed to allocate tensor")
-        
-        if self.requires_grad:
-            c_gmalloc(self.c_tensor_ptr, ctypes.c_float(0.0))
-            if not self.c_tensor_ptr.contents.grad:
-                raise RuntimeError("gmalloc failed to allocate tensor grad")
 
     @property
     def data(self) -> np.ndarray:
@@ -62,7 +57,7 @@ class Tensor:
     def grad(self) -> np.ndarray:
         out_array = np.empty(self.shape, dtype=np.float32)
 
-        c_raw_data_ptr = self.c_tensor_ptr.contents.grad.contents.data.contents.data
+        c_raw_data_ptr = self.c_tensor_ptr.contents.grad.contents.data
         c_strides_ptr = self.c_tensor_ptr.contents.strides
 
         it = np.nditer(out_array, flags=['multi_index'], op_flags=['writeonly'])
@@ -155,6 +150,12 @@ if __name__ == "__main__":
     a = from_data((2, 3), [[1,2,3], [4,5,6]])
     b = from_data((2, 3), [[2,3,4], [5,6,7]])
 
+    c = a
+
+    c.backward()
+    print(c.grad);print(a.grad)
+
+    """
     c = a + b
 
     c.backward()
@@ -162,4 +163,4 @@ if __name__ == "__main__":
     print(c.grad)
     print(b.grad)
     print(a.grad)
-
+    """

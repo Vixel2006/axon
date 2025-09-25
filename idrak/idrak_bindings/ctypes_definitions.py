@@ -16,7 +16,7 @@ class CTensor(ctypes.Structure):
 
 CTensor._fields_ = [
     ("data", ctypes.POINTER(CStorage)),
-    ("grad", ctypes.POINTER(CTensor)),
+    ("grad", ctypes.POINTER(CStorage)),
     ("shape", ctypes.POINTER(ctypes.c_int)),
     ("strides", ctypes.POINTER(ctypes.c_int)),
     ("device", CDevice),
