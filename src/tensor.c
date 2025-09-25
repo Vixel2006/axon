@@ -100,31 +100,22 @@ void sfree(Storage* s) {
 }
 
 void gmalloc(Tensor* t, float init) {
-    Tensor* g = malloc(sizeof(Tensor));
-    g->shape = t->shape;
+    int size = numel(t->shape, t->ndim);
 
-    g->ndim = t->ndim;
-    g->device = t->device;
-    g->requires_grad = t->requires_grad;
+    if (!t->grad) {
+        float* data = malloc(sizeof(float) * size);
 
-    int size = numel(g->shape, g->ndim);
-    float* data = malloc(sizeof(float) * size);
-
-    for (int i = 0; i < size; ++i) {
-        data[i] = init;
-    }
-
-    g->data = smalloc(data, size);
-
-    t->grad = g;
-}
-
-void gfree(Tensor* g) {
-    if (g) {
-        if (g->data) {
-            SAFE_FREE(g->data, sfree);
+        for (int i = 0; i < size; ++i) {
+            data[i] = init;
         }
-        free(g);
+
+        Storage* g = smalloc(data, size);
+
+        t->grad = g;
+    } else {
+        for (int i = 0; i < size; ++i) {
+            t->grad->data[i] = init;
+        }
     }
 }
 
@@ -177,7 +168,7 @@ void tfree(Tensor* t) {
     }
 
     if (t->grad) {
-        gfree(t->grad);
+        sfree(t->grad);
     }
 
     free(t);

@@ -6,7 +6,7 @@ from idrak.core.tensor import Tensor
 from idrak.ops.op import LazyOp
 from typing import List, Dict, Any
 import ctypes
-from idrak.idrak_bindings.ctypes_definitions import CTensor
+from idrak.idrak_bindings.ctypes_definitions import CTensor, CStorage
 from idrak.idrak_bindings.c_wrapper_functions import c_gmalloc
 
 class LazyBuffer:
@@ -73,10 +73,31 @@ class LazyBuffer:
         execution_order = self.topo_sort()[::-1]
 
         for i, buffer in enumerate(execution_order):
+            if not buffer.out.requires_grad:
+                continue
+
             if i == 0:
-                c_gmalloc(buffer.out.c_tensor_ptr, ctypes.c_float(1.0))
-            out_grad_ptr = buffer.out.c_tensor_ptr
-            in_grad_ptrs_type = ctypes.POINTER(CTensor) * len(buffer.prev)
-            in_grad_ptrs = in_grad_ptrs_type(*(t.c_tensor_ptr for t in buffer.prev))
-            in_grad_ptrs_ptr = ctypes.cast(in_grad_ptrs, ctypes.POINTER(CTensor))
-            buffer.op.backward(out_grad_ptr, in_grad_ptrs_ptr, len(buffer.prev), buffer.backward_ctx)
+                c_gmalloc(buffer.out.c_tensor_ptr, ctypes.c_float(1.0)) 
+            
+            out_grad_storage_ptr = buffer.out.c_tensor_ptr
+
+            if not out_grad_storage_ptr:
+                continue
+
+            prev_grad_storage_ptrs = []
+            for tensor in buffer.prev:
+                if tensor.requires_grad:
+                    if not tensor.c_tensor_ptr.contents.grad:
+                        raise RuntimeError(f"Gradient storage not allocated for input tensor with shape {tensor.shape} and requires_grad=True")
+                    prev_grad_storage_ptrs.append(tensor.c_tensor_ptr)
+            
+            if not prev_grad_storage_ptrs and i != 0:
+                continue
+
+            in_grad_ptrs_type = ctypes.POINTER(CTensor) * len(prev_grad_storage_ptrs)
+            in_grad_ptrs_array = in_grad_ptrs_type(*prev_grad_storage_ptrs)
+            
+            in_grad_ptrs_ptr = ctypes.cast(in_grad_ptrs_array, ctypes.POINTER(ctypes.POINTER(CTensor)))
+            
+            buffer.op.backward(out_grad_storage_ptr, in_grad_ptrs_ptr, len(prev_grad_storage_ptrs), buffer.backward_ctx)
+

@@ -25,7 +25,7 @@ void sfree(Storage* s);
 
 typedef struct Tensor {
     Storage* data;
-    struct Tensor* grad;
+    Storage* grad;
     int* shape;
     int* strides;
     Device device;
@@ -37,7 +37,6 @@ Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad);
 void tfree(Tensor* t);
 
 void gmalloc(Tensor* t, float init);
-void gfree(Tensor* t);
 
 int numel(const int* shape, int ndim);
 int* compute_strides(const int* shape, int ndim);

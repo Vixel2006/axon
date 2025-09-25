@@ -30,9 +30,6 @@ if tensor_lib:
     def c_gmalloc(grad_ptr, grad):
         return tensor_lib.gmalloc(grad_ptr, grad)
 
-    def c_gfree(tensor_ptr):
-        return tensor_lib.gfree(tensor_ptr)
-
     def c_tmalloc(shape, ndim, device, requires_grad):
         c_shape = (ctypes.c_int * ndim)(*shape)
         return tensor_lib.tmalloc(c_shape, ndim, device, requires_grad)
