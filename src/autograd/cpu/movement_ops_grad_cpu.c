@@ -26,10 +26,10 @@ void concat_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                         in_offset += coord * prev[tensor_idx]->strides[d];
                     }
 
-                    prev[tensor_idx]->grad->data->data[in_offset] += out->grad->data->data[offset + linear] * prev[tensor_idx]->data->data[in_offset];
+                    prev[tensor_idx]->grad->data[in_offset] += out->grad->data[offset + linear] * prev[tensor_idx]->data->data[in_offset];
 
                     if (linear < 5) {
-                        LOG_INFO("    [non-contig] linear=%d -> in_offset=%d, grad=%f", linear, in_offset, prev[tensor_idx]->grad->data->data[in_offset]);
+                        LOG_INFO("    [non-contig] linear=%d -> in_offset=%d, grad=%f", linear, in_offset, prev[tensor_idx]->grad->data[in_offset]);
                     }
                 }
             } else {
@@ -37,18 +37,18 @@ void concat_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 
                 int i = 0;
                 for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-                    __m256 din = _mm256_loadu_ps(prev[tensor_idx]->grad->data->data + i);
-                    __m256 dout = _mm256_loadu_ps(out->grad->data->data + i + offset);
+                    __m256 din = _mm256_loadu_ps(prev[tensor_idx]->grad->data + i);
+                    __m256 dout = _mm256_loadu_ps(out->grad->data + i + offset);
                     __m256 dd = _mm256_add_ps(din, dout);
 
-                    _mm256_store_ps(prev[tensor_idx]->grad->data->data + i, dd);
+                    _mm256_store_ps(prev[tensor_idx]->grad->data + i, dd);
                 }
 
                 for (; i < size; ++i) {
-                    prev[tensor_idx]->grad->data->data[i] += out->grad->data->data[i + offset];
+                    prev[tensor_idx]->grad->data[i] += out->grad->data[i + offset];
 
                     if (i < 5) { // show first few elems
-                        LOG_INFO("    [contig] i=%d, grad=%f", i, prev[tensor_idx]->grad->data->data[i]);
+                        LOG_INFO("    [contig] i=%d, grad=%f", i, prev[tensor_idx]->grad->data[i]);
                     }
                 }
             }
@@ -60,4 +60,3 @@ void concat_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 
     LOG_INFO("Finished concat_grad_op");
 }
-

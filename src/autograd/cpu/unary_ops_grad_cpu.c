@@ -23,7 +23,7 @@ void relu_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                     out_offset += coord * out->strides[d];
                 }
                 if (a->data->data[a_offset] > 0) {
-                    a->grad->data->data[a_offset] += out->grad->data->data[out_offset];
+                    a->grad->data[a_offset] += out->grad->data[out_offset];
                 }
             }
         }
@@ -32,16 +32,16 @@ void relu_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
             __m256 va = _mm256_loadu_ps(a->data->data + i);
             __m256 mask = _mm256_cmp_ps(va, _mm256_setzero_ps(), _CMP_GT_OQ);
-            __m256 dout = _mm256_loadu_ps(out->grad->data->data + i);
+            __m256 dout = _mm256_loadu_ps(out->grad->data + i);
             __m256 dmasked = _mm256_and_ps(dout, mask);
-            __m256 dprev = _mm256_loadu_ps(a->grad->data->data + i);
+            __m256 dprev = _mm256_loadu_ps(a->grad->data + i);
             dprev = _mm256_add_ps(dprev, dmasked);
-            _mm256_storeu_ps(a->grad->data->data + i, dprev);
+            _mm256_storeu_ps(a->grad->data + i, dprev);
         }
 
         for (; i < size; ++i) {
             if (a->data->data[i] > 0) {
-                a->grad->data->data[i] += out->grad->data->data[i];
+                a->grad->data[i] += out->grad->data[i];
             }
         }
     }
@@ -51,10 +51,10 @@ void log_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
     LOG_INFO("GRAD: log_grad_op: Computing gradient for natural logarithm");
 
     // Error checking for null tensors and invalid n_prev
-    if (!out || !out->grad->data->data || !prev) {
+    if (!out || !out->grad->data || !prev) {
         LOG_ERROR("log_grad_op ERROR: Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
-                  (void*)out, (void*)out->grad->data->data, (void*)prev);
+                  (void*)out, (void*)out->grad->data, (void*)prev);
         return;
     }
 
@@ -72,7 +72,7 @@ void log_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 
     Tensor* a = prev[0];
 
-    if (a->requires_grad && !a->grad->data->data) {
+    if (a->requires_grad && !a->grad->data) {
         LOG_ERROR("log_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
@@ -97,9 +97,9 @@ void log_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                               "index %d! Input to log was zero.",
                               linear);
                     // Handle this error, e.g., set gradient to 0 or NaN
-                    a->grad->data->data[a_offset] += 0.0f; // Or NAN
+                    a->grad->data[a_offset] += 0.0f; // Or NAN
                 } else {
-                    a->grad->data->data[a_offset] += out->grad->data->data[out_offset] / a->data->data[a_offset];
+                    a->grad->data[a_offset] += out->grad->data[out_offset] / a->data->data[a_offset];
                 }
             }
         }
@@ -107,8 +107,8 @@ void log_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
         int i = 0;
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
             __m256 va = _mm256_loadu_ps(a->data->data + i);
-            __m256 dout = _mm256_loadu_ps(out->grad->data->data + i);
-            __m256 da = _mm256_loadu_ps(a->grad->data->data + i);
+            __m256 dout = _mm256_loadu_ps(out->grad->data + i);
+            __m256 da = _mm256_loadu_ps(a->grad->data + i);
 
             // Check for zero values in va to avoid division by zero
             __m256 zero = _mm256_setzero_ps();
@@ -125,7 +125,7 @@ void log_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
             contrib = _mm256_blendv_ps(contrib, zero, zero_mask);
 
             da = _mm256_add_ps(da, contrib);
-            _mm256_storeu_ps(a->grad->data->data + i, da);
+            _mm256_storeu_ps(a->grad->data + i, da);
         }
 
         for (; i < size; ++i) {
@@ -133,9 +133,9 @@ void log_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                 LOG_ERROR("log_grad_op ERROR: Division by zero in gradient at index "
                           "%d! Input to log was zero.",
                           i);
-                a->grad->data->data[i] += 0.0f; // Or NAN
+                a->grad->data[i] += 0.0f; // Or NAN
             } else {
-                a->grad->data->data[i] += out->grad->data->data[i] / a->data->data[i];
+                a->grad->data[i] += out->grad->data[i] / a->data->data[i];
             }
         }
     }
@@ -145,10 +145,10 @@ void exp_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
     LOG_INFO("GRAD: exp_grad_op: Computing gradient for exponential");
 
     // Error checking for null tensors and invalid n_prev
-    if (!out || !out->grad->data->data || !prev) {
+    if (!out || !out->grad->data || !prev) {
         LOG_ERROR("exp_grad_op ERROR: Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
-                  (void*)out, (void*)out->grad->data->data, (void*)prev);
+                  (void*)out, (void*)out->grad->data, (void*)prev);
         return;
     }
 
@@ -166,7 +166,7 @@ void exp_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 
     Tensor* a = prev[0];
 
-    if (a->requires_grad && !a->grad->data->data) {
+    if (a->requires_grad && !a->grad->data) {
         LOG_ERROR("exp_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
@@ -186,24 +186,24 @@ void exp_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                     a_offset += coord * a->strides[d];
                     out_offset += coord * out->strides[d];
                 }
-                a->grad->data->data[a_offset] += out->grad->data->data[out_offset] * out->data->data[out_offset];
+                a->grad->data[a_offset] += out->grad->data[out_offset] * out->data->data[out_offset];
             }
         }
     } else {
         int i = 0;
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
             __m256 vout = _mm256_loadu_ps(out->data->data + i);
-            __m256 dout = _mm256_loadu_ps(out->grad->data->data + i);
-            __m256 da = _mm256_loadu_ps(a->grad->data->data + i);
+            __m256 dout = _mm256_loadu_ps(out->grad->data + i);
+            __m256 da = _mm256_loadu_ps(a->grad->data + i);
 
             __m256 contrib = _mm256_mul_ps(dout, vout);
 
             da = _mm256_add_ps(da, contrib);
-            _mm256_storeu_ps(a->grad->data->data + i, da);
+            _mm256_storeu_ps(a->grad->data + i, da);
         }
 
         for (; i < size; ++i) {
-            a->grad->data->data[i] += out->grad->data->data[i] * out->data->data[i];
+            a->grad->data[i] += out->grad->data[i] * out->data->data[i];
         }
     }
 }
@@ -211,10 +211,10 @@ void exp_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 void abs_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
     LOG_INFO("GRAD: abs_grad_op: Computing gradient for absolute value");
 
-    if (!out || !out->grad->data->data || !prev) {
+    if (!out || !out->grad->data || !prev) {
         LOG_ERROR("abs_grad_op ERROR: Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
-                  (void*)out, (void*)out->grad->data->data, (void*)prev);
+                  (void*)out, (void*)out->grad->data, (void*)prev);
         return;
     }
 
@@ -232,7 +232,7 @@ void abs_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 
     Tensor* a = prev[0];
 
-    if (a->requires_grad && !a->grad->data->data) {
+    if (a->requires_grad && !a->grad->data) {
         LOG_ERROR("abs_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
@@ -253,9 +253,9 @@ void abs_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                     out_offset += coord * out->strides[d];
                 }
                 if (a->data->data[a_offset] == 0.0f) {
-                    a->grad->data->data[a_offset] += 0.0f; // Gradient is 0 at x=0
+                    a->grad->data[a_offset] += 0.0f; // Gradient is 0 at x=0
                 } else {
-                    a->grad->data->data[a_offset] += out->grad->data->data[out_offset] * a->data->data[a_offset] / fabsf(a->data->data[a_offset]);
+                    a->grad->data[a_offset] += out->grad->data[out_offset] * a->data->data[a_offset] / fabsf(a->data->data[a_offset]);
                 }
             }
         }
@@ -263,8 +263,8 @@ void abs_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
         int i = 0;
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
             __m256 va = _mm256_loadu_ps(a->data->data + i);
-            __m256 dout = _mm256_loadu_ps(out->grad->data->data + i);
-            __m256 da = _mm256_loadu_ps(a->grad->data->data + i);
+            __m256 dout = _mm256_loadu_ps(out->grad->data + i);
+            __m256 da = _mm256_loadu_ps(a->grad->data + i);
 
             __m256 zero = _mm256_setzero_ps();
             __m256 sign_mask = _mm256_cmp_ps(va, zero, _CMP_LT_OQ); // Check for negative values
@@ -281,14 +281,14 @@ void abs_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
             __m256 contrib = _mm256_mul_ps(dout, sign_va);
 
             da = _mm256_add_ps(da, contrib);
-            _mm256_storeu_ps(a->grad->data->data + i, da);
+            _mm256_storeu_ps(a->grad->data + i, da);
         }
 
         for (; i < size; ++i) {
             if (a->data->data[i] == 0.0f) {
-                a->grad->data->data[i] += 0.0f;
+                a->grad->data[i] += 0.0f;
             } else {
-                a->grad->data->data[i] += out->grad->data->data[i] * a->data->data[i] / fabsf(a->data->data[i]);
+                a->grad->data[i] += out->grad->data[i] * a->data->data[i] / fabsf(a->data->data[i]);
             }
         }
     }
@@ -298,10 +298,10 @@ void neg_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
     LOG_INFO("GRAD: neg_grad_op: Computing gradient for negation");
 
     // Error checking for null tensors and invalid n_prev
-    if (!out || !out->grad->data->data || !prev) {
+    if (!out || !out->grad->data || !prev) {
         LOG_ERROR("neg_grad_op ERROR: Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
-                  (void*)out, (void*)out->grad->data->data, (void*)prev);
+                  (void*)out, (void*)out->grad->data, (void*)prev);
         return;
     }
 
@@ -319,7 +319,7 @@ void neg_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 
     Tensor* a = prev[0];
 
-    if (a->requires_grad && !a->grad->data->data) {
+    if (a->requires_grad && !a->grad->data) {
         LOG_ERROR("neg_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
@@ -339,7 +339,7 @@ void neg_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                     a_offset += coord * a->strides[d];
                     out_offset += coord * out->strides[d];
                 }
-                a->grad->data->data[a_offset] += -out->grad->data->data[out_offset];
+                a->grad->data[a_offset] += -out->grad->data[out_offset];
             }
         }
     } else {
@@ -348,18 +348,18 @@ void neg_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
         __m256 neg_one = _mm256_set1_ps(-1.0f);
 
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
-            __m256 dout = _mm256_loadu_ps(out->grad->data->data + i);
-            __m256 da = _mm256_loadu_ps(a->grad->data->data + i);
+            __m256 dout = _mm256_loadu_ps(out->grad->data + i);
+            __m256 da = _mm256_loadu_ps(a->grad->data + i);
 
             __m256 contrib = _mm256_mul_ps(dout, neg_one);
 
             da = _mm256_add_ps(da, contrib);
 
-            _mm256_storeu_ps(a->grad->data->data + i, da);
+            _mm256_storeu_ps(a->grad->data + i, da);
         }
 
         for (; i < size; ++i) {
-            a->grad->data->data[i] += -out->grad->data->data[i];
+            a->grad->data[i] += -out->grad->data[i];
         }
     }
 }
@@ -367,10 +367,10 @@ void neg_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 void clip_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
     LOG_INFO("GRAD: clip_grad_op: Computing gradient for clipping");
 
-    if (!out || !out->grad->data->data || !prev) {
+    if (!out || !out->grad->data || !prev) {
         LOG_ERROR("clip_grad_op ERROR: Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
-                  (void*)out, (void*)out->grad->data->data, (void*)prev);
+                  (void*)out, (void*)out->grad->data, (void*)prev);
         return;
     }
 
@@ -388,7 +388,7 @@ void clip_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 
     Tensor* a = prev[0];
 
-    if (a->requires_grad && !a->grad->data->data) {
+    if (a->requires_grad && !a->grad->data) {
         LOG_ERROR("clip_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
@@ -414,7 +414,7 @@ void clip_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                 }
                 float original_val = a->data->data[a_offset];
                 if (original_val >= min_val && original_val <= max_val) {
-                    a->grad->data->data[a_offset] += out->grad->data->data[out_offset];
+                    a->grad->data[a_offset] += out->grad->data[out_offset];
                 }
             }
         }
@@ -425,8 +425,8 @@ void clip_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
             __m256 original_vals = _mm256_loadu_ps(a->data->data + i);
-            __m256 dout = _mm256_loadu_ps(out->grad->data->data + i);
-            __m256 da = _mm256_loadu_ps(a->grad->data->data + i);
+            __m256 dout = _mm256_loadu_ps(out->grad->data + i);
+            __m256 da = _mm256_loadu_ps(a->grad->data + i);
 
             __m256 lower_bound_mask = _mm256_cmp_ps(original_vals, v_min, _CMP_GE_OQ);
             __m256 upper_bound_mask = _mm256_cmp_ps(original_vals, v_max, _CMP_LE_OQ);
@@ -435,13 +435,13 @@ void clip_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
             __m256 contrib = _mm256_and_ps(dout, within_range_mask);
 
             da = _mm256_add_ps(da, contrib);
-            _mm256_storeu_ps(a->grad->data->data + i, da);
+            _mm256_storeu_ps(a->grad->data + i, da);
         }
 
         for (; i < size; ++i) {
             float original_val = a->data->data[i];
             if (original_val >= min_val && original_val <= max_val) {
-                a->grad->data->data[i] += out->grad->data->data[i];
+                a->grad->data[i] += out->grad->data[i];
             }
         }
     }
