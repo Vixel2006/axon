@@ -9,7 +9,7 @@ void sgd(Tensor** params, int num_params, float lr) {
     __m256 lr_vec = _mm256_set1_ps(lr);
 
     for (int i = 0; i < num_params; ++i) {
-        if (!params[i] || !params[i]->requires_grad || !params[i]->grad->data->data || !params[i]->data->data) {
+        if (!params[i] || !params[i]->requires_grad || !params[i]->grad->data || !params[i]->data->data) {
             LOG_WARN("sgd: Skipping parameter %d due to invalid tensor, missing grad, or missing data.", i);
             continue;
         }
@@ -23,7 +23,7 @@ void sgd(Tensor** params, int num_params, float lr) {
         // --- Contiguous Path ---
         if (is_contiguous(params[i])) {
             float* data_ptr = params[i]->data->data;
-            float* grad_ptr = params[i]->grad->data->data;
+            float* grad_ptr = params[i]->grad->data;
 
             int j = 0;
             for (; j + SIMD_WIDTH - 1 < num_elements; j += SIMD_WIDTH) {
@@ -55,8 +55,8 @@ void sgd(Tensor** params, int num_params, float lr) {
             for (int k = 0; k < num_elements; ++k) {
                 size_t data_idx = get_flat_index(params[i], indices);
                 // Assuming grad has same layout - if not, calculate separately
-                params[i]->data->data[data_idx] -= lr * params[i]->grad->data->data[data_idx];
-                params[i]->grad->data->data[data_idx] = 0.0f; // Zero gradient
+                params[i]->data->data[data_idx] -= lr * params[i]->grad->data[data_idx];
+                params[i]->grad->data[data_idx] = 0.0f; // Zero gradient
 
                 // Increment indices (your existing logic is fine)
                 int carry = 1;

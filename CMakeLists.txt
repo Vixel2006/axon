@@ -3,11 +3,11 @@ cmake_minimum_required(VERSION 3.10)
 project(idrak C)
 
 find_path(SLEEF_INCLUDE_DIR sleef.h
-          PATHS ${CMAKE_CURRENT_SOURCE_DIR}/vendor/sleef_install/include
+          PATHS ${CMAKE_CURRENT_SOURCE_DIR}/vendor/sleef/build/include
           NO_DEFAULT_PATH)
 
 find_library(SLEEF_LIBRARY NAMES sleef
-             PATHS ${CMAKE_CURRENT_SOURCE_DIR}/vendor/sleef_install/lib
+             PATHS ${CMAKE_CURRENT_SOURCE_DIR}/vendor/sleef/build/lib
              NO_DEFAULT_PATH)
 
 if(SLEEF_INCLUDE_DIR AND SLEEF_LIBRARY)
