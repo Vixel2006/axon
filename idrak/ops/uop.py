@@ -72,16 +72,16 @@ class Clip(UOp):
         if min_val is None or max_val is None:
             raise ValueError("Clip operation requires 'min_val' and 'max_val' keyword arguments.")
 
-        clip_extras = ClipExtras(min_val=min_val, max_val=max_val)
+        clip_extras = ClipExtras(min_val=ctypes.c_float(min_val), max_val=ctypes.c_float(max_val))
         ctx = ctypes.pointer(clip_extras)
 
         forward_kwargs = {"min_val": min_val, "max_val": max_val}
-        return forward_kwargs, ctx
+        return forward_kwargs, ctypes.cast(ctx, ctypes.c_void_p)
 
     def forward(self, out: "Tensor", a: "Tensor", **kwargs):
         min_val = kwargs["min_val"]
         max_val = kwargs["max_val"]
-        c_clip(a.c_tensor_ptr, min_val, max_val, out.c_tensor_ptr)
+        c_clip(a.c_tensor_ptr, out.c_tensor_ptr, min_val, max_val)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):

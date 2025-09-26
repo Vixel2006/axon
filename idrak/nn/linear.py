@@ -11,12 +11,12 @@ class Linear(Module):
         self.bias = bias
 
         if self.bias:
-            self.B = Tensor((1, out_features))
+            self.B = zeros((1, out_features))
         else:
             self.B = None
 
     def forward(self, x):
-        out = x @ self.W.transpose(-2, -1)
+        out = x @ self.W.T
 
         if self.bias:
             out += self.B

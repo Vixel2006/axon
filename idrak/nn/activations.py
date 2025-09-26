@@ -10,15 +10,15 @@ class ReLU(Module):
 
 class Tanh(Module):
     def forward(self, x: Tensor) -> Tensor:
-        return (exp(x) - exp(-x)) / (exp(x) + exp(-x))
+        return (x.exp() - (-x).exp()) / (x.exp() + (-x).exp())
 
 class Sigmoid(Module):
     def forward(self, x: Tensor) -> Tensor:
-        return 1 / (1 + exp(-x))
+        return 1 / ((-x).exp() + 1)
 
 
 class Softmax(Module):
     def forward(self, x: Tensor) -> Tensor:
         x_max = max(x, dim=-1)
-        exp_x = exp(x - x_max)
+        exp_x = (x - x_max).exp()
         return exp_x / sum(exp_x, dim=-1)

@@ -30,6 +30,7 @@ class Tensor:
         self.c_tensor_ptr = c_tmalloc(shape, ndim, device_, requires_grad)
         if not self.c_tensor_ptr:
             raise RuntimeError("tmalloc failed to allocate tensor")
+        c_gmalloc(self.c_tensor_ptr, ctypes.c_float(0.0))
 
     @property
     def data(self) -> np.ndarray:
@@ -144,24 +145,3 @@ class Tensor:
         if self.c_tensor_ptr:
             c_tfree(self.c_tensor_ptr)
             self.c_tensor_ptr = None
-
-if __name__ == "__main__":
-    from idrak.functions import *
-    a = from_data((2, 3), [[1,2,3], [4,5,6]])
-    b = from_data((2, 3), [[2,3,4], [5,6,7]])
-
-    c = a ** 2
-
-    c.backward()
-    print(c);print(a)
-    print(c.grad);print(a.grad)
-
-    """
-    c = a + b
-
-    c.backward()
-
-    print(c.grad)
-    print(b.grad)
-    print(a.grad)
-    """

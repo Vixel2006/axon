@@ -8,10 +8,10 @@ from idrak.ops.bop import Conv2D
 from idrak.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
 
 # =========== Initialization Operations ============
-def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor: return Zeros.create_node(shape, requires_grad)
-def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True,) -> Tensor: return Ones.create_node(shape, requires_grad)
-def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str = "cpu", requires_grad: bool = True) -> Tensor: return Randn.create_node(shape, requires_grad)
-def uniform(shape: tuple[int, ...] | list[int], low: float = 0.0, high: float = 1.0, device: str = "cpu", requires_grad: bool = True) -> Tensor: return Uniform.create_node(shape, requires_grad, low=low, high=high)
+def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor: return Zeros.create_node(shape, requires_grad=requires_grad)
+def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True,) -> Tensor: return Ones.create_node(shape, requires_grad=requires_grad)
+def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str = "cpu", requires_grad: bool = True) -> Tensor: return Randn.create_node(shape, requires_grad=requires_grad)
+def uniform(shape: tuple[int, ...] | list[int], low: float = 0.0, high: float = 1.0, device: str = "cpu", requires_grad: bool = True) -> Tensor: return Uniform.create_node(shape, requires_grad=requires_grad, low=low, high=high)
 def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] | np.ndarray, device: str = "cpu", requires_grad: bool = True) -> Tensor: return FromData.create_node(shape, data=data, requires_grad=requires_grad)
 
 
@@ -59,4 +59,17 @@ def div(a: Tensor | float, b: Tensor | float) -> Tensor:
 def sum(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Sum.create_node(a, dim, keepdim)
 def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(a, dim, keepdim)
 def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim, keepdim)
+
+if __name__ =="__main__":
+    a = from_data((2,), [0.0, .2])
+    b = from_data((2,), [0.0, .2])
+
+    c = a + b
+
+    d = clip(c, 1e-4, 1 - 1e-4)
+
+
+    d.backward()
+
+    print(d);print(c);print(a.grad);print(b.grad)
 

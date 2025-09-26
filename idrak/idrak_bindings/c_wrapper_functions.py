@@ -146,8 +146,8 @@ if tensor_lib:
     def c_neg(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.neg_op(in_tensor_ptr, out_tensor_ptr)
 
-    def c_clip(in_tensor_ptr, min_val, max_val, out_tensor_ptr):
-        tensor_lib.clip_op(in_tensor_ptr, min_val, max_val, out_tensor_ptr)
+    def c_clip(in_tensor_ptr, out_tensor_ptr, min_val, max_val):
+        tensor_lib.clip_op(in_tensor_ptr,out_tensor_ptr, min_val, max_val)
 
     def c_tanh(in_tensor_ptr, out_tensor_ptr):
         tensor_lib.tanh_op(in_tensor_ptr, out_tensor_ptr)
@@ -269,9 +269,6 @@ if tensor_lib:
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
         tensor_lib.zero_grad(in_param_ptrs, num_params)
 
-
-    def c_set_debug_mode(enable):
-        tensor_lib.idrak_set_debug_mode(ctypes.c_int(enable))
 else:
     # WARNING: We should make this raise an error
     def c_numel(shape, ndim): pass
