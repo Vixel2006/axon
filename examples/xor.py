@@ -5,21 +5,15 @@ import idrak.metrics as metrics
 import idrak.optim as optim
 from idrak.data.dataset import Dataset
 from idrak.functions import *
-from idrak.idrak_bindings.c_wrapper_functions import c_set_debug_mode
 from idrak.nn.activations import Tanh, Sigmoid, ReLU
+from idrak.functions import *
 
-# Check for DEBUG argument
-if "DEBUG=1" in sys.argv:
-    c_set_debug_mode(1)
-    sys.argv.remove("DEBUG=1")
-else:
-    c_set_debug_mode(0)
 
 # Define the dataset
 class XorSet(Dataset):
     def __init__(self):
-        self.x = [Tensor((1, 2), [[0, 0]]), Tensor((1, 2), [[0,1]]), Tensor((1, 2), [[1, 0]]), Tensor((1, 2), [[1,1]])]
-        self.y = [Tensor((1,1), [[0]]), Tensor((1,1), [[1]]), Tensor((1,1), [[1]]), Tensor((1,1), [[0]])]
+        self.x = [from_data((1, 2), [[0, 0]]), from_data((1, 2), [[0,1]]), from_data((1, 2), [[1, 0]]), from_data((1, 2), [[1,1]])]
+        self.y = [from_data((1,1), [[0]]), from_data((1,1), [[1]]), from_data((1,1), [[1]]), from_data((1,1), [[0]])]
 
 
     def __getitem__(self, idx):
@@ -29,7 +23,6 @@ class XorSet(Dataset):
         return len(self.x)
 
 xorset = XorSet()
-
 
 # Here we define the model
 model = nn.Sequential(
@@ -42,13 +35,13 @@ model = nn.Sequential(
 )
 
 # Here we define the optimizer
-optimizer = optim.Adam(model.params, 0.1)
+optimizer = optim.SGD(model.params, 0.1)
 # Here we do the loop
-for i in range(100):
-    for input, truth in xorset:
+for i in range(1000):
+    for inp, truth in xorset:
         optimizer.zero_grad()
 
-        pred = model(input)
+        pred = model(inp)
 
         loss = metrics.bce(pred, truth)
 
@@ -59,8 +52,8 @@ for i in range(100):
     if (i+1) % 10 == 0:
         print(f"Epoch {i+1} -> Loss: {loss}")
 
-for input, _ in xorset:
-    pred = model(input)
+for inp, _ in xorset:
+    pred = model(inp)
 
     pred.realize()
 
@@ -69,5 +62,5 @@ for input, _ in xorset:
     else:
         num = 0
 
-    print(Tensor((1,1), [[num]]))
+    print(num)
 

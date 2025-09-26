@@ -196,6 +196,14 @@ if tensor_lib:
     ]
     tensor_lib.neg_grad_op.restype = None
 
+    tensor_lib.clip_grad_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.clip_grad_op.restype = None
+
     # Reduction operatiosn grad
     tensor_lib.sum_grad_op.argtypes = [
         ctypes.POINTER(CTensor),
@@ -248,6 +256,13 @@ if tensor_lib:
 
     tensor_lib.neg_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
     tensor_lib.neg_op.restype = None
+
+    tensor_lib.clip_op.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,ctypes.c_float
+    ]
+    tensor_lib.clip_op.restype = None
 
     # Reduction operations
     tensor_lib.max_op.argtypes = [
@@ -505,5 +520,3 @@ if tensor_lib:
     ]
     tensor_lib.zero_grad.restype = None
 
-    tensor_lib.idrak_set_debug_mode.argtypes = [ctypes.c_int]
-    tensor_lib.idrak_set_debug_mode.restype = None

@@ -292,24 +292,3 @@ void abs_op(Tensor* in, Tensor* out) {
     }
     from_data(out, data);
 }
-
-int main(void) {
-    int shape[] = {1, 2};
-    Tensor* a = tmalloc(shape, 2, CPU, true);
-
-    float* data = malloc(sizeof(float) * 2);
-    data[0] = 1.0;
-    data[1] = 4.0;
-    from_data(a, data);
-
-    Tensor* out = tmalloc(shape, 2, CPU, true);
-
-    exp_op(a, out);
-
-    for (int i = 0; i < 2; ++i) {
-        printf("%f, ", out->data->data[i]);
-    }
-
-    SAFE_FREE(a, tfree);
-    SAFE_FREE(out, tfree);
-}

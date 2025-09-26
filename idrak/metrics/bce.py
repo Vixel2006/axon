@@ -1,4 +1,4 @@
-from idrak.functions import clip, log, mean
+from idrak.functions import clip, log, mean, from_data
 from idrak.core.tensor import Tensor
 
 def bce(pred: Tensor, truth: Tensor, reduction: str = "mean", epsilon: float = 1e-6) -> Tensor:
@@ -9,8 +9,8 @@ def bce(pred: Tensor, truth: Tensor, reduction: str = "mean", epsilon: float = 1
     return out
 
 if __name__ == "__main__":
-    pred = Tensor((2,2), [[.5, .5], [.5, .5]])
-    truth = Tensor((2,2), [[1., 2.], [3., 4.]])
+    pred = from_data((2,2), [[.5, .5], [.5, .5]])
+    truth = from_data((2,2), [[1., 2.], [3., 4.]])
 
     loss = bce(pred, truth)
 
