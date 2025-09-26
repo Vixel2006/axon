@@ -150,9 +150,10 @@ if __name__ == "__main__":
     a = from_data((2, 3), [[1,2,3], [4,5,6]])
     b = from_data((2, 3), [[2,3,4], [5,6,7]])
 
-    c = a
+    c = a ** 2
 
     c.backward()
+    print(c);print(a)
     print(c.grad);print(a.grad)
 
     """
