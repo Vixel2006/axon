@@ -50,10 +50,10 @@ class BOp(LazyOp):
 
         if isinstance(b_operand, (float, int)):
             forward_kwargs["scalar_val"] = float(b_operand)
-            backward_ctx = ctypes.c_float(float(b_operand))
+            backward_ctx = ctypes.cast(ctypes.pointer(ctypes.c_float(float(b_operand))), ctypes.c_void_p)
         elif isinstance(a_operand, (float, int)) and isinstance(b_operand, Tensor):
-             forward_kwargs["r_scalar_val"] = float(a_operand)
-             backward_ctx = ctypes.c_float(float(a_operand))
+            forward_kwargs["r_scalar_val"] = float(a_operand)
+            backward_ctx = ctypes.cast(ctypes.pointer(ctypes.c_float(float(a_operand))), ctypes.c_void_p)
 
         return forward_kwargs, backward_ctx
 
@@ -161,7 +161,7 @@ class RSub(BOp):
             raise TypeError("RSub (scalar - Tensor) operation expected first operand to be a scalar.")
 
         forward_kwargs: Dict[str, Any] = {"r_scalar_val": float(args[0])}
-        backward_ctx: Any = ctypes.c_float(float(args[0]))
+        backward_ctx: Any = ctypes.cast(ctypes.pointer(ctypes.c_float(float(args[0]))), ctypes.c_void_p)
 
         return forward_kwargs, backward_ctx
 
@@ -233,7 +233,7 @@ class RDiv(BOp):
             raise TypeError("RDiv (scalar / Tensor) operation expected first operand to be a scalar.")
 
         forward_kwargs: Dict[str, Any] = {"r_scalar_val": float(args[0])}
-        backward_ctx: Any = ctypes.c_float(float(args[0]))
+        backward_ctx: Any = ctypes.cast(ctypes.pointer(ctypes.c_float(float(args[0]))), ctypes.c_void_p)
 
         return forward_kwargs, backward_ctx
 
