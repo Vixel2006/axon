@@ -40,6 +40,6 @@ class Conv2DBackwardExtras(ctypes.Structure):
 
 class ClipExtras(ctypes.Structure):
     _fields_ = [
-        ("min_val", ctypes.c_double),
-        ("max_val", ctypes.c_double),
+        ("min_val", ctypes.c_float),
+        ("max_val", ctypes.c_float),
     ]

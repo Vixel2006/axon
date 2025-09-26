@@ -4,7 +4,7 @@
 #include <string.h>
 
 void zero_grad(Tensor** parameters, int num_parameters) {
-    LOG_INFO("DEBUG: zero_grad: Zeroing gradients for %d parameters", num_parameters);
+    LOG_INFO("zero_grad: Zeroing gradients for %d parameters", num_parameters);
 
     for (int i = 0; i < num_parameters; ++i) {
         Tensor* t = parameters[i];
@@ -34,8 +34,8 @@ void zero_grad(Tensor** parameters, int num_parameters) {
 
         size_t size = numel(t->shape, t->ndim);
         if (size > 0) {
-            memset(t->grad->data, 0, size * sizeof(float));
-            LOG_INFO("DEBUG: zero_grad: Zeroed gradient for parameter %d (size=%zu)", i, size);
+            gmalloc(t, 0.0);
+            LOG_INFO("zero_grad: Zeroed gradient for parameter %d (size=%zu)", i, size);
         }
     }
 }

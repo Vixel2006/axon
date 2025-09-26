@@ -5,17 +5,10 @@ from idrak.data.dataset import Dataset
 from idrak.optim import SGD, Adam
 import idrak.nn as nn
 from idrak.nn.activations import Tanh, ReLU, Sigmoid, Softmax
-from idrak.idrak_bindings.c_wrapper_functions import c_set_debug_mode
 import idrak.metrics as metrics
-from idrak.metrics.cce import categorical_cross_entropy
 import numpy as np
 from mnist_datasets import MNISTLoader
 
-if "DEBUG=1" in sys.argv:
-    c_set_debug_mode(1)
-    sys.argv.remove("DEBUG=1")
-else:
-    c_set_debug_mode(0)
 
 # Define the dataset for the MNIST
 class MNIST(Dataset):
@@ -29,10 +22,10 @@ class MNIST(Dataset):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        image = Tensor(self.images[idx].shape, self.images[idx])
+        image = from_data(self.images[idx].shape, self.images[idx])
         # Convert label to one-hot encoding
         one_hot_label = np.eye(10)[self.labels[idx]].reshape(*self.labels[idx].shape, 10)
-        label = Tensor(one_hot_label.shape, one_hot_label)
+        label = from_data(one_hot_label.shape, one_hot_label)
         return image, label
 
     def show(self, idx):
@@ -88,12 +81,8 @@ model = nn.Sequential(
     Softmax()
 )
 
-def cce(logits, one_hot_labels):
-    corr = log(sum(logits * one_hot_labels, dim=-1))
-    return mean(corr)
-
 # Define the optimizer
-optim = Adam(model.params, Config.LR)
+optim = SGD(model.params, Config.LR)
 
 
 # Now do the training
@@ -103,7 +92,7 @@ for epoch in range(Config.EPOCHS):
         optim.zero_grad()
         pred = model(images)
 
-        loss = cce(pred, labels)
+        loss = metrics.bce(pred, labels)
 
         loss.backward()
 

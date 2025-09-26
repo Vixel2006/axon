@@ -21,7 +21,6 @@ class Sequential(Module):
     
     @property
     def params(self):
-        """Override the params property to handle the layers list"""
         params = []
         for layer in self.layers:
             if isinstance(layer, Module):
@@ -30,7 +29,6 @@ class Sequential(Module):
     
     @property
     def buffers(self):
-        """Override the buffers property to handle the layers list"""
         buffers = []
         for layer in self.layers:
             if isinstance(layer, Module):
