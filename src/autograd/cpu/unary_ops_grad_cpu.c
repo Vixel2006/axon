@@ -394,8 +394,8 @@ void clip_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
     }
 
     ClipExtras* clip_extras = (ClipExtras*)extras;
-    double min_val = clip_extras->min_val;
-    double max_val = clip_extras->max_val;
+    float min_val = clip_extras->min_val;
+    float max_val = clip_extras->max_val;
 
     int size = numel(a->shape, a->ndim);
 
@@ -413,8 +413,12 @@ void clip_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                     out_offset += coord * out->strides[d];
                 }
                 float original_val = a->data->data[a_offset];
+                LOG_INFO("clip_grad_op: linear=%d, original_val=%f, min_val=%f, max_val=%f, out_grad=%f", linear, original_val, min_val, max_val, out->grad->data[out_offset]);
                 if (original_val >= min_val && original_val <= max_val) {
                     a->grad->data[a_offset] += out->grad->data[out_offset];
+                    LOG_INFO("clip_grad_op: a->grad[%d] updated to %f", a_offset, a->grad->data[a_offset]);
+                } else {
+                    LOG_INFO("clip_grad_op: a->grad[%d] not updated (original_val out of range)", a_offset);
                 }
             }
         }

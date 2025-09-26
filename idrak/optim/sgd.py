@@ -5,7 +5,7 @@ from idrak.metrics import bce
 
 class SGD(Optimizer):
     def __init__(self, params: list[Tensor], lr: float):
-        self.params = [param._c_tensor for param in params]
+        self.params = [param.c_tensor_ptr for param in params]
         self.num_params = len(params)
         self.lr = lr
     
