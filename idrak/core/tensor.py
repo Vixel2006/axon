@@ -30,7 +30,9 @@ class Tensor:
         self.c_tensor_ptr = c_tmalloc(shape, ndim, device_, requires_grad)
         if not self.c_tensor_ptr:
             raise RuntimeError("tmalloc failed to allocate tensor")
-        c_gmalloc(self.c_tensor_ptr, ctypes.c_float(0.0))
+        
+        if requires_grad:
+            c_gmalloc(self.c_tensor_ptr, ctypes.c_float(0.0))
 
     @property
     def data(self) -> np.ndarray:
