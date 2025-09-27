@@ -130,6 +130,7 @@ void sum_op(Tensor* a, Tensor* out, int axis, bool keepdim) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void mean_op(Tensor* a, Tensor* out, int axis, bool keepdim) {
@@ -265,6 +266,7 @@ void max_op(Tensor* a, Tensor* out, int axis, bool keepdim) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void sum_full_op(Tensor* a, Tensor* out) {
@@ -330,6 +332,7 @@ void sum_full_op(Tensor* a, Tensor* out) {
     }
 
     from_data(out, total_sum);
+    free(total_sum);
 }
 
 void mean_full_op(Tensor* a, Tensor* out) {
@@ -425,4 +428,5 @@ void max_full_op(Tensor* a, Tensor* out) {
     data[0] = max_val;
 
     from_data(out, data);
+    free(data);
 }

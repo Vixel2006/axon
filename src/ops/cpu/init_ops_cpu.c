@@ -20,6 +20,7 @@ void zeros(Tensor* t) {
     }
 
     t->data = smalloc(data, size);
+    free(data);
 
     if (t->requires_grad) {
         gmalloc(t, 0.0f);
@@ -41,6 +42,7 @@ void ones(Tensor* t) {
     }
 
     t->data = smalloc(data, size);
+    free(data);
 
     if (t->requires_grad) {
         gmalloc(t, 0.0f);
@@ -63,6 +65,7 @@ void randn(Tensor* t) {
     }
 
     t->data = smalloc(data, size);
+    free(data);
 
     if (t->requires_grad) {
         gmalloc(t, 0.0f);
@@ -85,6 +88,7 @@ void uniform(Tensor* t, float low, float high) {
     }
 
     t->data = smalloc(data, size);
+    free(data);
 
     if (t->requires_grad) {
         gmalloc(t, 0.0f);

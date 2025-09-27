@@ -77,7 +77,7 @@ class LazyBuffer:
                 continue
 
             if i == 0:
-                c_gmalloc(buffer.out.c_tensor_ptr, ctypes.c_float(1.0)) 
+                c_gmalloc(buffer.out.c_tensor_ptr, ctypes.c_float(1.0))
             
             out_grad_storage_ptr = buffer.out.c_tensor_ptr
 
