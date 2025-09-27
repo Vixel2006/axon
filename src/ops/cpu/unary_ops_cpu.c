@@ -79,6 +79,7 @@ void relu_op(Tensor* in, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void log_op(Tensor* in, Tensor* out) {
@@ -139,6 +140,7 @@ void log_op(Tensor* in, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void exp_op(Tensor* in, Tensor* out) {
@@ -172,6 +174,7 @@ void exp_op(Tensor* in, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void neg_op(Tensor* in, Tensor* out) {
@@ -207,6 +210,7 @@ void neg_op(Tensor* in, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void clip_op(Tensor* in, Tensor* out, float min_val, float max_val) {
@@ -257,6 +261,7 @@ void clip_op(Tensor* in, Tensor* out, float min_val, float max_val) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void abs_op(Tensor* in, Tensor* out) {
@@ -291,4 +296,5 @@ void abs_op(Tensor* in, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }

@@ -44,6 +44,7 @@ void add_scalar_op(Tensor* a, float b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void sub_scalar_op(Tensor* a, float b, Tensor* out) {
@@ -82,6 +83,7 @@ void sub_scalar_op(Tensor* a, float b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void rsub_scalar_op(Tensor* a, float b, Tensor* out) {
@@ -127,6 +129,7 @@ void rsub_scalar_op(Tensor* a, float b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void mul_scalar_op(Tensor* a, float b, Tensor* out) {
@@ -165,6 +168,7 @@ void mul_scalar_op(Tensor* a, float b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void div_scalar_op(Tensor* a, float b, Tensor* out) {
@@ -218,6 +222,7 @@ void div_scalar_op(Tensor* a, float b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void rdiv_scalar_op(Tensor* a, float b, Tensor* out) {
@@ -270,6 +275,7 @@ void rdiv_scalar_op(Tensor* a, float b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void pow_scalar_op(Tensor* a, float b, Tensor* out) {
@@ -308,5 +314,5 @@ void pow_scalar_op(Tensor* a, float b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
-

@@ -5,13 +5,17 @@ from idrak.metrics import bce
 
 class SGD(Optimizer):
     def __init__(self, params: list[Tensor], lr: float):
-        self.params = [param.c_tensor_ptr for param in params]
+        self.params = [param for param in params]
         self.num_params = len(params)
         self.lr = lr
     
     def step(self):
-        c_sgd(self.params, self.num_params, self.lr)
+        params_ptr = [param.c_tensor_ptr for param in self.params]
+        c_sgd(params_ptr, self.num_params, self.lr)
 
     def zero_grad(self):
-        c_zero_grad(self.params, self.num_params)
+        params_ptr = [param.c_tensor_ptr for param in self.params]
+        c_zero_grad(params_ptr, self.num_params)
+
+
 
