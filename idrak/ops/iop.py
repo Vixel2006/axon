@@ -1,4 +1,3 @@
-# In idrak/ops/creation_ops.py (or similar file)
 from __future__ import annotations
 from typing import Any, Dict, List, Tuple, Optional
 import ctypes
@@ -41,8 +40,9 @@ class Ones(IOp):
     def create_ctx_struct(cls, *args, **kwargs) -> Tuple[Dict[str, Any], Any]:
         return {}, None
 
-    def forward(self, out: "Tensor", *args, **kwargs): # Changed to instance method
-        c_ones(out.c_tensor_ptr)
+    def forward(self, out: "Tensor", *args, **kwargs):
+        if not out.c_tensor_ptr.contents.data:
+            c_ones(out.c_tensor_ptr)
 
 class Zeros(IOp):
     @classmethod
@@ -50,7 +50,8 @@ class Zeros(IOp):
         return {}, None
 
     def forward(self, out: "Tensor", *args, **kwargs):
-        c_zeros(out.c_tensor_ptr)
+        if not out.c_tensor_ptr.contents.data:
+            c_zeros(out.c_tensor_ptr)
 
 class Uniform(IOp):
     @classmethod
@@ -63,7 +64,8 @@ class Uniform(IOp):
     def forward(self, out: "Tensor", *args, **kwargs):
         low = kwargs.get("low", 0.0)
         high = kwargs.get("high", 1.0)
-        c_uniform(out.c_tensor_ptr, low, high)
+        if not out.c_tensor_ptr.contents.data:
+            c_uniform(out.c_tensor_ptr, low, high)
 
 class Randn(IOp):
     @classmethod
@@ -71,7 +73,8 @@ class Randn(IOp):
         return {}, None
 
     def forward(self, out: "Tensor", *args, **kwargs):
-        c_randn(out.c_tensor_ptr)
+        if not out.c_tensor_ptr.contents.data:
+            c_randn(out.c_tensor_ptr)
 
 class FromData(IOp):
     @classmethod
@@ -103,5 +106,6 @@ class FromData(IOp):
         else:
             raise TypeError(f"Unsupported data type for FromData: {type(data_input)}. Expected list, tuple, or numpy.ndarray.")
 
-        c_from_data(out.c_tensor_ptr, data_ptr)
+        if not out.c_tensor_ptr.contents.data:
+            c_from_data(out.c_tensor_ptr, data_ptr)
 

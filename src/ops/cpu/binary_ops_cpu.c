@@ -86,6 +86,7 @@ void add_op(Tensor* a, Tensor* b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void sub_op(Tensor* a, Tensor* b, Tensor* out) {
@@ -119,6 +120,7 @@ void sub_op(Tensor* a, Tensor* b, Tensor* out) {
     }
 
     from_data(out, data);
+    free(data);
 }
 
 void mul_op(Tensor* a, Tensor* b, Tensor* out) {
@@ -183,6 +185,7 @@ void div_op(Tensor* a, Tensor* b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }
 
 void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
@@ -321,6 +324,7 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
         }
     }
     from_data(out, data);
+    free(data);
 
     LOG_INFO("OP: matmul_op: Matrix multiplication completed successfully");
 }
@@ -387,6 +391,7 @@ void conv2d_op(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size, 
     }
 
     from_data(out, data);
+    free(data);
 }
 
 void dot_op(Tensor* a, Tensor* b, Tensor* out) {
@@ -433,6 +438,7 @@ void dot_op(Tensor* a, Tensor* b, Tensor* out) {
         data[0] = sum;
     }
     from_data(out, data);
+    free(data);
 }
 
 void pow_op(Tensor* a, Tensor* b, Tensor* out) {
@@ -465,4 +471,5 @@ void pow_op(Tensor* a, Tensor* b, Tensor* out) {
         }
     }
     from_data(out, data);
+    free(data);
 }

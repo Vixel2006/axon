@@ -110,6 +110,7 @@ void gmalloc(Tensor* t, float init) {
         }
 
         Storage* g = smalloc(data, size);
+        free(data);
 
         t->grad = g;
     } else {

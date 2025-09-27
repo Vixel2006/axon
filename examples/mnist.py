@@ -19,20 +19,26 @@ class MNIST(Dataset):
         
         # Filter for images of 0 and 1
         mask = (labels == 0) | (labels == 1)
-        self.images = images[mask][10:]
-        self.labels = labels[mask][10:]
+        self.images = images[mask]
+        self.labels = labels[mask]
     
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        img_data = self.images[idx]
-        if img_data.ndim == 1:
-            img_data = np.expand_dims(img_data, axis=0)
-        image = from_data(img_data.shape, img_data / 255.0)
-        # Label is now a simple scalar
-        label = from_data((1,1), [[self.labels[idx]]])
-        return image, label
+        if isinstance(idx, slice):
+            imgs = self.images[idx]
+            labels = self.labels[idx]
+            imgs = imgs.reshape(len(imgs), 784) / 255.0
+            images = from_data(imgs.shape, imgs)
+            labels = from_data((len(labels), 1), labels.reshape(-1,1))
+            return images, labels
+        else:
+            img_data = self.images[idx].reshape(1, 784) / 255.0
+            image = from_data(img_data.shape, img_data)
+            label = from_data((1,1), [[self.labels[idx]]])
+            return image, label
+
 
     def show(self, idx):
         img_data = self.images[idx]
@@ -67,8 +73,8 @@ class DataLoader:
 
 # Define the configuration for the model
 class Config:
-    BATCH_SIZE = 2
-    EPOCHS = 2
+    BATCH_SIZE = 1
+    EPOCHS = 5
     LR = 0.01
     IMSIZE = (28, 28)
 
@@ -96,8 +102,6 @@ for epoch in range(Config.EPOCHS):
 
 
         optim.step()
-
-        loss.realize()
 
     print(f"Epoch [{epoch + 1}/{Config.EPOCHS}]: Loss {loss}")
 
