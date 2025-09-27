@@ -229,4 +229,5 @@ void concat_op(Tensor** in, Tensor* out, int num_tensors, int axis) {
 
     from_data(out, data);
     free(cum_sizes);
+    free(data);
 }

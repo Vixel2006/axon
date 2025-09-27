@@ -110,6 +110,10 @@ class Tensor:
             return self._lazy_buffer.realize()
         return self
 
+    def detach(self):
+        self._lazy_buffer = None
+        return self
+
     def backward(self):
         if self._lazy_buffer is not None:
             self._lazy_buffer.backward()
@@ -144,6 +148,7 @@ class Tensor:
         return f"Tensor(shape={self.shape}, data={self.data}, device={self.device}, requires_grad={self.requires_grad})"
 
     def __del__(self):
+        self._lazy_buffer = None
         if self.c_tensor_ptr:
             c_tfree(self.c_tensor_ptr)
             self.c_tensor_ptr = None
