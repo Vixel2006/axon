@@ -1,5 +1,4 @@
 from __future__ import annotations
-from os import wait
 
 from idrak.idrak_bindings.c_wrapper_functions import (
     c_tmalloc,
@@ -30,7 +29,9 @@ class Tensor:
         self.c_tensor_ptr = c_tmalloc(shape, ndim, device_, requires_grad)
         if not self.c_tensor_ptr:
             raise RuntimeError("tmalloc failed to allocate tensor")
-        
+
+        self._lazy_buffer = None
+
         if requires_grad:
             c_gmalloc(self.c_tensor_ptr, ctypes.c_float(0.0))
 
@@ -117,6 +118,9 @@ class Tensor:
     def backward(self):
         if self._lazy_buffer is not None:
             self._lazy_buffer.backward()
+
+            execution_order = self._lazy_buffer.topo_sort()
+
 
     def numel(self) -> int: return c_numel(self.shape, self.ndim)
 
