@@ -73,7 +73,7 @@ class DataLoader:
 
 # Define the configuration for the model
 class Config:
-    BATCH_SIZE = 1
+    BATCH_SIZE = 64
     EPOCHS = 5
     LR = 0.01
     IMSIZE = (28, 28)
@@ -84,8 +84,7 @@ trainloader = DataLoader(trainset, Config.BATCH_SIZE)
 # Define the model
 model = nn.Sequential(
     nn.Linear(784, 1, bias=False),
-    Sigmoid()
-)
+    Sigmoid())
 
 # Define the optimizer
 optim = SGD(model.params, Config.LR)
