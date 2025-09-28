@@ -1,18 +1,56 @@
+import numpy as np
+
 from idrak.core.tensor import Tensor
 from idrak.ops.uop import *
 from idrak.ops.bop import *
 from idrak.ops.mop import *
 from idrak.ops.rop import *
-from idrak.ops.iop import *
+
 from idrak.ops.bop import Conv2D
-from idrak.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform
+from idrak.idrak_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform, c_from_data
 
 # =========== Initialization Operations ============
-def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor: return Zeros.create_node(shape, requires_grad=requires_grad)
-def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True,) -> Tensor: return Ones.create_node(shape, requires_grad=requires_grad)
-def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str = "cpu", requires_grad: bool = True) -> Tensor: return Randn.create_node(shape, requires_grad=requires_grad)
-def uniform(shape: tuple[int, ...] | list[int], low: float = 0.0, high: float = 1.0, device: str = "cpu", requires_grad: bool = True) -> Tensor: return Uniform.create_node(shape, requires_grad=requires_grad, low=low, high=high)
-def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] | np.ndarray, device: str = "cpu", requires_grad: bool = True) -> Tensor: return FromData.create_node(shape, data=data, requires_grad=requires_grad)
+def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor:
+    out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
+    c_zeros(out.c_tensor_ptr)
+    return out
+
+def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True,) -> Tensor:
+    out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
+    c_ones(out.c_tensor_ptr)
+    return out
+
+def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str = "cpu", requires_grad: bool = True) -> Tensor:
+    out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
+    # NOTE: We need to add the seed to the randn function
+    c_randn(out.c_tensor_ptr)
+    return out
+
+def uniform(shape: tuple[int, ...] | list[int], low: float = 0.0, high: float = 1.0, device: str = "cpu", requires_grad: bool = True) -> Tensor:
+    out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
+    c_uniform(out.c_tensor_ptr, low, high)
+    return out
+
+def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] | np.ndarray, device: str = "cpu", requires_grad: bool = True) -> Tensor:
+    out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
+
+    if isinstance(data, np.ndarray):
+        data_ptr = data.astype(np.float32).ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    elif isinstance(data, (list, tuple)):
+        flat_data = []
+        for item in data:
+            if isinstance(item, (list, tuple)):
+                flat_data.extend(item)
+            else:
+                flat_data.append(item)
+        
+        c_array_type = ctypes.c_float * len(flat_data)
+        data_ptr = c_array_type(*flat_data)
+    else:
+        raise TypeError(f"Unsupported data type for from_data: {type(data)}. Expected list, tuple, or numpy.ndarray.")
+
+    c_from_data(out.c_tensor_ptr, data_ptr)
+    return out
 
 
 # ========== Movement Operations ============
@@ -59,17 +97,4 @@ def div(a: Tensor | float, b: Tensor | float) -> Tensor:
 def sum(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Sum.create_node(a, dim, keepdim)
 def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(a, dim, keepdim)
 def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim, keepdim)
-
-if __name__ =="__main__":
-    a = from_data((2,), [0.0, .2])
-    b = from_data((2,), [0.0, .2])
-
-    c = a + b
-
-    d = clip(c, 1e-4, 1 - 1e-4)
-
-
-    d.backward()
-
-    print(d);print(c);print(a.grad);print(b.grad)
 
