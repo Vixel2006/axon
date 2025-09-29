@@ -10,6 +10,17 @@ class Module(ABC):
     def __call__(self, x, *args: Any, **kwds: Any) -> Any:
         return self.forward(x, *args, **kwds)
 
+    def __rshift__(self, other):
+        from .pipeline import Pipeline
+        if isinstance(other, Module):
+            return Pipeline(self, other)
+        elif isinstance(other, Pipeline):
+            new_pipeline = Pipeline(self)
+            new_pipeline.layers.extend(other.layers)
+            return new_pipeline
+        else:
+            return NotImplemented
+
     @property
     def params(self):
         params = []
@@ -29,3 +40,12 @@ class Module(ABC):
             elif isinstance(elem, Module):
                 buffers.extend(elem.buffers)
         return buffers
+
+    def freeze(self):
+        for param in self.params:
+            param.requires_grad = False
+            param.grad = None
+
+    @abstractmethod
+    def reset_parameters(self):
+        pass
