@@ -23,3 +23,9 @@ class Linear(Module):
 
         return out
 
+    def reset_parameters(self):
+        # Re-initialize weights using Xavier normal initialization
+        self.W = xavier_normal_((self.W.shape[0], self.W.shape[1]), self.W.shape[1], self.W.shape[0])
+        # Re-initialize bias to zeros if bias is enabled
+        if self.bias:
+            self.B = zeros((1, self.B.shape[1]))
