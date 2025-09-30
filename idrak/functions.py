@@ -37,15 +37,8 @@ def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] 
     if isinstance(data, np.ndarray):
         data_ptr = data.astype(np.float32).ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     elif isinstance(data, (list, tuple)):
-        flat_data = []
-        for item in data:
-            if isinstance(item, (list, tuple)):
-                flat_data.extend(item)
-            else:
-                flat_data.append(item)
-        
-        c_array_type = ctypes.c_float * len(flat_data)
-        data_ptr = c_array_type(*flat_data)
+        data_np = np.array(data, dtype=np.float32)
+        data_ptr = data_np.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     else:
         raise TypeError(f"Unsupported data type for from_data: {type(data)}. Expected list, tuple, or numpy.ndarray.")
 
@@ -84,13 +77,23 @@ def conv2d(a: Tensor, b: Tensor, kernel_size: tuple[int, ...], stride: tuple[int
 def sub(a: Tensor | float, b: Tensor | float) -> Tensor:
     if isinstance(a, Tensor):
         return Sub.create_node(a, b)
-    return RSub.create_node(b, a)
+    return RSub.create_node(a, b)
 
 def div(a: Tensor | float, b: Tensor | float) -> Tensor:
     if isinstance(a, Tensor):
         return Div.create_node(a, b)
-    return RDiv.create_node(b, a)
+    return RDiv.create_node(a, b)
 
+def softmax(a: Tensor, dim: int = -1) -> Tensor:
+    x_max = max(a, dim=dim, keepdim=True)
+    exp_x = (a - x_max).exp()
+    return exp_x / sum(exp_x, dim=dim, keepdim=True)
+
+def log_softmax(a: Tensor, dim: int = -1) -> Tensor:
+    x_max = max(a, dim=dim, keepdim=True)
+    exp_x = (a - x_max).exp()
+    log_sum_exp = sum(exp_x, dim=dim, keepdim=True).log()
+    return a - x_max - log_sum_exp
 
 
 # ========= Reduction Operations ==========

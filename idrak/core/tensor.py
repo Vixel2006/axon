@@ -34,6 +34,9 @@ class Tensor:
 
         if requires_grad:
             c_gmalloc(self.c_tensor_ptr, ctypes.c_float(0.0))
+        else:
+            # Explicitly set grad to NULL if requires_grad is False
+            self.c_tensor_ptr.contents.grad = None
 
     @property
     def data(self) -> np.ndarray:
@@ -85,7 +88,7 @@ class Tensor:
 
     @property
     def strides(self) -> Tuple[int]:
-        return tuple(self.c_tensor_ptr.contents.shape[i] for i in range(self.c_tensor_ptr.contents.ndim))
+        return tuple(self.c_tensor_ptr.contents.strides[i] for i in range(self.c_tensor_ptr.contents.ndim))
 
     @property
     def ndim(self) -> int:
@@ -102,6 +105,10 @@ class Tensor:
     def requires_grad(self) -> bool:
         return self.c_tensor_ptr.contents.requires_grad
 
+    @requires_grad.setter
+    def requires_grad(self, value: bool):
+        self.c_tensor_ptr.contents.requires_grad = value
+
     @property
     def T(self) -> Tensor:
         return Transpose.create_node(self, -2, -1)
@@ -112,10 +119,15 @@ class Tensor:
         return self
 
     def detach(self):
-        self._lazy_buffer = None
-        return self
+        from idrak.functions import from_data
+        # Create a new Tensor with the same data as self, but with requires_grad=False
+        t = from_data(self.shape, self.data, requires_grad=False)
+        return t
 
     def backward(self):
+        if not self.requires_grad:
+            raise RuntimeError("Gradient storage not allocated: cannot call backward on a tensor that does not require grad.")
+
         if self._lazy_buffer is not None:
             self._lazy_buffer.backward()
 
@@ -142,8 +154,8 @@ class Tensor:
     def __truediv__(self, other: Tensor | float) -> Tensor: return Div.create_node(self, other)
     def __pow__(self, other: Tensor | float) -> Tensor: return Pow.create_node(self, other)
     def __matmul__(self, other: Tensor) -> Tensor: return MatMul.create_node(self, other)
-    def __radd__(self, other: float) -> Tensor: return Add.create_node(other, self)
-    def __rmul__(self, other: float) -> Tensor: return Mul.create_node(other, self)
+    def __radd__(self, other: float) -> Tensor: return Add.create_node(self, other)
+    def __rmul__(self, other: float) -> Tensor: return Mul.create_node(self, other)
     def __rsub__(self, other: float) -> Tensor: return RSub.create_node(other, self)
     def __rtruediv__(self, other: float) -> Tensor: return RDiv.create_node(other, self)
     def __neg__(self) -> Tensor: return Neg.create_node(self)
@@ -156,3 +168,5 @@ class Tensor:
         if self.c_tensor_ptr:
             c_tfree(self.c_tensor_ptr)
             self.c_tensor_ptr = None
+
+

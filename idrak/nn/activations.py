@@ -15,6 +15,9 @@ class Tanh(Module):
     def forward(self, x: Tensor) -> Tensor:
         return (x.exp() - (-x).exp()) / (x.exp() + (-x).exp())
 
+    def reset_parameters(self):
+        pass
+
 class Sigmoid(Module):
     def forward(self, x: Tensor) -> Tensor:
         return 1 / ((-x).exp() + 1)
@@ -23,8 +26,3 @@ class Sigmoid(Module):
         pass
 
 
-class Softmax(Module):
-    def forward(self, x: Tensor) -> Tensor:
-        x_max = max(x, dim=-1)
-        exp_x = (x - x_max).exp()
-        return exp_x / sum(exp_x, dim=-1)

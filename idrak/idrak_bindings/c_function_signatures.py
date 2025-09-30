@@ -29,6 +29,11 @@ if tensor_lib:
     ]
     tensor_lib.gmalloc.restype = None
 
+    tensor_lib.gfree.argtypes = [
+        ctypes.POINTER(CTensor)
+    ]
+    tensor_lib.gfree.restype = None
+
     tensor_lib.tmalloc.argtypes = [
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,

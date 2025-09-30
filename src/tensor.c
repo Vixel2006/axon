@@ -120,6 +120,12 @@ void gmalloc(Tensor* t, float init) {
     }
 }
 
+void gfree(Tensor* t) {
+    if (t->grad) {
+        sfree(t->grad);
+    }
+}
+
 Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad) {
     Tensor* t = malloc(sizeof(Tensor));
     if (!t) {

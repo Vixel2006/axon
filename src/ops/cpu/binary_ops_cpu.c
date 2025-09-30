@@ -324,6 +324,11 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P) {
         }
     }
     from_data(out, data);
+    if (!out->data) {
+        LOG_ERROR("matmul_op ERROR: Failed to set output tensor data.");
+        free(data);
+        return;
+    }
     free(data);
 
     LOG_INFO("OP: matmul_op: Matrix multiplication completed successfully");
