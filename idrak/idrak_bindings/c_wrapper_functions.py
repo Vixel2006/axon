@@ -30,6 +30,9 @@ if tensor_lib:
     def c_gmalloc(grad_ptr, grad):
         return tensor_lib.gmalloc(grad_ptr, grad)
 
+    def c_gfree(tensor_ptr):
+        return tensor_lib.gfree(tensor_ptr)
+
     def c_tmalloc(shape, ndim, device, requires_grad):
         c_shape = (ctypes.c_int * ndim)(*shape)
         return tensor_lib.tmalloc(c_shape, ndim, device, requires_grad)
@@ -51,6 +54,9 @@ if tensor_lib:
 
     def c_from_data(tensor_ptr, data):
         return tensor_lib.from_data(tensor_ptr, data)
+
+    def c_borrow(out_tensor_ptr, storage_ptr, grad_storage_ptr):
+        return tensor_lib.borrow(out_tensor_ptr, storage_ptr, grad_storage_ptr)
 
     def c_add_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):
         tensor_lib.add_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras)
@@ -283,6 +289,8 @@ else:
 
     def c_gfree(tensor_ptr): pass
 
+    def c_gfree(tensor_ptr): pass
+
     def c_tmalloc(shape, ndim, device, requires_grad): pass
 
     def c_tfree(tensor_ptr): pass
@@ -293,7 +301,9 @@ else:
 
     def c_randn(tensor_ptr): pass
 
-    def c_uniform(tensor_ptr, low, high): pass
+    def c_from_data(tensor_ptr, data): pass
+
+    def c_borrow(out_tensor_ptr, storage_ptr, grad_storage_ptr): pass
 
     def c_add_grad_op(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras): pass
 
