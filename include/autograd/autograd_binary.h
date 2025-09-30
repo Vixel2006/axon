@@ -28,5 +28,6 @@ void rdiv_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
 void matmul_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
 void conv2d_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
 void dot_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
+void pow_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
 
 #endif

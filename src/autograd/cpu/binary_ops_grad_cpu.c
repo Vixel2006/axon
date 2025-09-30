@@ -382,49 +382,177 @@ void mul_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
 void pow_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
     LOG_INFO("GRAD: pow_grad_op: Computing gradient for power operation");
 
-    int size = numel(out->shape, out->ndim);
+    // Error checking for null tensors
+    if (!out || !out->grad->data || !prev) {
+        LOG_ERROR("pow_grad_op ERROR: Output tensor, output gradient, or previous "
+                  "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
+                  (void*)out, (void*)out->grad->data, (void*)prev);
+        return;
+    }
+
+    if (n_prev != 1 && n_prev != 2) {
+        LOG_ERROR("pow_grad_op ERROR: Invalid number of previous tensors: %d. "
+                  "Expected 1 or 2.",
+                  n_prev);
+        return;
+    }
 
     Tensor* a = prev[0];
-    float b = *((float*)extras);
+    int size = numel(out->shape, out->ndim);
 
-    if (!a->requires_grad)
-        return;
+    if (n_prev == 1) { // Tensor ** scalar
+        float b_scalar = *((float*)extras);
 
-    if (!is_contiguous(a) || !is_contiguous(out)) {
-        unary_grad_noncontig(out, a, b, unary_pow_da);
-    } else {
-        int i = 0;
-        __m256 scalar_b = _mm256_set1_ps(b);
-        float c = b - 1.0f;
-        __m256 scalar_bm1 = _mm256_set1_ps(c);
-        __m256 zero = _mm256_setzero_ps();
+        if (!a->requires_grad)
+            return;
 
-        for (; i + 7 < size; i += 8) {
-            __m256 x = _mm256_loadu_ps(a->data->data + i);
-            __m256 dout = _mm256_loadu_ps(out->grad->data + i);
-            __m256 agrad = _mm256_loadu_ps(a->grad->data + i);
+        if (!is_contiguous(a) || !is_contiguous(out)) {
+            unary_grad_noncontig(out, a, b_scalar, unary_pow_da);
+        } else {
+            int i = 0;
+            __m256 scalar_b = _mm256_set1_ps(b_scalar);
+            float c = b_scalar - 1.0f;
+            __m256 scalar_bm1 = _mm256_set1_ps(c);
+            __m256 zero = _mm256_setzero_ps();
 
-            __m256 x_pow = Sleef_powf8_u10avx2(x, scalar_bm1);
-            __m256 coeff = _mm256_mul_ps(scalar_b, x_pow);
+            for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+                __m256 x = _mm256_loadu_ps(a->data->data + i);
+                __m256 dout = _mm256_loadu_ps(out->grad->data + i);
+                __m256 agrad = _mm256_loadu_ps(a->grad->data + i);
 
-            // mask problematic case: x==0 && (b-1)<0
-            __m256 zero_mask = _mm256_cmp_ps(x, zero, _CMP_EQ_OQ);
-            __m256 neg_exp_mask = _mm256_cmp_ps(scalar_bm1, zero, _CMP_LT_OQ);
-            __m256 problem_mask = _mm256_and_ps(zero_mask, neg_exp_mask);
-            coeff = _mm256_blendv_ps(coeff, zero, problem_mask);
+                __m256 x_pow = Sleef_powf8_u10avx2(x, scalar_bm1);
+                __m256 coeff = _mm256_mul_ps(scalar_b, x_pow);
 
-            __m256 da = _mm256_fmadd_ps(dout, coeff, agrad);
-            _mm256_storeu_ps(a->grad->data + i, da);
-        }
+                // mask problematic case: x==0 && (b-1)<0
+                __m256 zero_mask = _mm256_cmp_ps(x, zero, _CMP_EQ_OQ);
+                __m256 neg_exp_mask = _mm256_cmp_ps(scalar_bm1, zero, _CMP_LT_OQ);
+                __m256 problem_mask = _mm256_and_ps(zero_mask, neg_exp_mask);
+                coeff = _mm256_blendv_ps(coeff, zero, problem_mask);
 
-        for (; i < size; ++i) {
-            float x = a->data->data[i];
-            float grad_val = 0.0f;
-
-            if (!(x == 0.0f && (b - 1.0f) < 0.0f)) {
-                grad_val = b * powf(x, b - 1.0f);
+                __m256 da = _mm256_fmadd_ps(dout, coeff, agrad);
+                _mm256_storeu_ps(a->grad->data + i, da);
             }
-            a->grad->data[i] += out->grad->data[i] * grad_val;
+
+            for (; i < size; ++i) {
+                float x = a->data->data[i];
+                float grad_val = 0.0f;
+
+                if (!(x == 0.0f && (b_scalar - 1.0f) < 0.0f)) {
+                    grad_val = b_scalar * powf(x, b_scalar - 1.0f);
+                }
+                a->grad->data[i] += out->grad->data[i] * grad_val;
+            }
+        }
+    } else if (n_prev == 2) { // Tensor ** Tensor
+        Tensor* b_tensor = prev[1];
+
+        if (!a->requires_grad && !b_tensor->requires_grad)
+            return;
+
+        if (!is_contiguous(a) || !is_contiguous(b_tensor) || !is_contiguous(out)) {
+            // Fallback for non-contiguous tensors (implement if needed)
+            // For now, we'll use a basic loop
+            for (int linear = 0; linear < size; ++linear) {
+                int idx = linear;
+                int a_offset = 0, b_offset = 0, out_offset = 0;
+                for (int d = out->ndim - 1; d >= 0; --d) {
+                    int coord = idx % out->shape[d];
+                    idx /= out->shape[d];
+                    a_offset += coord * a->strides[d];
+                    b_offset += coord * b_tensor->strides[d];
+                    out_offset += coord * out->strides[d];
+                }
+
+                float dout = out->grad->data[out_offset];
+                float aval = a->data->data[a_offset];
+                float bval = b_tensor->data->data[b_offset];
+
+                // d(a^b)/da = b * a^(b-1)
+                if (a->requires_grad) {
+                    float grad_a_val = 0.0f;
+                    if (!(aval == 0.0f && (bval - 1.0f) < 0.0f)) {
+                        grad_a_val = bval * powf(aval, bval - 1.0f);
+                    }
+                    a->grad->data[a_offset] += dout * grad_a_val;
+                }
+
+                // d(a^b)/db = a^b * log(a)
+                if (b_tensor->requires_grad) {
+                    float grad_b_val = 0.0f;
+                    if (aval > 0.0f) { // log is only defined for positive numbers
+                        grad_b_val = powf(aval, bval) * logf(aval);
+                    }
+                    b_tensor->grad->data[b_offset] += dout * grad_b_val;
+                }
+            }
+        } else {
+            // Contiguous case with SIMD (AVX2)
+            __m256 zero = _mm256_setzero_ps();
+            __m256 one = _mm256_set1_ps(1.0f);
+
+            int i = 0; // Declare i here
+            for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+                __m256 x = _mm256_loadu_ps(a->data->data + i);
+                __m256 y = _mm256_loadu_ps(b_tensor->data->data + i);
+                __m256 dout = _mm256_loadu_ps(out->grad->data + i);
+
+                // Gradient for 'a': dout * y * x^(y-1)
+                if (a->requires_grad) {
+                    __m256 agrad = _mm256_loadu_ps(a->grad->data + i);
+                    __m256 y_minus_one = _mm256_sub_ps(y, one);
+                    __m256 x_pow_y_minus_one = Sleef_powf8_u10avx2(x, y_minus_one);
+                    __m256 coeff_a = _mm256_mul_ps(y, x_pow_y_minus_one);
+
+                    // Mask problematic case: x==0 && (y-1)<0
+                    __m256 zero_mask_x = _mm256_cmp_ps(x, zero, _CMP_EQ_OQ);
+                    __m256 neg_exp_mask_y = _mm256_cmp_ps(y_minus_one, zero, _CMP_LT_OQ);
+                    __m256 problem_mask_a = _mm256_and_ps(zero_mask_x, neg_exp_mask_y);
+                    coeff_a = _mm256_blendv_ps(coeff_a, zero, problem_mask_a);
+
+                    __m256 da = _mm256_fmadd_ps(dout, coeff_a, agrad);
+                    _mm256_storeu_ps(a->grad->data + i, da);
+                }
+
+                // Gradient for 'b': dout * x^y * log(x)
+                if (b_tensor->requires_grad) {
+                    __m256 bgrad = _mm256_loadu_ps(b_tensor->grad->data + i);
+                    __m256 x_pow_y = Sleef_powf8_u10avx2(x, y);
+                    __m256 log_x = Sleef_logf8_u10avx2(x);
+
+                    // Mask for x <= 0 for log(x)
+                    __m256 non_positive_x_mask = _mm256_cmp_ps(x, zero, _CMP_LE_OQ);
+                    log_x = _mm256_blendv_ps(log_x, zero, non_positive_x_mask); // Set log(x) to 0 if x <= 0
+
+                    __m256 coeff_b = _mm256_mul_ps(x_pow_y, log_x);
+                    __m256 db = _mm256_fmadd_ps(dout, coeff_b, bgrad);
+                    _mm256_storeu_ps(b_tensor->grad->data + i, db);
+                }
+            }
+
+            // Handle remaining elements (non-SIMD)
+            for (; i < size; ++i) {
+                float x = a->data->data[i];
+                float y = b_tensor->data->data[i];
+                float dout = out->grad->data[i];
+
+                // Gradient for 'a'
+                if (a->requires_grad) {
+                    float grad_a_val = 0.0f;
+                    if (!(x == 0.0f && (y - 1.0f) < 0.0f)) {
+                        grad_a_val = y * powf(x, y - 1.0f);
+                    }
+                    a->grad->data[i] += dout * grad_a_val;
+                }
+
+                // Gradient for 'b'
+                if (b_tensor->requires_grad) {
+                    float grad_b_val = 0.0f;
+                    if (x > 0.0f) {
+                        grad_b_val = powf(x, y) * logf(x);
+                    }
+                    b_tensor->grad->data[i] += dout * grad_b_val;
+                }
+            }
         }
     }
 }
@@ -956,29 +1084,3 @@ void dot_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
         }
     }
 }
-
-/*
-int main(void) {
-    int shape[] = {2, 2};
-    Tensor* a = tmalloc(shape, 2, CPU, true);
-
-    Tensor* b = tmalloc(shape, 2, CPU, true);
-
-    ones(a);
-    ones(b);
-
-    Tensor* c = tmalloc(shape, 2, CPU, true);
-    gmalloc(c, 1.0);
-
-    Tensor** in = malloc(sizeof(Tensor) * 2);
-    in[0] = a;
-    in[1] = b;
-
-    add_grad_op(c, in, 2, NULL);
-
-    for (int i = 0; i < 4; ++i) {
-        printf("grad: %f, grad: %f", a->grad->data[i], b->grad->data[i]);
-    }
-    printf("\n");
-}
-*/

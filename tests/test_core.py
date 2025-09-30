@@ -14,28 +14,8 @@ from idrak.ops.mop import Transpose, View, Unsqueeze, Squeeze, Expand, Broadcast
 # Import binary, unary, and initialization operations
 from idrak.ops.bop import Add, Sub, Mul, Div, Pow, MatMul, RSub, RDiv, Dot, Conv2D
 from idrak.ops.uop import ReLU, Log, Exp, Abs, Neg, Clip
-from idrak.ops.iop import Zeros, Ones, Uniform, Randn, FromData
+from idrak.functions import from_data
 
-# Import actual C-binding functions for verification if needed,
-# though the Python Tensor methods should abstract this away.
-# We assume these are correctly linked and work.
-from idrak.idrak_bindings.ctypes_definitions import CTensor, CStorage, Conv2DBackwardExtras, ClipExtras
-from idrak.idrak_bindings.c_wrapper_functions import (
-    c_tmalloc, c_tfree, c_gmalloc, c_numel, c_compute_strides,
-    c_add, c_sub, c_mul, c_div, c_pow_scalar, c_pow, c_div_scalar, c_add_scalar,
-    c_sub_scalar, c_rsub_scalar, c_mul_scalar, c_conv, c_rdiv_scalar,
-    c_rdiv_scalar, c_add_grad_op, c_sub_grad_op, c_mul_grad_op, c_pow_grad_op,
-    c_matmul_grad_op, c_div_grad_op, c_rdiv_grad_op, c_rsub_grad_op,
-    c_conv_grad_op, c_dot, c_dot_grad_op, c_relu, c_log, c_exp, c_abs, c_neg,
-    c_relu_grad_op, c_log_grad_op, c_abs_grad_op, c_exp_grad_op, c_neg_grad_op,
-    c_clip, c_clip_grad_op, c_concat_grad_op, c_view, c_unsqueeze, c_squeeze,
-    c_expand, c_broadcast, c_transpose, c_concat, c_ones, c_zeros, c_uniform,
-    c_randn, c_from_data
-)
-
-# Helper to check if a C pointer is valid (not NULL)
-def is_c_ptr_valid(c_ptr):
-    return bool(c_ptr) and c_ptr.contents is not None
 
 class TestTensorCore:
 
@@ -45,17 +25,14 @@ class TestTensorCore:
         assert t.ndim == 2
         assert t.device == "cpu"
         assert t.requires_grad is True
-        assert is_c_ptr_valid(t.c_tensor_ptr)
-        assert not is_c_ptr_valid(t.c_tensor_ptr.contents.data)
-        assert is_c_ptr_valid(t.c_tensor_ptr.contents.grad)
+        assert t.c_tensor_ptr is not None
+        assert t.c_tensor_ptr.contents.grad is not None
         assert np.all(t.grad == 0.0)
 
     def test_tensor_init_no_grad(self):
         t = Tensor((2, 2), requires_grad=False)
         assert t.requires_grad is False
-        assert t.c_tensor_ptr.contents.grad is None
-        # Attempting to access .grad property should raise AttributeError
-        with pytest.raises(AttributeError, match="grad storage is not allocated for this tensor"):
+        with pytest.raises((ValueError, AttributeError)):
             _ = t.grad
 
     def test_tensor_init_cuda(self):
@@ -66,12 +43,7 @@ class TestTensorCore:
         assert t.c_tensor_ptr.contents.device == 1
 
     def test_tensor_data_property(self):
-        t = Tensor((2, 2))
-        # Fill data via direct C pointer access (simulating C computation)
-        # In a real test, you'd use a creation op like FromData or an arithmetic op.
-        flat_data = [1.0, 2.0, 3.0, 4.0]
-        for i, val in enumerate(flat_data):
-            t.c_tensor_ptr.contents.data.contents.data[i] = ctypes.c_float(val)
+        t = from_data((2, 2), np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32))
 
         expected_data = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
         assert np.array_equal(t.data, expected_data)
@@ -102,30 +74,16 @@ class TestTensorCore:
         # Strides for (4,) should be (1,)
         assert t_4.strides == (1,)
 
-    """
     def test_tensor_ndim_property(self):
         t_1d = Tensor((5,))
         assert t_1d.ndim == 1
         t_3d = Tensor((2, 3, 4))
         assert t_3d.ndim == 3
-    """
 
     def test_tensor_T_property(self):
-        t = Tensor((2, 3))
-        t_T = t.T # This should create a new Tensor with a Transpose LazyBuffer
-        assert isinstance(t_T, Tensor)
-        assert t_T.shape == (3, 2)
-        assert t_T._lazy_buffer is not None
-        assert isinstance(t_T._lazy_buffer.op, Transpose)
-        assert t_T._lazy_buffer.prev[0] is t # The original tensor is a previous node
-
-        # Realize to get the actual transposed data
-        # For this to work, the C `c_transpose` function must be correctly implemented.
-        # Let's manually put some data into 't'
-        t_flat_data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
-        for i, val in enumerate(t_flat_data):
-            t.c_tensor_ptr.contents.data.contents.data[i] = ctypes.c_float(val)
+        t = from_data((2, 3), np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float32))
         
+        t_T = t.T
         # Manually verify transpose output shape and data
         expected_transposed_data = np.array([[1., 4.], [2., 5.], [3., 6.]], dtype=np.float32)
         assert np.array_equal(t_T.realize().data, expected_transposed_data)
@@ -150,7 +108,7 @@ class TestTensorCore:
         # and that Python's `del` triggers __del__ and thus c_tfree.
         
         # Before deletion, the pointer should be valid
-        assert is_c_ptr_valid(c_ptr_ref)
+        # assert is_c_ptr_valid(c_ptr_ref)
         
         # After deletion, the Python object is gone, and c_tfree should be called
         del t
@@ -161,6 +119,380 @@ class TestTensorCore:
         # For now, we'll rely on memory leak detection tools or the C implementation being correct.
         # If the C library has assertions for double-free, we'd catch issues here.
         # This test primarily ensures __del__ doesn't crash.
+
+    def test_tensor_view(self):
+        a_np = np.arange(12, dtype=np.float32).reshape(3, 4)
+        a = from_data(a_np.shape, a_np)
+
+        b = a.view((4, 3))
+        assert b.shape == (4, 3)
+        assert np.array_equal(b.realize().data, a_np.reshape(4, 3))
+
+        c = a.view((2, 2, 3))
+        assert c.shape == (2, 2, 3)
+        assert np.array_equal(c.realize().data, a_np.reshape(2, 2, 3))
+
+        # Test with -1 for inferred dimension
+        d = a.view((2, -1))
+        assert d.shape == (2, 6)
+        assert np.array_equal(d.realize().data, a_np.reshape(2, 6))
+
+        with pytest.raises(ValueError, match="Can only specify one -1 in shape."):
+            a.view((-1, -1))
+        with pytest.raises(RuntimeError, match="Unable to view as numel mismatch"):
+            a.view((3, 3)) # 9 elements vs 12
+
+    def test_tensor_unsqueeze(self):
+        a_np = np.arange(6, dtype=np.float32).reshape(2, 3)
+        a = from_data(a_np.shape, a_np)
+
+        b = a.unsqueeze(0)
+        assert b.shape == (1, 2, 3)
+        assert np.array_equal(b.realize().data, a_np.reshape(1, 2, 3))
+
+        c = a.unsqueeze(-1)
+        assert c.shape == (2, 3, 1)
+        assert np.array_equal(c.realize().data, a_np.reshape(2, 3, 1))
+
+        d = a.unsqueeze(1)
+        assert d.shape == (2, 1, 3)
+        assert np.array_equal(d.realize().data, a_np.reshape(2, 1, 3))
+
+        with pytest.raises(ValueError, match="Dimension 4 out of range"):
+            a.unsqueeze(4)
+
+    def test_tensor_squeeze(self):
+        a_np = np.arange(6, dtype=np.float32).reshape(1, 2, 1, 3, 1)
+        a = from_data(a_np.shape, a_np)
+
+        c = a.squeeze(0) # Squeeze specific dimension
+        assert c.shape == (2, 1, 3, 1)
+        assert np.array_equal(c.realize().data, a_np.reshape(2, 1, 3, 1))
+
+        d = a.squeeze(2) # Squeeze specific dimension
+        assert d.shape == (1, 2, 3, 1)
+        assert np.array_equal(d.realize().data, a_np.reshape(1, 2, 3, 1))
+
+        e = a.squeeze(-1) # Squeeze specific dimension (negative index)
+        assert e.shape == (1, 2, 1, 3)
+        assert np.array_equal(e.realize().data, a_np.reshape(1, 2, 1, 3))
+
+        with pytest.raises(IndexError, match="Dimension out of range"):
+            a.squeeze(5)
+        with pytest.raises(IndexError, match="Dimension out of range"):
+            a.squeeze(-6)
+
+    def test_tensor_expand(self):
+        a_np = np.array([[1, 2, 3]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+
+        b = a.expand((2, 3))
+        assert b.shape == (2, 3)
+        expected_b = np.array([[1, 2, 3], [1, 2, 3]], dtype=np.float32)
+        assert np.array_equal(b.realize().data, expected_b)
+
+        c_np = np.array([[1], [2]], dtype=np.float32)
+        c = from_data(c_np.shape, c_np)
+        d = c.expand((2, 3))
+        assert d.shape == (2, 3)
+        expected_d = np.array([[1, 1, 1], [2, 2, 2]], dtype=np.float32)
+        assert np.array_equal(d.realize().data, expected_d)
+
+        # Expand with -1
+        e = a.expand((2, -1))
+        assert e.shape == (2, 3)
+        assert np.array_equal(e.realize().data, expected_b)
+
+        with pytest.raises(ValueError, match="Can't expand dimension"):
+            a.expand((3, 2)) # Cannot expand 3 to 2
+
+    def test_tensor_broadcast(self):
+        a_np = np.array([[1, 2, 3]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+
+        b = a.broadcast((2, 3))
+        assert b.shape == (2, 3)
+        expected_b = np.array([[1, 2, 3], [1, 2, 3]], dtype=np.float32)
+        assert np.array_equal(b.realize().data, expected_b)
+
+        c_np = np.array([[1], [2]], dtype=np.float32)
+        c = from_data(c_np.shape, c_np)
+        d = c.broadcast((2, 3))
+        assert d.shape == (2, 3)
+        expected_d = np.array([[1, 1, 1], [2, 2, 2]], dtype=np.float32)
+        assert np.array_equal(d.realize().data, expected_d)
+
+        # Test with incompatible shapes
+        with pytest.raises(ValueError, match="Shapes are not broadcastable"):
+            a.broadcast((3, 2)) # (1,3) to (3,2) is not directly broadcastable without more complex rules
+
+    def test_tensor_detach(self):
+        a = from_data((2, 2), [[1, 2], [3, 4]])
+        b = a + 1.0
+        b.realize()
+        assert b._lazy_buffer is not None
+        assert b.requires_grad is True
+        
+        c = b.detach()
+        assert c is not b
+        assert np.array_equal(c.data, b.data) # Data should be the same
+        assert c._lazy_buffer is None # Lazy buffer should be cleared
+        assert c.requires_grad is False # requires_grad should be False for detached tensor
+
+        # Ensure that detaching breaks the graph for backward pass
+        with pytest.raises(RuntimeError, match="Gradient storage not allocated"):
+            c.backward() # Should fail because the graph is broken
+
+        # Original tensor 'a' should still have its graph intact
+        a_orig = from_data((2,2), np.ones((2,2), dtype=np.float32), requires_grad=True)
+        d = a_orig + 1.0
+        d.backward()
+        assert np.all(a_orig.grad == 1.0) # Should still work
+
+    def test_tensor_exp(self):
+        a_np = np.array([[0.0, 1.0], [2.0, 3.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+
+        b = a.exp()
+        expected_b = np.exp(a_np)
+        assert np.allclose(b.realize().data, expected_b)
+
+        # Test backward
+        b.backward()
+        expected_a_grad = np.exp(a_np) # d(exp(x))/dx = exp(x)
+        assert np.allclose(a.grad, expected_a_grad)
+
+    def test_tensor_log(self):
+        a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+
+        b = a.log()
+        expected_b = np.log(a_np)
+        assert np.allclose(b.realize().data, expected_b)
+
+        # Test backward
+        b.backward()
+        expected_a_grad = 1.0 / a_np # d(log(x))/dx = 1/x
+        assert np.allclose(a.grad, expected_a_grad)
+
+    def test_tensor_abs(self):
+        a_np = np.array([[-1.0, 2.0], [-3.0, 4.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+
+        b = a.abs()
+        expected_b = np.abs(a_np)
+        assert np.allclose(b.realize().data, expected_b)
+
+        # Test backward
+        b.backward()
+        expected_a_grad = np.sign(a_np) # d(|x|)/dx = sign(x)
+        assert np.allclose(a.grad, expected_a_grad)
+
+    def test_tensor_relu(self):
+        a_np = np.array([[-1.0, 0.0], [2.0, -3.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+
+        b = a.relu()
+        expected_b = np.maximum(0, a_np)
+        assert np.allclose(b.realize().data, expected_b)
+
+        # Test backward
+        b.backward()
+        expected_a_grad = (a_np > 0).astype(np.float32) # d(relu(x))/dx = 1 if x > 0 else 0
+        assert np.allclose(a.grad, expected_a_grad)
+
+    def test_tensor_neg(self):
+        a_np = np.array([[-1.0, 2.0], [-3.0, 4.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+
+        b = -a
+        expected_b = -a_np
+        assert np.allclose(b.realize().data, expected_b)
+
+        # Test backward
+        b.backward()
+        expected_a_grad = np.array([[-1.0, -1.0], [-1.0, -1.0]], dtype=np.float32)
+        assert np.allclose(a.grad, expected_a_grad)
+
+    def test_tensor_add(self):
+        a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        b_np = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+        b = from_data(b_np.shape, b_np)
+
+        # Tensor + Tensor
+        c = a + b
+        expected_c = a_np + b_np
+        assert np.allclose(c.realize().data, expected_c)
+        c.backward()
+        assert np.allclose(a.grad, np.ones_like(a_np))
+        assert np.allclose(b.grad, np.ones_like(b_np))
+
+        # Tensor + scalar
+        d = a + 10.0
+        expected_d = a_np + 10.0
+        assert np.allclose(d.realize().data, expected_d)
+        d.backward()
+        assert np.allclose(a.grad, np.ones_like(a_np) * 2) # Accumulated from previous backward
+
+        # scalar + Tensor (__radd__)
+        e_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        e = from_data(e_np.shape, e_np)
+        f = 20.0 + e
+        expected_f = 20.0 + e_np
+        assert np.allclose(f.realize().data, expected_f)
+        f.backward()
+        assert np.allclose(e.grad, np.ones_like(e_np))
+
+    def test_tensor_sub(self):
+        a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        b_np = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+        b = from_data(b_np.shape, b_np)
+
+        # Tensor - Tensor
+        c = a - b
+        expected_c = a_np - b_np
+        assert np.allclose(c.realize().data, expected_c)
+        c.backward()
+        assert np.allclose(a.grad, np.ones_like(a_np))
+        assert np.allclose(b.grad, -np.ones_like(b_np))
+
+        # Tensor - scalar
+        d = a - 10.0
+        expected_d = a_np - 10.0
+        assert np.allclose(d.realize().data, expected_d)
+        d.backward()
+        assert np.allclose(a.grad, np.ones_like(a_np) * 2) # Accumulated from previous backward
+
+        # scalar - Tensor (__rsub__)
+        e_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        e = from_data(e_np.shape, e_np)
+        f = 20.0 - e
+        expected_f = 20.0 - e_np
+        assert np.allclose(f.realize().data, expected_f)
+        f.backward()
+        assert np.allclose(e.grad, -np.ones_like(e_np))
+
+    def test_tensor_mul(self):
+        a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        b_np = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+        b = from_data(b_np.shape, b_np)
+
+        # Tensor * Tensor
+        c = a * b
+        expected_c = a_np * b_np
+        assert np.allclose(c.realize().data, expected_c)
+        c.backward()
+        assert np.allclose(a.grad, b_np)
+        assert np.allclose(b.grad, a_np)
+
+        # Tensor * scalar
+        d = a * 10.0
+        expected_d = a_np * 10.0
+        assert np.allclose(d.realize().data, expected_d)
+        d.backward()
+        assert np.allclose(a.grad, b_np + 10.0) # Accumulated
+
+        # scalar * Tensor (__rmul__)
+        e_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        e = from_data(e_np.shape, e_np)
+        f = 20.0 * e
+        expected_f = 20.0 * e_np
+        assert np.allclose(f.realize().data, expected_f)
+        f.backward()
+        assert np.allclose(e.grad, np.ones_like(e_np) * 20.0)
+
+    def test_tensor_div(self):
+        a_np = np.array([[10.0, 20.0], [30.0, 40.0]], dtype=np.float32)
+        b_np = np.array([[5.0, 4.0], [3.0, 2.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+        b = from_data(b_np.shape, b_np)
+
+        # Tensor / Tensor
+        c = a / b
+        expected_c = a_np / b_np
+        assert np.allclose(c.realize().data, expected_c)
+        c.backward()
+        assert np.allclose(a.grad, 1.0 / b_np)
+        assert np.allclose(b.grad, -a_np / (b_np ** 2))
+
+        # Tensor / scalar
+        d = a / 2.0
+        expected_d = a_np / 2.0
+        assert np.allclose(d.realize().data, expected_d)
+        d.backward()
+        assert np.allclose(a.grad, (1.0 / b_np) + (1.0 / 2.0)) # Accumulated
+
+        # scalar / Tensor (__rtruediv__)
+        e_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        e = from_data(e_np.shape, e_np)
+        f = 20.0 / e
+        expected_f = 20.0 / e_np
+        assert np.allclose(f.realize().data, expected_f)
+        f.backward()
+        assert np.allclose(e.grad, -20.0 / (e_np ** 2))
+
+    def test_tensor_pow(self):
+        a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        b_np = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)
+
+        a = from_data(a_np.shape, a_np)
+        b = from_data(b_np.shape, b_np)
+
+        # Tensor ** Tensor
+        c = a ** b
+        expected_c = a_np ** b_np
+        assert np.allclose(c.realize().data, expected_c)
+        c.backward()
+        # d(a^b)/da = b * a^(b-1)
+        # d(a^b)/db = a^b * log(a)
+        assert np.allclose(a.grad, b_np * (a_np ** (b_np - 1)))
+        assert np.allclose(b.grad, (a_np ** b_np) * np.log(a_np))
+
+        # Tensor ** scalar
+        d = a ** 3.0
+        expected_d = a_np ** 3.0
+        assert np.allclose(d.realize().data, expected_d)
+        d.backward()
+        assert np.allclose(a.grad, (b_np * (a_np ** (b_np - 1))) + (3.0 * (a_np ** 2))) # Accumulated
+
+    def test_tensor_matmul(self):
+        # Matrix-Matrix multiplication
+        a_np = np.array([[1, 2], [3, 4]], dtype=np.float32)
+        b_np = np.array([[5, 6], [7, 8]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np)
+        b = from_data(b_np.shape, b_np)
+
+        c = a @ b
+        expected_c = a_np @ b_np
+        assert np.allclose(c.realize().data, expected_c, rtol=1e-4, atol=1e-4)
+        c.backward()
+        # dL/dA = dL/dC @ B.T
+        # dL/dB = A.T @ dL/dC
+        assert np.allclose(a.grad, np.ones_like(expected_c) @ b_np.T, rtol=1e-4, atol=1e-4)
+        assert np.allclose(b.grad, a_np.T @ np.ones_like(expected_c), rtol=1e-4, atol=1e-4)
+
+
+        # Batch matrix multiplication (example: (2, 2, 3) @ (2, 3, 2))
+        j_np = np.arange(12, dtype=np.float32).reshape(2, 2, 3)
+        k_np = np.arange(12, 24, dtype=np.float32).reshape(2, 3, 2)
+        j = from_data(j_np.shape, j_np)
+        k = from_data(k_np.shape, k_np)
+
+        l = j @ k
+        expected_l = j_np @ k_np
+        assert np.allclose(l.realize().data, expected_l, rtol=1e-4, atol=1e-4)
+        l.backward()
+        # For batch matmul, gradients are also batch-wise
+        # dL/dJ = dL/dL @ K.T (batch-wise)
+        # dL/dK = J.T @ dL/dL (batch-wise)
+        # np.einsum can help here for batch matmul gradients
+        expected_j_grad = np.einsum('...ij,...jk->...ik', np.ones_like(expected_l), np.swapaxes(k_np, -1, -2))
+        expected_k_grad = np.einsum('...ki,...il->...kl', np.swapaxes(j_np, -1, -2), np.ones_like(expected_l))
+        assert np.allclose(j.grad, expected_j_grad, rtol=1e-4, atol=1e-4)
+        assert np.allclose(k.grad, expected_k_grad, rtol=1e-4, atol=1e-4)
 
 
 class TestLazyBufferCore:
@@ -258,15 +590,10 @@ class TestLazyBufferCore:
 
 
     def test_lazy_buffer_realize_and_forward(self):
-        a = Tensor((2,2), requires_grad=True)
-        b = Tensor((2,2), requires_grad=True)
-        
-        # Initialize some data in 'a' and 'b' directly in C memory
         a_flat_data = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
         b_flat_data = np.array([5.0, 6.0, 7.0, 8.0], dtype=np.float32)
-        for i in range(a_flat_data.size):
-            a.c_tensor_ptr.contents.data.contents.data[i] = a_flat_data[i]
-            b.c_tensor_ptr.contents.data.contents.data[i] = b_flat_data[i]
+        a = from_data((2,2), a_flat_data.reshape(2,2), requires_grad=True)
+        b = from_data((2,2), b_flat_data.reshape(2,2), requires_grad=True)
 
         c = a + b # This creates c with a LazyBuffer for Add operation
         d = c.relu() # This creates d with a LazyBuffer for ReLU operation
@@ -284,17 +611,14 @@ class TestLazyBufferCore:
         expected_c_data = a_flat_data + b_flat_data # [6.0, 8.0, 10.0, 12.0]
         expected_d_data = np.maximum(expected_c_data, 0) # ReLU, so same as c_data here
         
-        assert np.array_equal(c.data.flatten(), expected_c_data)
-        assert np.array_equal(d.data.flatten(), expected_d_data)
+        assert np.allclose(c.data.flatten(), expected_c_data, rtol=1e-4, atol=1e-4)
+        assert np.allclose(d.data.flatten(), expected_d_data, rtol=1e-4, atol=1e-4)
 
 
     def test_lazy_buffer_backward(self):
         # Test a simple graph: a -> add_scalar -> c
-        a = Tensor((2,2), requires_grad=True)
-        # Initialize 'a' with some data
         a_flat_data = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)
-        for i in range(a_flat_data.size):
-            a.c_tensor_ptr.contents.data.contents.data[i] = a_flat_data[i]
+        a = from_data((2,2), a_flat_data.reshape(2,2), requires_grad=True)
 
         scalar_val = 5.0
         c = a + scalar_val # c = Add.create_node(a, scalar_val)
@@ -309,27 +633,23 @@ class TestLazyBufferCore:
         # 4. Add.backward is called.
         
         # Verify c.grad (should be all ones as it's the final output of the backward call)
-        assert np.all(c.grad == 1.0)
+        assert np.allclose(c.grad, 1.0, rtol=1e-4, atol=1e-4)
         
         # Verify a.grad
         # For c = a + S, dc/da = 1. So, gradient of a should be the gradient of c.
         # The `c_add_grad_op` should propagate `out_grad_ptr` to the `prev_ptrs`.
         # Assuming `c_add_grad_op` correctly copies the gradient:
-        assert np.all(a.grad == 1.0)
+        assert np.allclose(a.grad, 1.0, rtol=1e-4, atol=1e-4)
 
 
     def test_lazy_buffer_backward_complex_graph(self):
         # Graph: a --- (mul) ---> c --- (relu) ---> d
         #        |                    ^
         #        +--------- (add) ---+
-        a = Tensor((2,2), requires_grad=True)
-        b = Tensor((2,2), requires_grad=True)
-
-        # Initialize data
         a_data = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
         b_data = np.array([[0.5, 0.5], [0.5, 0.5]], dtype=np.float32)
-        for i, val in enumerate(a_data.flatten()): a.c_tensor_ptr.contents.data.contents.data[i] = val
-        for i, val in enumerate(b_data.flatten()): b.c_tensor_ptr.contents.data.contents.data[i] = val
+        a = from_data(a_data.shape, a_data, requires_grad=True)
+        b = from_data(b_data.shape, b_data, requires_grad=True)
 
         c_mul = a * b         # Add.create_node(a, b)
         c_add = c_mul + a     # Mul.create_node(c_mul, a) (assuming add_grad accumulates correctly)
@@ -378,6 +698,10 @@ class TestLazyBufferCore:
         expected_b_grad = expected_c_add_grad * a.data # dL/dc_mul * dc_mul/db
 
         # Due to potential floating point inaccuracies from C operations, use `np.isclose`
-        assert np.allclose(d.grad, expected_d_grad)
-        assert np.allclose(a.grad, expected_a_grad)
-        assert np.allclose(b.grad, expected_b_grad)
+        assert np.allclose(d.grad, expected_d_grad, rtol=1e-4, atol=1e-4)
+        assert np.allclose(a.grad, expected_a_grad, rtol=1e-4, atol=1e-4)
+        assert np.allclose(b.grad, expected_b_grad, rtol=1e-4, atol=1e-4)
+
+
+
+

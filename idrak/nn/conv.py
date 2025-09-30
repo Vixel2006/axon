@@ -33,3 +33,8 @@ class Conv2d(Module):
         
         return out
 
+    def reset_parameters(self):
+        self.weights = xavier_normal_(self.weights.shape, self.kernel_size[1], self.kernel_size[0])
+        if self.bias:
+            self.bias = zeros(self.bias.shape)
+
