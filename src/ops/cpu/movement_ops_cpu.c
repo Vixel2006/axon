@@ -55,10 +55,10 @@ void unsqueeze_op(Tensor* in, Tensor* out, int dim) {
 void squeeze_op(Tensor* in, Tensor* out, int dim) {
     LOG_INFO("OP: squeeze_op: Squeezing Tensor %p at dimension %d", (void*)in, dim);
 
-    if (dim < 0 || dim >= in->ndim || in->shape[dim] != 1) {
+    if (dim < 0 || dim >= in->ndim) {
         LOG_ERROR("squeeze_op: Invalid dimension %d for squeeze operation "
-                  "(ndim=%d, shape[%d]=%d). Dimension must be 1.",
-                  dim, in->ndim, dim, in->shape[dim]);
+                  "(ndim=%d).",
+                  dim, in->ndim);
         return;
     }
 

@@ -98,7 +98,7 @@ class View(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", shape: tuple[int, ...]):
-        c_view(a_tensor.c_tensor_ptr, out.c_tensor_ptr, (ctypes.c_int * len(shape))(*shape), len(shape))
+        c_view(a_tensor.c_tensor_ptr, out.c_tensor_ptr, shape, len(shape))
 
 
 class Unsqueeze(ViewOp):
@@ -170,6 +170,8 @@ class Squeeze(ViewOp):
 
             if new_shape[dim] == 1:
                 new_shape.pop(dim)
+            else:
+                raise IndexError(f"Dimension out of range (expected to be in the range of [-{a.ndim}, {a.ndim-1}], but got {dim})")
         else:
             new_shape = [s for s in new_shape if s != 1]
 
@@ -348,7 +350,7 @@ class Broadcast(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", shape: tuple[int, ...]):
-        c_broadcast(a_tensor.c_tensor_ptr, out.c_tensor_ptr, (ctypes.c_int * len(shape))(*shape), len(shape))
+        c_broadcast(a_tensor.c_tensor_ptr, out.c_tensor_ptr, shape, len(shape))
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
