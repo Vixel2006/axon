@@ -18,7 +18,7 @@ void zero_grad(Tensor** parameters, int num_parameters) {
             continue;
         }
 
-        if (t->grad->data == NULL) {
+        if (t->grad == NULL) {
             LOG_WARN("zero_grad: Parameter at index %d requires gradients but "
                      "t->grad (SharedData) is NULL. Cannot zero gradient.",
                      i);
@@ -27,7 +27,7 @@ void zero_grad(Tensor** parameters, int num_parameters) {
 
         if (t->grad->data == NULL) {
             LOG_WARN("zero_grad: Parameter at index %d requires gradients but "
-                     "t->grad->elems is NULL. Cannot zero gradient.",
+                     "t->grad->data is NULL. Cannot zero gradient.",
                      i);
             continue;
         }

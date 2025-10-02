@@ -7,6 +7,7 @@ from idrak.nn.activations import ReLU, Sigmoid
 from idrak.functions import from_data
 from idrak.utils.model_io import save_model, load_model
 
+
 class TestModelIO:
 
     def setup_method(self):
@@ -39,10 +40,18 @@ class TestModelIO:
     def test_load_model(self):
         model = self.create_simple_model()
         # Modify parameters to ensure loading restores them correctly
-        model.layers[0].W = from_data(model.layers[0].W.shape, np.ones(model.layers[0].W.shape, dtype=np.float32))
-        model.layers[0].B = from_data(model.layers[0].B.shape, np.ones(model.layers[0].B.shape, dtype=np.float32))
-        model.layers[2].W = from_data(model.layers[2].W.shape, np.zeros(model.layers[2].W.shape, dtype=np.float32))
-        model.layers[2].B = from_data(model.layers[2].B.shape, np.zeros(model.layers[2].B.shape, dtype=np.float32))
+        model.layers[0].W = from_data(
+            model.layers[0].W.shape, np.ones(model.layers[0].W.shape, dtype=np.float32)
+        )
+        model.layers[0].B = from_data(
+            model.layers[0].B.shape, np.ones(model.layers[0].B.shape, dtype=np.float32)
+        )
+        model.layers[2].W = from_data(
+            model.layers[2].W.shape, np.zeros(model.layers[2].W.shape, dtype=np.float32)
+        )
+        model.layers[2].B = from_data(
+            model.layers[2].B.shape, np.zeros(model.layers[2].B.shape, dtype=np.float32)
+        )
 
         save_model(model, self.model_path)
         loaded_model = load_model(self.model_path)
@@ -54,18 +63,34 @@ class TestModelIO:
         assert isinstance(loaded_model.layers[2], Linear)
 
         # Verify parameters are restored
-        assert np.array_equal(loaded_model.layers[0].W.data, np.ones(model.layers[0].W.shape))
-        assert np.array_equal(loaded_model.layers[0].B.data, np.ones(model.layers[0].B.shape))
-        assert np.array_equal(loaded_model.layers[2].W.data, np.zeros(model.layers[2].W.shape))
-        assert np.array_equal(loaded_model.layers[2].B.data, np.zeros(model.layers[2].B.shape))
+        assert np.array_equal(
+            loaded_model.layers[0].W.data, np.ones(model.layers[0].W.shape)
+        )
+        assert np.array_equal(
+            loaded_model.layers[0].B.data, np.ones(model.layers[0].B.shape)
+        )
+        assert np.array_equal(
+            loaded_model.layers[2].W.data, np.zeros(model.layers[2].W.shape)
+        )
+        assert np.array_equal(
+            loaded_model.layers[2].B.data, np.zeros(model.layers[2].B.shape)
+        )
 
     def test_model_round_trip(self):
         original_model = self.create_simple_model()
         # Set specific weights for predictable output
-        original_model.layers[0].W = from_data((3, 2), np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]], dtype=np.float32))
-        original_model.layers[0].B = from_data((1, 3), np.array([[0.0, 0.0, 0.0]], dtype=np.float32))
-        original_model.layers[2].W = from_data((1, 3), np.array([[0.7, 0.8, 0.9]], dtype=np.float32))
-        original_model.layers[2].B = from_data((1, 1), np.array([[0.0]], dtype=np.float32))
+        original_model.layers[0].W = from_data(
+            (3, 2), np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]], dtype=np.float32)
+        )
+        original_model.layers[0].B = from_data(
+            (1, 3), np.array([[0.0, 0.0, 0.0]], dtype=np.float32)
+        )
+        original_model.layers[2].W = from_data(
+            (1, 3), np.array([[0.7, 0.8, 0.9]], dtype=np.float32)
+        )
+        original_model.layers[2].B = from_data(
+            (1, 1), np.array([[0.0]], dtype=np.float32)
+        )
 
         input_np = np.array([[1.0, 2.0]], dtype=np.float32)
         input_tensor = from_data(input_np.shape, input_np)
