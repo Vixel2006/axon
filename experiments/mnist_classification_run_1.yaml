@@ -1,0 +1,80 @@
+artifacts:
+- name: trained_model
+  path: experiments/mnist_classification_run_1_model.pkl
+description: Training a simple linear model for MNIST digit classification with LogSoftmax
+  and NLL loss.
+hyperparameters:
+  batch_size: 64
+  epochs: 10
+  learning_rate: 0.2
+  model_architecture: Linear -> LogSoftmax
+id: mnist_classification_run_1
+metrics:
+  test_accuracy:
+  - step: null
+    value: 0.4029
+  train_loss:
+  - step: 1
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - &id001 !!python/object/apply:numpy.dtype
+      args:
+      - f4
+      - false
+      - true
+      state: !!python/tuple
+      - 3
+      - <
+      - null
+      - null
+      - null
+      - -1
+      - -1
+      - 0
+    - !!binary |
+      JhZsPg==
+  - step: 2
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      kwBsPg==
+  - step: 3
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      Q/VrPg==
+  - step: 4
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      Ju1rPg==
+  - step: 5
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      9uZrPg==
+  - step: 6
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      EuJrPg==
+  - step: 7
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      Fd5rPg==
+  - step: 8
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      w9prPg==
+  - step: 9
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      9tdrPg==
+  - step: 10
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      itVrPg==
+name: MNIST Classification - Linear + LogSoftmax
