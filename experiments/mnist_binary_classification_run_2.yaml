@@ -1,0 +1,54 @@
+artifacts:
+- name: trained_model
+  path: experiments/mnist_binary_classification_run_2_model.pkl
+description: Training a deeper model with ReLU activation for 0/1 MNIST classification.
+hyperparameters:
+  batch_size: 64
+  epochs: 5
+  learning_rate: 0.01
+  model_architecture: Linear -> ReLU
+id: mnist_binary_classification_run_2
+metrics:
+  test_accuracy:
+  - step: null
+    value: 53.664302600472816
+  train_loss:
+  - step: 1
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - &id001 !!python/object/apply:numpy.dtype
+      args:
+      - f4
+      - false
+      - true
+      state: !!python/tuple
+      - 3
+      - <
+      - null
+      - null
+      - null
+      - -1
+      - -1
+      - 0
+    - !!binary |
+      J3fJQA==
+  - step: 2
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      J3fJQA==
+  - step: 3
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      J3fJQA==
+  - step: 4
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      J3fJQA==
+  - step: 5
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      J3fJQA==
+name: MNIST Binary Classification (0s and 1s) - Linear-ReLU-Linear-Sigmoid

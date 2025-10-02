@@ -19,6 +19,7 @@ import numpy as np
 import ctypes
 from typing import List, Optional, Tuple, Union
 from enum import Enum
+import weakref
 
 class Tensor:
     _lazy_buffer: Optional[Any]
@@ -31,12 +32,6 @@ class Tensor:
             raise RuntimeError("tmalloc failed to allocate tensor")
 
         self._lazy_buffer = None
-
-        if requires_grad:
-            c_gmalloc(self.c_tensor_ptr, ctypes.c_float(0.0))
-        else:
-            # Explicitly set grad to NULL if requires_grad is False
-            self.c_tensor_ptr.contents.grad = None
 
     @property
     def data(self) -> np.ndarray:
@@ -162,11 +157,9 @@ class Tensor:
 
     def __str__(self) -> str:
         return f"Tensor(shape={self.shape}, data={self.data}, device={self.device}, requires_grad={self.requires_grad})"
-
+    
     def __del__(self):
         self._lazy_buffer = None
         if self.c_tensor_ptr:
             c_tfree(self.c_tensor_ptr)
             self.c_tensor_ptr = None
-
-
