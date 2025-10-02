@@ -146,7 +146,7 @@ void binary_grad_noncontig(Tensor* out, Tensor* a, Tensor* b, binary_grad_fn da_
         for (int d = out_ndim - 1; d >= 0; --d)
         {
             int out_coord = b_current_linear_idx % out_shape[d];
-            b_current_linear_idx /= b_shape[d];
+            b_current_linear_idx /= out_shape[d];
 
             int b_dim_idx = d - (out_ndim - b_ndim);
             if (b_dim_idx >= 0)
