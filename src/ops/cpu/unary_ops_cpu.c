@@ -11,6 +11,9 @@
 #include "utils.h"
 #endif
 
+#define EPS 1e-9
+#define SAFE_LOGF(x) logf(((x) < EPS) ? EPS : (x))
+
 #define SIMD_WIDTH 8
 
 #define COMPUTE_UNARY_OFFSETS(linear_idx, in_tensor, off_in, off_out)                              \
@@ -58,7 +61,8 @@ void relu_op(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: relu_op: Performing ReLU activation");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)in->data->data, (void*)in->grad->data, (void*)out->data->data, (void*)out->grad->data);
+             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
+             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "relu_op")) return;
 
@@ -100,7 +104,8 @@ void log_op(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: log_op: Performing natural logarithm");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)in->data->data, (void*)in->grad->data, (void*)out->data->data, (void*)out->grad->data);
+             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
+             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "log_op")) return;
 
@@ -149,7 +154,7 @@ void log_op(Tensor* in, Tensor* out)
         for (int linear = 0; linear < size; ++linear)
         {
             COMPUTE_UNARY_OFFSETS(linear, in, offset_in, offset_out);
-            data[offset_out] = logf(in->data->data[offset_in]);
+            data[offset_out] = SAFE_LOGF(in->data->data[offset_in]);
         }
     }
     else
@@ -159,13 +164,15 @@ void log_op(Tensor* in, Tensor* out)
         for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH)
         {
             __m256 x = _mm256_loadu_ps(in->data->data + i);
-            __m256 z = Sleef_logf8_u10avx2(x);
+            __m256 minimum = _mm256_set1_ps(EPS);
+            __m256 clamped = _mm256_max_ps(x, minimum);
+            __m256 z = Sleef_logf8_u10avx2(clamped);
             _mm256_storeu_ps(data + i, z);
         }
 
         for (; i < size; ++i)
         {
-            data[i] = logf(in->data->data[i]);
+            data[i] = SAFE_LOGF(in->data->data[i]);
         }
     }
     from_data(out, data);
@@ -176,7 +183,8 @@ void exp_op(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: exp_op: Performing exponential");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)in->data->data, (void*)in->grad->data, (void*)out->data->data, (void*)out->grad->data);
+             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
+             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "exp_op")) return;
 
@@ -217,7 +225,8 @@ void neg_op(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: neg_op: Performing negation");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)in->data->data, (void*)in->grad->data, (void*)out->data->data, (void*)out->grad->data);
+             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
+             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "neg_op")) return;
 
@@ -260,7 +269,8 @@ void clip_op(Tensor* in, Tensor* out, float min_val, float max_val)
 {
     LOG_INFO("OP: clip_op: Performing clipping");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)in->data->data, (void*)in->grad->data, (void*)out->data->data, (void*)out->grad->data);
+             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
+             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "clip_op")) return;
 
@@ -328,7 +338,8 @@ void abs_op(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: abs_op: Performing absolute value");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)in->data->data, (void*)in->grad->data, (void*)out->data->data, (void*)out->grad->data);
+             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
+             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "abs_op")) return;
 
