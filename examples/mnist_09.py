@@ -16,12 +16,8 @@ class MNIST(Dataset):
         loader = MNISTLoader()
         images, labels = loader.load(train=train)
         
-        if train:
-            self.images = images[:1000]
-            self.labels = labels[:1000]
-        else:
-            self.images = images[:100]
-            self.labels = labels[:100]
+        self.images = images
+        self.labels = labels
     
     def __len__(self):
         return len(self.labels)
@@ -86,7 +82,7 @@ def run_experiment(experiment_id, experiment_name, description, model, optim, ep
 
             optim.step()
 
-        print(f"Epoch [{epoch + 1}/{epochs}]: Loss {loss}")
+        print(f"Epoch [{epoch + 1}/{epochs}]: Loss {loss.data[0]:.4f}")
         exp.log_metric("train_loss", loss.data[0], step=epoch + 1) # Log loss
 
     # Evaluation
@@ -126,13 +122,13 @@ def run_experiment(experiment_id, experiment_name, description, model, optim, ep
 
 # Define the configuration for the model
 class Config:
-    BATCH_SIZE = 50
-    EPOCHS = 20
-    LR = 0.01
+    BATCH_SIZE = 64
+    EPOCHS = 10
+    LR = 0.2
     IMSIZE = (28, 28)
 
 # First Experiment: Linear -> LogSoftmax
-model_1 = nn.Pipeline(nn.Linear(784, 10, bias=False), LogSoftmax())
+model_1 = nn.Pipeline(nn.Linear(784, 10, bias=True), LogSoftmax())
 optim_1 = SGD(model_1.params, Config.LR)
 run_experiment(
     experiment_id="mnist_classification_run_1",
