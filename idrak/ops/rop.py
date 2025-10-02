@@ -67,7 +67,7 @@ class ROp(LazyOp):
         if dim is not None:
             backward_ctx = ctypes.c_int(0)
         
-        return forward_kwargs, backward_ctx
+        return forward_kwargs, None
 
 
 class Sum(ROp):

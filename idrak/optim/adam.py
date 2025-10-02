@@ -5,8 +5,6 @@ from idrak.idrak_bindings.c_wrapper_functions import c_adam, c_zero_grad
 
 class Adam(Optimizer):
     def __init__(self, params: list[Tensor], lr: float, betas: tuple[float, float] = (0.9, 0.999), epsilon = 1e-8):
-        for param in params:
-            print(param.grad)
         self.params = [param.c_tensor_ptr for param in params]
         self.num_params = len(self.params)
         self._mt_tensors = [zeros(param.shape) for param in params]

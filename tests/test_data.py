@@ -1,8 +1,10 @@
 import pytest
 from idrak.data.dataset import Dataset
 
+
 class ConcreteDataset(Dataset):
     """A concrete implementation of Dataset for testing purposes."""
+
     def __init__(self, data):
         self.data = data
 
@@ -11,6 +13,7 @@ class ConcreteDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
 
 class TestDataset:
 

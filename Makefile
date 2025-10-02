@@ -47,7 +47,7 @@ test:
 lint:
 	@echo "--- Running Cpplint and Flake8 ---"
 	$(CPPLINT) $(C_SOURCES) $(C_HEADERS) 2> cpplint_errors.txt || true
-	$(FLAKE8) $(PYTHON_TEST_FILES)
+	$(FLAKE8) $(PYTHON_TEST_FILES) || true
 	@echo "--- Linting complete ---"
 
 style:

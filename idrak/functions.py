@@ -35,13 +35,13 @@ def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] 
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
 
     if isinstance(data, np.ndarray):
-        data_ptr = data.astype(np.float32).ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+        out._data_np = data.astype(np.float32)
     elif isinstance(data, (list, tuple)):
-        data_np = np.array(data, dtype=np.float32)
-        data_ptr = data_np.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+        out._data_np = np.array(data, dtype=np.float32)
     else:
         raise TypeError(f"Unsupported data type for from_data: {type(data)}. Expected list, tuple, or numpy.ndarray.")
 
+    data_ptr = out._data_np.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     c_from_data(out.c_tensor_ptr, data_ptr)
     return out
 
@@ -91,13 +91,40 @@ def softmax(a: Tensor, dim: int = -1) -> Tensor:
 
 def log_softmax(a: Tensor, dim: int = -1) -> Tensor:
     x_max = max(a, dim=dim, keepdim=True)
-    exp_x = (a - x_max).exp()
-    log_sum_exp = sum(exp_x, dim=dim, keepdim=True).log()
-    return a - x_max - log_sum_exp
+    shifted = a - x_max
+    log_sum_exp = log(sum(exp(shifted), dim=dim, keepdim=True))
+    return shifted - log_sum_exp
+
+def one_hot(labels: Tensor, num_classes: int) -> Tensor:
+    if labels.ndim != 1:
+        raise ValueError("Labels must be a 1D tensor of class indices.")
+    
+    labels_tensor = labels # Keep a reference to the labels Tensor object
+    # Validate label values
+    labels_data_np = labels_tensor.realize().data # Keep a reference to labels.data to prevent premature garbage collection
+    if np.any(labels_data_np < 0) or np.any(labels_data_np >= num_classes):
+        raise ValueError(f"Label values must be between 0 and {num_classes - 1}, but got values outside this range.")
+
+    one_hot_data = np.zeros((labels_tensor.shape[0], num_classes), dtype=np.float32)
+    one_hot_data[np.arange(labels_tensor.shape[0]), labels_data_np.astype(np.int32)] = 1.0
+    result = from_data((labels_tensor.shape[0], num_classes), one_hot_data)
+    return result
 
 
 # ========= Reduction Operations ==========
-def sum(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Sum.create_node(a, dim, keepdim)
-def mean(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Mean.create_node(a, dim, keepdim)
-def max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor: return Max.create_node(a, dim, keepdim)
+def sum(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Sum.create_node(a, dim=dim, keepdim=keepdim)
+def mean(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Mean.create_node(a, dim=dim, keepdim=keepdim)
+def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
+
+if __name__ == "__main__":
+    from idrak.core.tensor import Tensor
+    t = from_data((2,3), [[4,5,6],[7,8,9]])
+
+    m = log_softmax(t)
+
+    m.backward()
+
+    print(m)
+
+    print(t.grad)
 
