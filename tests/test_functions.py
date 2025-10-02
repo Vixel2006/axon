@@ -1,13 +1,46 @@
 import pytest
 import numpy as np
 from idrak.core.tensor import Tensor
-from idrak.functions import zeros, ones, randn, uniform, from_data, view, unsqueeze, squeeze, expand, broadcast, transpose, concat, stack, relu, clip, log, exp, abs, neg, add, mul, pow, matmul, dot, conv2d, sub, div, sum, mean, max
+from idrak.functions import (
+    zeros,
+    ones,
+    randn,
+    uniform,
+    from_data,
+    view,
+    unsqueeze,
+    squeeze,
+    expand,
+    broadcast,
+    transpose,
+    concat,
+    stack,
+    relu,
+    clip,
+    log,
+    exp,
+    abs,
+    neg,
+    add,
+    mul,
+    pow,
+    matmul,
+    dot,
+    conv2d,
+    sub,
+    div,
+    sum,
+    mean,
+    max,
+)
+
 
 # Helper to initialize a Tensor's data directly for testing purposes.
 def _init_tensor_data(tensor: Tensor, data: np.ndarray):
     flat_data = data.flatten().astype(np.float32)
     for i, val in enumerate(flat_data):
         tensor.c_tensor_ptr.contents.data.contents.data[i] = ctypes.c_float(val)
+
 
 class TestFunctions:
 
@@ -52,7 +85,9 @@ class TestFunctions:
         data_list = [[1.0, 2.0], [3.0, 4.0]]
         t_list = from_data((2, 2), data_list)
         assert t_list.shape == (2, 2)
-        assert np.array_equal(t_list.realize().data, np.array(data_list, dtype=np.float32))
+        assert np.array_equal(
+            t_list.realize().data, np.array(data_list, dtype=np.float32)
+        )
 
         data_np = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)
         t_np = from_data((2, 2), data_np)
@@ -111,7 +146,7 @@ class TestFunctions:
 
         # Test squeezing a non-singleton dimension (should raise error)
         with pytest.raises(IndexError, match="Dimension out of range"):
-            squeeze(a, dim=1) # dim 1 has size 2, not 1
+            squeeze(a, dim=1)  # dim 1 has size 2, not 1
 
         # Test squeezing an out-of-range dimension
         with pytest.raises(IndexError, match="Dimension out of range"):
@@ -130,11 +165,11 @@ class TestFunctions:
 
         # Test with -1 for inferred dimension
         c = expand(a, (-1, 3))
-        assert c.shape == (1, 3) # (3,) expanded to (1,3)
+        assert c.shape == (1, 3)  # (3,) expanded to (1,3)
         # assert np.array_equal(c.realize().data, a_np.reshape(1, 3)) # Data assertion removed
 
         with pytest.raises(ValueError, match="Can't expand dimension"):
-            expand(a, (3, 2)) # Cannot expand 3 to 2
+            expand(a, (3, 2))  # Cannot expand 3 to 2
 
     def test_broadcast_function(self):
         a_np = np.array([[1, 2, 3]], dtype=np.float32)
@@ -243,17 +278,17 @@ class TestFunctions:
         b = from_data(b_np.shape, b_np)
 
         c = add(a, b)
-        assert c.shape == a.shape # Shape should be the same
+        assert c.shape == a.shape  # Shape should be the same
         # expected_c = a_np + b_np
         # assert np.allclose(c.realize().data, expected_c)
 
         d = add(a, 10.0)
-        assert d.shape == a.shape # Shape should be the same
+        assert d.shape == a.shape  # Shape should be the same
         # expected_d = a_np + 10.0
         # assert np.allclose(d.realize().data, expected_d)
 
         e = add(10.0, a)
-        assert e.shape == a.shape # Shape should be the same
+        assert e.shape == a.shape  # Shape should be the same
         # expected_e = 10.0 + a_np
         # assert np.allclose(e.realize().data, expected_e)
 
@@ -264,17 +299,17 @@ class TestFunctions:
         b = from_data(b_np.shape, b_np)
 
         c = sub(a, b)
-        assert c.shape == a.shape # Shape should be the same
+        assert c.shape == a.shape  # Shape should be the same
         # expected_c = a_np - b_np
         # assert np.allclose(c.realize().data, expected_c)
 
         d = sub(a, 10.0)
-        assert d.shape == a.shape # Shape should be the same
+        assert d.shape == a.shape  # Shape should be the same
         # expected_d = a_np - 10.0
         # assert np.allclose(d.realize().data, expected_d)
 
         e = sub(10.0, a)
-        assert e.shape == a.shape # Shape should be the same
+        assert e.shape == a.shape  # Shape should be the same
         # expected_e = 10.0 - a_np
         # assert np.allclose(e.realize().data, expected_e)
 
@@ -285,17 +320,17 @@ class TestFunctions:
         b = from_data(b_np.shape, b_np)
 
         c = mul(a, b)
-        assert c.shape == a.shape # Shape should be the same
+        assert c.shape == a.shape  # Shape should be the same
         # expected_c = a_np * b_np
         # assert np.allclose(c.realize().data, expected_c)
 
         d = mul(a, 10.0)
-        assert d.shape == a.shape # Shape should be the same
+        assert d.shape == a.shape  # Shape should be the same
         # expected_d = a_np * 10.0
         # assert np.allclose(d.realize().data, expected_d)
 
         e = mul(10.0, a)
-        assert e.shape == a.shape # Shape should be the same
+        assert e.shape == a.shape  # Shape should be the same
         # expected_e = 10.0 * a_np
         # assert np.allclose(e.realize().data, expected_e)
 
@@ -306,17 +341,17 @@ class TestFunctions:
         b = from_data(b_np.shape, b_np)
 
         c = div(a, b)
-        assert c.shape == a.shape # Shape should be the same
+        assert c.shape == a.shape  # Shape should be the same
         # expected_c = a_np / b_np
         # assert np.allclose(c.realize().data, expected_c)
 
         d = div(a, 2.0)
-        assert d.shape == a.shape # Shape should be the same
+        assert d.shape == a.shape  # Shape should be the same
         # expected_d = a_np / 2.0
         # assert np.allclose(d.realize().data, expected_d)
 
         e = div(20.0, a)
-        assert e.shape == a.shape # Shape should be the same
+        assert e.shape == a.shape  # Shape should be the same
         # expected_e = 20.0 / a_np
         # assert np.allclose(e.realize().data, expected_e)
 
@@ -327,11 +362,11 @@ class TestFunctions:
         b = from_data(b_np.shape, b_np)
 
         c = pow(a, b)
-        expected_c = a_np ** b_np
+        expected_c = a_np**b_np
         assert np.allclose(c.realize().data, expected_c)
 
         d = pow(a, 3.0)
-        expected_d = a_np ** 3.0
+        expected_d = a_np**3.0
         assert np.allclose(d.realize().data, expected_d)
 
     def test_matmul_function(self):
@@ -341,7 +376,7 @@ class TestFunctions:
         b = from_data(b_np.shape, b_np)
 
         c = matmul(a, b)
-        assert c.shape == (2, 2) # Shape should be (2, 2)
+        assert c.shape == (2, 2)  # Shape should be (2, 2)
         # expected_c = a_np @ b_np
         # assert np.allclose(c.realize().data, expected_c)
 
@@ -352,7 +387,7 @@ class TestFunctions:
         e = from_data(e_np.shape, e_np)
 
         f = matmul(d, e)
-        assert f.shape == (2,) # Shape should be (2,)
+        assert f.shape == (2,)  # Shape should be (2,)
         # expected_f = d_np @ e_np
         # assert np.allclose(f.realize().data, expected_f)
 
@@ -363,7 +398,7 @@ class TestFunctions:
         b = from_data(b_np.shape, b_np)
 
         c = dot(a, b)
-        assert c.shape == () # Shape should be () for scalar output
+        assert c.shape == ()  # Shape should be () for scalar output
         # expected_c = np.dot(a_np, b_np)
         # assert np.allclose(c.realize().data, expected_c)
 
@@ -374,7 +409,7 @@ class TestFunctions:
         e = from_data(e_np.shape, e_np)
 
         f = dot(d, e)
-        assert f.shape == (2,) # Shape should be (2,)
+        assert f.shape == (2,)  # Shape should be (2,)
         # expected_f = np.sum(d_np * e_np, axis=-1)
         # assert np.allclose(f.realize().data, expected_f)
 
@@ -391,7 +426,9 @@ class TestFunctions:
         stride = (1, 1)
         padding = 0
 
-        output_tensor = conv2d(input_tensor, kernel_tensor, kernel_size, stride, padding)
+        output_tensor = conv2d(
+            input_tensor, kernel_tensor, kernel_size, stride, padding
+        )
 
         # Manually compute expected output shape
         batch_size, in_channels, in_h, in_w = input_np.shape

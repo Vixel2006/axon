@@ -1,0 +1,143 @@
+artifacts:
+- name: trained_model
+  path: experiments/mnist_regression_run_1_model.pkl
+description: Training a simple linear model for MNIST digit regression.
+hyperparameters:
+  batch_size: 50
+  epochs: 20
+  learning_rate: 0.01
+  model_architecture: Linear
+id: mnist_regression_run_1
+metrics:
+  test_average_mse:
+  - step: null
+    value: !!python/object/apply:numpy._core.multiarray._reconstruct
+      args:
+      - !!python/name:numpy.ndarray ''
+      - !!python/tuple
+        - 0
+      - !!binary |
+        Yg==
+      state: !!python/tuple
+      - 1
+      - !!python/tuple
+        - 1
+      - &id001 !!python/object/apply:numpy.dtype
+        args:
+        - f4
+        - false
+        - true
+        state: !!python/tuple
+        - 3
+        - <
+        - null
+        - null
+        - null
+        - -1
+        - -1
+        - 0
+      - false
+      - !!binary |
+        E1YIQQ==
+  train_loss:
+  - step: 1
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      AWQoQQ==
+  - step: 2
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      QgcmQQ==
+  - step: 3
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      3vgiQQ==
+  - step: 4
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      FdogQQ==
+  - step: 5
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      bmwfQQ==
+  - step: 6
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      hnEeQQ==
+  - step: 7
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      pMAdQQ==
+  - step: 8
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      0z8dQQ==
+  - step: 9
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      ct4cQQ==
+  - step: 10
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      7ZEcQQ==
+  - step: 11
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      fFMcQQ==
+  - step: 12
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      uh4cQQ==
+  - step: 13
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      1/AbQQ==
+  - step: 14
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      98cbQQ==
+  - step: 15
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      6KIbQQ==
+  - step: 16
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      z4AbQQ==
+  - step: 17
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      HmEbQQ==
+  - step: 18
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      Z0MbQQ==
+  - step: 19
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      YycbQQ==
+  - step: 20
+    value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      3AwbQQ==
+name: MNIST Regression - Linear

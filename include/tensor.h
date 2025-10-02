@@ -4,17 +4,24 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#define SAFE_FREE(ptr, free_func)                                                                                                                                                                                                                                                                          \
-    do {                                                                                                                                                                                                                                                                                                   \
-        if (ptr) {                                                                                                                                                                                                                                                                                         \
-            free_func(ptr);                                                                                                                                                                                                                                                                                \
-            ptr = NULL;                                                                                                                                                                                                                                                                                    \
-        }                                                                                                                                                                                                                                                                                                  \
+#define SAFE_FREE(ptr_addr, free_func)                                                             \
+    do                                                                                             \
+    {                                                                                              \
+        if (*(ptr_addr))                                                                           \
+        {                                                                                          \
+            free_func(*(ptr_addr));                                                                \
+            *(ptr_addr) = NULL;                                                                    \
+        }                                                                                          \
     } while (0)
 
-typedef enum { CPU, CUDA } Device;
+typedef enum
+{
+    CPU,
+    CUDA
+} Device;
 
-typedef struct {
+typedef struct
+{
     float* data;
     int size;
     int counter;
@@ -23,7 +30,8 @@ typedef struct {
 Storage* smalloc(float* data, int size);
 void sfree(Storage* s);
 
-typedef struct Tensor {
+typedef struct Tensor
+{
     Storage* data;
     Storage* grad;
     int* shape;
@@ -42,4 +50,5 @@ void gfree(Tensor* t);
 int numel(const int* shape, int ndim);
 int* compute_strides(const int* shape, int ndim);
 bool is_contiguous(Tensor* t);
+bool shapes_equal(const int* shape1, int ndim1, const int* shape2, int ndim2);
 #endif

@@ -3,6 +3,7 @@ import os
 import yaml
 from idrak.experiment import Experiment
 
+
 class TestExperiment:
 
     def setup_method(self):
@@ -16,7 +17,9 @@ class TestExperiment:
             os.rmdir(self.test_dir)
 
     def test_experiment_init(self):
-        exp = Experiment(id="exp1", name="My First Experiment", description="A test run")
+        exp = Experiment(
+            id="exp1", name="My First Experiment", description="A test run"
+        )
         assert exp.id == "exp1"
         assert exp.name == "My First Experiment"
         assert exp.description == "A test run"
@@ -37,7 +40,7 @@ class TestExperiment:
         exp.log_metric("accuracy", 0.96, step=20)
         assert exp.metrics == {
             "accuracy": [{"value": 0.95, "step": 10}, {"value": 0.96, "step": 20}],
-            "loss": [{"value": 0.1, "step": 10}]
+            "loss": [{"value": 0.1, "step": 10}],
         }
 
     def test_log_artifact(self):
@@ -46,11 +49,13 @@ class TestExperiment:
         exp.log_artifact("/path/to/results.csv")
         assert exp.artifacts == [
             {"path": "/path/to/model.pt", "name": "trained_model"},
-            {"path": "/path/to/results.csv", "name": "results.csv"}
+            {"path": "/path/to/results.csv", "name": "results.csv"},
         ]
 
     def test_save_and_load_experiment(self):
-        exp = Experiment(id="exp5", name="Save/Load Test", description="Testing persistence")
+        exp = Experiment(
+            id="exp5", name="Save/Load Test", description="Testing persistence"
+        )
         exp.log_hyperparameter("epochs", 5)
         exp.log_metric("val_loss", 0.05, step=100)
         exp.log_artifact("/tmp/chart.png")

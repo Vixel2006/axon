@@ -7,7 +7,8 @@
 #include <sleef.h>
 #include <string.h>
 
-typedef struct {
+typedef struct
+{
     float min_val;
     float max_val;
 } ClipExtras;
