@@ -1,16 +1,16 @@
-from idrak.core.tensor import Tensor
-from idrak.nn.activations import ReLU, Tanh, Sigmoid
-from idrak.nn.module import Module
-from idrak.nn.linear import Linear
-from idrak.nn.pipeline import Pipeline
-from idrak.nn.init import (
+from fajr.core.tensor import Tensor
+from fajr.nn.activations import ReLU, Tanh, Sigmoid
+from fajr.nn.module import Module
+from fajr.nn.linear import Linear
+from fajr.nn.pipeline import Pipeline
+from fajr.nn.init import (
     xavier_uniform_,
     xavier_normal_,
     kaiming_uniform_,
     kaiming_normal_,
 )
-from idrak.nn.conv import Conv2d
-from idrak.functions import from_data, zeros
+from fajr.nn.conv import Conv2d
+from fajr.functions import from_data, zeros
 import numpy as np
 
 

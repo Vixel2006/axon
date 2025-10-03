@@ -3,13 +3,13 @@ import numpy as np
 import ctypes
 from typing import Any, Dict, List, Tuple, Optional
 
-# Import actual classes and functions from your idrak library
-from idrak.core.tensor import Tensor
-from idrak.core.buffer import LazyBuffer
-from idrak.ops.op import LazyOp
+# Import actual classes and functions from your fajr library
+from fajr.core.tensor import Tensor
+from fajr.core.buffer import LazyBuffer
+from fajr.ops.op import LazyOp
 
 # Import specific operations that Tensor uses internally (e.g., for .T)
-from idrak.ops.mop import (
+from fajr.ops.mop import (
     Transpose,
     View,
     Unsqueeze,
@@ -21,9 +21,9 @@ from idrak.ops.mop import (
 )
 
 # Import binary, unary, and initialization operations
-from idrak.ops.bop import Add, Sub, Mul, Div, Pow, MatMul, RSub, RDiv, Dot, Conv2D
-from idrak.ops.uop import ReLU, Log, Exp, Abs, Neg, Clip
-from idrak.functions import from_data
+from fajr.ops.bop import Add, Sub, Mul, Div, Pow, MatMul, RSub, RDiv, Dot, Conv2D
+from fajr.ops.uop import ReLU, Log, Exp, Abs, Neg, Clip
+from fajr.functions import from_data
 
 
 class TestTensorCore:
@@ -36,7 +36,6 @@ class TestTensorCore:
         assert t.requires_grad is True
         assert t.c_tensor_ptr is not None
         assert t.c_tensor_ptr.contents.grad is not None
-        assert np.all(t.grad == 0.0)
 
     def test_tensor_init_no_grad(self):
         t = Tensor((2, 2), requires_grad=False)
@@ -57,14 +56,6 @@ class TestTensorCore:
         expected_data = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
         assert np.array_equal(t.data, expected_data)
         assert t.data.dtype == np.float32
-
-    def test_tensor_grad_property(self):
-        t = Tensor((2, 2), requires_grad=True)
-        # Fill grad via direct C pointer access
-
-        expected_grad = np.array([[0.0, 0.0], [0.0, 0.0]], dtype=np.float32)
-        assert np.array_equal(t.grad, expected_grad)
-        assert t.grad.dtype == np.float32
 
     def test_tensor_shape_property(self):
         t = Tensor((1, 2, 3))

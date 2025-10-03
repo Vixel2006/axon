@@ -1,5 +1,5 @@
 import pytest
-from idrak.data.dataset import Dataset
+from fajr.data.dataset import Dataset
 
 
 class ConcreteDataset(Dataset):

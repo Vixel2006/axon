@@ -36,7 +36,8 @@ build: prepare init $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)
 	$(CMAKE) -S . -B $(BUILD_DIR)
 	$(CMAKE) --build $(BUILD_DIR)
-	$(PIP) install -e .
+	cp $(BUILD_DIR)/libfajr.so fajr/
+	$(PIP) install -e . --force-reinstall
 	@echo "--- Build complete ---"
 
 test:
