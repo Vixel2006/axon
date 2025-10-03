@@ -1,6 +1,6 @@
 # Tensor
 
-`idrak.core.tensor.Tensor` is the fundamental data structure in Idrak. It represents multi-dimensional arrays and is the primary vehicle for all computations, supporting automatic differentiation and lazy evaluation.
+`fajr.core.tensor.Tensor` is the fundamental data structure in Fajr. It represents multi-dimensional arrays and is the primary vehicle for all computations, supporting automatic differentiation and lazy evaluation.
 
 ## Key Features
 
@@ -11,11 +11,11 @@
 
 ## Initialization
 
-While `Tensor` can be directly instantiated, it's often created via functional APIs like `idrak.functions.zeros`, `idrak.functions.ones`, or `idrak.functions.from_data`.
+While `Tensor` can be directly instantiated, it's often created via functional APIs like `fajr.functions.zeros`, `fajr.functions.ones`, or `fajr.functions.from_data`.
 
 ```python
-import idrak
-import idrak.functions as F
+import fajr
+import fajr.functions as F
 import numpy as np
 
 # Create a tensor of zeros
@@ -51,8 +51,8 @@ print(y.data)
 `Tensor` supports standard arithmetic operations, which automatically build the computation graph:
 
 ```python
-import idrak
-import idrak.functions as F
+import fajr
+import fajr.functions as F
 
 a = F.ones((2, 2), requires_grad=True)
 b = F.from_data((2, 2), np.array([[1, 2], [3, 4]]), requires_grad=True)

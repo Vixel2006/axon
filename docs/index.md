@@ -1,8 +1,8 @@
-# Idrak API Documentation
+# Fajr API Documentation
 
-Welcome to the Idrak API documentation. This guide provides an overview of Idrak's Python frontend, designed for hackability, speed, and intuitive deep learning experimentation.
+Welcome to the Fajr API documentation. This guide provides an overview of Idrak's Python frontend, designed for hackability, speed, and intuitive deep learning experimentation.
 
-Idrak treats neural networks as pure pipelines of data transformations, giving you unparalleled control and insight into your models.
+Fajr treats neural networks as pure pipelines of data transformations, giving you unparalleled control and insight into your models.
 
 ## Core Modules
 
