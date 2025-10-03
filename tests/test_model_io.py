@@ -1,11 +1,11 @@
 import pytest
 import os
 import numpy as np
-from idrak.nn.pipeline import Pipeline
-from idrak.nn.linear import Linear
-from idrak.nn.activations import ReLU, Sigmoid
-from idrak.functions import from_data
-from idrak.utils.model_io import save_model, load_model
+from fajr.nn.pipeline import Pipeline
+from fajr.nn.linear import Linear
+from fajr.nn.activations import ReLU, Sigmoid
+from fajr.functions import from_data
+from fajr.utils.model_io import save_model, load_model
 
 
 class TestModelIO:

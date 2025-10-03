@@ -1,7 +1,7 @@
 import pytest
 import os
 import yaml
-from idrak.experiment import Experiment
+from fajr.experiment import Experiment
 
 
 class TestExperiment:

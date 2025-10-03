@@ -1,0 +1,27 @@
+name: IDRAK CI Action
+run-name: ${{ github.actor }} is trying to merge a pr to the main branch
+on: [push]
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - name:  Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake
+
+      - name: Install python depdenencies
+        run: |
+          python3 -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt
+
+      - name: Building the environment
+        run: make prepare init build
+
+      - name: Linting
+        run: make lint
+
+      - name: Testing the code
+        run: make test
+
