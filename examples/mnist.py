@@ -152,7 +152,7 @@ def evaluate_experiment(experiment_id):
     model_path = exp.artifacts[0]['name']
     model = load_model(model_path)
 
-    # Now we can use the model to do the evaluation
+    # Now we can use the model to do the evaluation and calculate the accuracy
     all_pred = 0
     true_pred = 0
     for image, label in testset:
@@ -171,6 +171,6 @@ def evaluate_experiment(experiment_id):
 
 
 if __name__ == "__main__":
-    #run_experiment()
+    run_experiment()
     evaluate_experiment("ua1893uae134")
 

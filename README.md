@@ -1,4 +1,4 @@
-<h1 align="center">Idrak</h1>
+<h1 align="center">Fajr</h1>
 
 <p align="center">
   This is not a deep learning framework. It's an argument.
@@ -15,16 +15,16 @@
 
 ## 🚀 Philosophy: The Unapologetic Truth of Data Transformations
 
-Idrak challenges the status quo of deep learning frameworks. We believe in a world where experimentation is effortless, extending functionality is trivial, and maintenance is a breeze. Our core philosophy revolves around:
+Fajr challenges the status quo of deep learning frameworks. We believe in a world where experimentation is effortless, extending functionality is trivial, and maintenance is a breeze. Our core philosophy revolves around:
 
--   **Neural Networks as Pure Data Pipelines:** Forget monolithic blocks. A neural network is nothing more than a relentless, sequential pipeline of data transformations. Idrak embraces this brutal simplicity, allowing you to compose and manipulate these transformations with unprecedented clarity and control.
--   **Unrivaled Hackability:** Dive deep, inspect, and mutate anything at runtime. Idrak treats you like a hacker, not just a user. We expose the guts because you deserve to see them.
+-   **Neural Networks as Pure Data Pipelines:** Forget monolithic blocks. A neural network is nothing more than a relentless, sequential pipeline of data transformations. Fajr embraces this brutal simplicity, allowing you to compose and manipulate these transformations with unprecedented clarity and control.
+-   **Unrivaled Hackability:** Dive deep, inspect, and mutate anything at runtime. Fajr treats you like a hacker, not just a user. We expose the guts because you deserve to see them.
 -   **Fast & Easy Experimentation:** Rapidly iterate on ideas without boilerplate. Focus on your unique logic, not framework intricacies. Your time is too valuable for abstraction layers that fight you.
 -   **Effortless Extensibility & Maintainability:** The modular design ensures that adding new features or maintaining existing ones is straightforward and intuitive. No more archaeological digs through opaque codebases.
--   **AI Accelerator Startup Advantage:** For those building AI accelerators, Idrak significantly reduces the backend operational overhead. Achieve PyTorch-like results with drastically less effort in writing custom ops. Stop writing thousands of lines of backend code when you could be innovating.
+-   **AI Accelerator Startup Advantage:** For those building AI accelerators, Fajr significantly reduces the backend operational overhead. Achieve PyTorch-like results with drastically less effort in writing custom ops. Stop writing thousands of lines of backend code when you could be innovating.
 -   **Laziness is Superior:** Embrace lazy evaluation for computations. This paradigm allows for powerful optimizations, efficient resource utilization, and a more intuitive way to define complex computational graphs. Why compute what you don't need, when you don't need it?
 
-Idrak achieves this through a clear, functional approach to deep learning components:
+Fajr achieves this through a clear, functional approach to deep learning components:
 -   **The Model (`Pipeline`):** Compose your model's layers into a flexible `Pipeline` object, managing learnable parameters and enabling dynamic architecture changes. It's your data's journey, laid bare.
 -   **The Experiment (`Experiment`):** A dedicated tool for tracking hyperparameters, logging metrics, and managing artifacts, providing a clear overview of your experimental runs. No more guessing what worked and why.
 
@@ -32,15 +32,15 @@ This design promotes clean, composable systems over monolithic structures, givin
 
 <br>
 
-## The Idrak Way in 4 Steps
+## The Fajr Way in 4 Steps
 
-See how Idrak's design leads to a cleaner, faster, and more hackable workflow.
+See how Fajr's design leads to a cleaner, faster, and more hackable workflow.
 
 ### Step 1: Define Hyperparameters & Initialize Experiment
 
 ```python
-import idrak
-from idrak.experiment import Experiment
+import fajr
+from fajr.experiment import Experiment
 import uuid
 
 # Define your experiment's hyperparameters
@@ -55,7 +55,7 @@ hyperparams = {
 }
 
 # Initialize an experiment to track your run
-exp = Experiment(id=str(uuid.uuid4()), name="MyFirstIdrakExperiment")
+exp = Experiment(id=str(uuid.uuid4()), name="MyFirstFajrExperiment")
 for key, value in hyperparams.items():
     exp.log_hyperparameter(key, value)
 ```
@@ -63,8 +63,8 @@ for key, value in hyperparams.items():
 ### Step 2: Build the Model (`Pipeline`)
 
 ```python
-import idrak.metrics as metrics
-from idrak.nn import Pipeline, Conv2d, Linear
+import fajr.metrics as metrics
+from fajr.nn import Pipeline, Conv2d, Linear
 
 # Layers are composed using the >> operator or passed to the Pipeline constructor
 model = Pipeline(
@@ -90,7 +90,7 @@ def my_training_step(pipeline_model, batch):
 
 ```python
 # Assuming my_train_data and my_eval_data are defined
-# Assuming an optimizer is initialized, e.g., optimizer = idrak.optim.Adam(model.params, lr=hyperparams["learning_rate"])
+# Assuming an optimizer is initialized, e.g., optimizer = fajr.optim.Adam(model.params, lr=hyperparams["learning_rate"])
 
 for epoch in range(hyperparams["epochs"]):
     total_loss = 0
@@ -123,7 +123,7 @@ exp.save() # Save experiment results
 
 ## 💣 Hackability Is Not a Feature. It's the Point.
 
-Most libraries hide their internals like it’s some sacred artifact. Idrak doesn’t do that. Everything is an object you can poke, inspect, and mutate at runtime. We tear down the walls.
+Most libraries hide their internals like it’s some sacred artifact. Fajr doesn’t do that. Everything is an object you can poke, inspect, and mutate at runtime. We tear down the walls.
 
 -   🔍 Access **all model parameters** with `pipeline.params`
 -   🧱 Access **buffers** (non-trainable states) with `pipeline.buffers`
@@ -132,15 +132,15 @@ Most libraries hide their internals like it’s some sacred artifact. Idrak does
 -   👁️‍🗨️ Pure functional `>>` pipelines — you trace, log, wrap, or fuse
 -   🧬 Plug and play — it’s just Python dicts and functional calls
 
-Frameworks treat you like a user. Idrak treats you like a hacker.
+Frameworks treat you like a user. Fajr treats you like a hacker.
 
 ### Dynamic Architecture: Swap Layers, Reset State, or Keep Going. Your Call.
 
-Idrak gives you the power to fundamentally alter your network's structure and state *mid-run*. This isn't just flexibility; it's a declaration of war on static, rigid architectures.
+Fajr gives you the power to fundamentally alter your network's structure and state *mid-run*. This isn't just flexibility; it's a declaration of war on static, rigid architectures.
 
 ```python
-from idrak.nn import Conv2d, Linear, Pipeline
-import idrak.core.tensor as T
+from fajr.nn import Conv2d, Linear, Pipeline
+import fajr.core.tensor as T
 
 # Assume 'model' is an existing Pipeline
 # Assume 'input_tensor' is a Tensor
@@ -185,7 +185,7 @@ You want to freeze weights? Detach the gradient. You want to mutate activations 
 
 ## 🔥 The Vision: A Fully Fused Stack & Lazy Evaluation
 
-Idrak's design enables our ultimate goal: bridging the gap between high-level expression and bare-metal performance, powered by lazy evaluation. This isn't just an optimization; it's a declaration of intent.
+Fajr's design enables our ultimate goal: bridging the gap between high-level expression and bare-metal performance, powered by lazy evaluation. This isn't just an optimization; it's a declaration of intent.
 
 -   **JIT Compiler for CUDA:** The explicit pipeline (`>>`) is a parsable AST. We will trace and fuse it into high-performance CUDA kernels, leveraging lazy evaluation for optimal execution. This isn't just an optimization; it's a fundamental shift in how we execute deep learning.
 -   **Lazy Evaluation for Efficiency:** Computations are only performed when their results are actually needed, leading to significant performance gains and reduced memory footprint, especially for complex graphs. Why waste cycles on intermediate results that might never be used?
@@ -210,8 +210,8 @@ Idrak's design enables our ultimate goal: bridging the gap between high-level ex
 ## 🚀 Getting Started
 
 ```bash
-git clone https://github.com/yushi2006/idrak.git
-cd idrak
+git clone https://github.com/yushi2006/fajr.git
+cd fajr
 pip install -e .
 ```
 

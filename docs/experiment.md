@@ -1,6 +1,6 @@
 # Experiment
 
-`idrak.experiment.Experiment` is a utility class designed for tracking and managing your deep learning experimental runs. It provides a structured way to log hyperparameters, metrics, and artifacts, making your research reproducible and organized.
+`fajr.experiment.Experiment` is a utility class designed for tracking and managing your deep learning experimental runs. It provides a structured way to log hyperparameters, metrics, and artifacts, making your research reproducible and organized.
 
 ## Key Features
 
@@ -14,7 +14,7 @@
 An `Experiment` is initialized with a unique ID, a name, and an optional description.
 
 ```python
-from idrak.experiment import Experiment
+from fajr.experiment import Experiment
 import uuid
 
 # Generate a unique ID for the experiment
@@ -74,11 +74,11 @@ print("Logged metrics:", exp.metrics)
 Use `log_artifact(path: str, name: Optional[str] = None)` to record paths to important files generated during your experiment. This could include saved model weights, plots, or data samples.
 
 ```python
-from idrak.experiment import Experiment
+from fajr.experiment import Experiment
 import uuid
-from idrak.utils.model_io import save_model, load_model # Added import
-from idrak.nn import Pipeline, Linear # Added for model example
-from idrak.nn.activations import Sigmoid # Added for model example
+from fajr.utils.model_io import save_model, load_model # Added import
+from fajr.nn import Pipeline, Linear # Added for model example
+from fajr.nn.activations import Sigmoid # Added for model example
 import os # Added for path operations
 
 # ... (assuming exp is initialized) ...
@@ -88,7 +88,7 @@ model = Pipeline(Linear(10, 1), Sigmoid())
 
 # Ensure the directory for saved models exists
 os.makedirs("./saved_models", exist_ok=True)
-model_path = os.path.join("./saved_models", "my_model_epoch_9.idrak")
+model_path = os.path.join("./saved_models", "my_model_epoch_9.fajr")
 save_model(model, model_path) # Now actively saving the model
 
 exp.log_artifact(model_path, name="final_model_weights")

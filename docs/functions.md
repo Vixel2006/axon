@@ -1,6 +1,6 @@
 # Functions (Functional API)
 
-`idrak.functions` provides a high-level, functional API for creating tensors and performing various operations (unary, binary, movement, reduction). These functions are the primary way to interact with Idrak's lazy computation graph and build complex expressions.
+`fajr.functions` provides a high-level, functional API for creating tensors and performing various operations (unary, binary, movement, reduction). These functions are the primary way to interact with Idrak's lazy computation graph and build complex expressions.
 
 ## Key Categories
 
@@ -15,8 +15,8 @@ Functions to create new tensors with specific initial values, this is the only o
 *   `from_data(shape: tuple, data: list | np.ndarray, device: str = "cpu", requires_grad: bool = True) -> Tensor`
 
 ```python
-import idrak
-import idrak.functions as F
+import fajr
+import fajr.functions as F
 import numpy as np
 
 a = F.zeros((2, 2))
@@ -39,8 +39,8 @@ Functions that operate on a single tensor.
 *   `clip(a: Tensor, min_val: float, max_val: float) -> Tensor`
 
 ```python
-import idrak
-import idrak.functions as F
+import fajr
+import fajr.functions as F
 
 x = F.from_data((2,2), [[-1.0, 0.5], [2.0, -3.0]], requires_grad=True)
 y = F.relu(x)
@@ -63,8 +63,8 @@ Functions that operate on two tensors or a tensor and a scalar.
 *   `conv2d(a: Tensor, b: Tensor, kernel_size: tuple, stride: tuple, padding: int) -> Tensor` (2D Convolution)
 
 ```python
-import idrak
-import idrak.functions as F
+import fajr
+import fajr.functions as F
 import numpy as np
 
 a = F.ones((2, 2), requires_grad=True)
@@ -93,8 +93,8 @@ Functions that change the shape or arrangement of tensor elements without changi
 *   `stack(a: list[Tensor], axis: int = 0) -> Tensor`
 
 ```python
-import idrak
-import idrak.functions as F
+import fajr
+import fajr.functions as F
 
 x = F.ones((1, 3))
 y = F.unsqueeze(x, dim=0) # Shape becomes (1, 1, 3)
@@ -112,8 +112,8 @@ Functions that reduce the number of dimensions of a tensor by performing an oper
 *   `max(a: Tensor, dim: int | None = None, keepdim: bool = False) -> Tensor`
 
 ```python
-import idrak
-import idrak.functions as F
+import fajr
+import fajr.functions as F
 
 x = F.from_data((2, 3), [[1, 2, 3], [4, 5, 6]])
 
