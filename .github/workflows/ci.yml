@@ -24,6 +24,12 @@ jobs:
           python3 -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+      - name: Build SLEEF
+        run: |
+          mkdir -p vendor/sleef/build
+          cmake -S vendor/sleef -B vendor/sleef/build
+          cmake --build vendor/sleef/build
+
       - name: Building the environment
         run: make prepare init build
 
