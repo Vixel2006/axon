@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(fajr C)
+project(axon C)
 
 find_path(SLEEF_INCLUDE_DIR sleef.h
           PATHS ${CMAKE_CURRENT_SOURCE_DIR}/vendor/sleef/build/include
@@ -17,7 +17,7 @@ else()
     message(FATAL_ERROR "Could not find SLEEF library or include directory.")
 endif()
 
-add_library(fajr SHARED
+add_library(axon SHARED
   src/tensor.c src/ops/cpu/unary_ops_cpu.c src/ops/cpu/reduction_ops_cpu.c src/ops/cpu/init_ops_cpu.c
   src/ops/cpu/binary_ops_cpu.c src/ops/cpu/binary_ops_scalar_cpu.c src/ops/cpu/movement_ops_cpu.c
   src/autograd/cpu/binary_ops_grad_cpu.c src/autograd/cpu/unary_ops_grad_cpu.c
@@ -25,10 +25,10 @@ add_library(fajr SHARED
   src/optimizers/sgd.c src/optimizers/adam.c src/optimizers/zero_grad.c src/autograd/cpu/movement_ops_grad_cpu.c
 )
 
-target_include_directories(fajr PUBLIC include ${SLEEF_INCLUDE_DIR})
-target_link_libraries(fajr PRIVATE ${SLEEF_LIBRARY})
-target_compile_options(fajr PRIVATE -mavx2 -mfma)
+target_include_directories(axon PUBLIC include ${SLEEF_INCLUDE_DIR})
+target_link_libraries(axon PRIVATE ${SLEEF_LIBRARY})
+target_compile_options(axon PRIVATE -mavx2 -mfma)
 
 # Set output directory for the shared library
 # This will place libidrak.so (or idrak.dll/idrak.dylib) in the build directory
-set_target_properties(fajr PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+set_target_properties(axon PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

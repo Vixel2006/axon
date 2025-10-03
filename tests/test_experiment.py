@@ -1,7 +1,7 @@
 import pytest
 import os
 import yaml
-from fajr.experiment import Experiment
+from axon.experiment import Experiment
 
 
 class TestExperiment:

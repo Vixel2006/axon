@@ -1,6 +1,6 @@
 # Pipeline
 
-`fajr.nn.pipeline.Pipeline` is the core class for composing neural network layers in Fajr. It allows you to chain `Module` instances together, treating your network as a sequential flow of data transformations. This design emphasizes clarity, hackability, and dynamic architecture manipulation.
+`axon.nn.pipeline.Pipeline` is the core class for composing neural network layers in Fajr. It allows you to chain `Module` instances together, treating your network as a sequential flow of data transformations. This design emphasizes clarity, hackability, and dynamic architecture manipulation.
 
 ## Key Features
 
@@ -14,9 +14,9 @@
 You can initialize a `Pipeline` by passing `Module` instances to its constructor or by using the `>>` operator.
 
 ```python
-import fajr as nw
-from fajr.nn import Pipeline, Linear, Conv2d
-from fajr.nn.activations import ReLU
+import axon as nw
+from axon.nn import Pipeline, Linear, Conv2d
+from axon.nn.activations import ReLU
 
 # Method 1: Pass layers to constructor
 model1 = Pipeline(
@@ -44,9 +44,9 @@ mnist_model = Linear(784, 1) >> Sigmoid()
 `Pipeline` behaves like a Python list, allowing you to inspect and modify its layers dynamically.
 
 ```python
-import fajr as nw
-from fajr.nn import Pipeline, Linear, Conv2d
-from fajr.nn.activations import ReLU, Sigmoid
+import axon as nw
+from axon.nn import Pipeline, Linear, Conv2d
+from axon.nn.activations import ReLU, Sigmoid
 
 model = Linear(784, 1) >> Sigmoid()
 
@@ -86,9 +86,9 @@ print("Model parameters reset after layer swap.")
 ## Example: Freezing Layers
 
 ```python
-import fajr as nw
-from fajr.nn import Pipeline, Linear, Conv2d
-from fajr.nn.activations import ReLU
+import axon as nw
+from axon.nn import Pipeline, Linear, Conv2d
+from axon.nn.activations import ReLU
 
 model = Linear(784, 1) >> Sigmoid()
 

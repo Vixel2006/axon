@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from fajr.core.tensor import Tensor
-from fajr.functions import (
+from axon.core.tensor import Tensor
+from axon.functions import (
     zeros,
     ones,
     randn,

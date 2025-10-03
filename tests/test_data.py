@@ -1,5 +1,5 @@
 import pytest
-from fajr.data.dataset import Dataset
+from axon.data.dataset import Dataset
 
 
 class ConcreteDataset(Dataset):

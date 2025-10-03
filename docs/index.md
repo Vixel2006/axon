@@ -1,8 +1,8 @@
-# Fajr API Documentation
+# Axon API Documentation
 
-Welcome to the Fajr API documentation. This guide provides an overview of Idrak's Python frontend, designed for hackability, speed, and intuitive deep learning experimentation.
+Welcome to the Axon API documentation. This guide provides an overview of Idrak's Python frontend, designed for hackability, speed, and intuitive deep learning experimentation.
 
-Fajr treats neural networks as pure pipelines of data transformations, giving you unparalleled control and insight into your models.
+Axon treats neural networks as pure pipelines of data transformations, giving you unparalleled control and insight into your models.
 
 ## Core Modules
 

@@ -11,9 +11,8 @@
 void add_scalar_op(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: add_scalar_op: Performing scalar addition (scalar=%.2f)", b);
-    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
+             (void*) a->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     int size = numel(a->shape, a->ndim);
     float* data = malloc(sizeof(float) * size);
@@ -61,9 +60,8 @@ void add_scalar_op(Tensor* a, float b, Tensor* out)
 void sub_scalar_op(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: sub_scalar_op: Performing scalar subtraction (scalar=%.2f)", b);
-    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
+             (void*) a->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     int size = numel(a->shape, a->ndim);
     float* data = malloc(sizeof(float) * size);
@@ -111,9 +109,8 @@ void sub_scalar_op(Tensor* a, float b, Tensor* out)
 void rsub_scalar_op(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: rsub_scalar_op: Performing reverse scalar subtraction (scalar=%.2f)", b);
-    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
+             (void*) a->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     // Error checking for null tensors
     if (!b || !out)
@@ -170,9 +167,8 @@ void rsub_scalar_op(Tensor* a, float b, Tensor* out)
 void mul_scalar_op(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: mul_scalar_op: Performing scalar multiplication (scalar=%.2f)", b);
-    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
+             (void*) a->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     int size = numel(a->shape, a->ndim);
     float* data = malloc(sizeof(float) * size);
@@ -220,9 +216,8 @@ void mul_scalar_op(Tensor* a, float b, Tensor* out)
 void div_scalar_op(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: div_scalar_op: Performing scalar division (scalar=%.2f)", b);
-    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
+             (void*) a->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     int size = numel(a->shape, a->ndim);
     float* data = malloc(sizeof(float) * size);
@@ -292,9 +287,8 @@ void div_scalar_op(Tensor* a, float b, Tensor* out)
 void rdiv_scalar_op(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: rdiv_scalar_op: Performing reverse scalar division (scalar=%.2f)", b);
-    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
+             (void*) a->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     int size = numel(a->shape, a->ndim);
     float* data = malloc(sizeof(float) * size);
@@ -362,9 +356,8 @@ void rdiv_scalar_op(Tensor* a, float b, Tensor* out)
 void pow_scalar_op(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: pow_scalar_op: Performing scalar power (exponent=%.2f)", b);
-    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+    LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
+             (void*) a->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     int size = numel(a->shape, a->ndim);
     float* data = malloc(sizeof(float) * size);

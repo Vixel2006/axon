@@ -1,8 +1,8 @@
-#ifndef IDRAK_UTILS_H
-#define IDRAK_UTILS_H
+#ifndef AXON_UTILS_H
+#define AXON_UTILS_H
 
 #include "logger.h"
-#include "tensor.h" // Required for Tensor type in get_flat_index
+#include "tensor.h"
 
 void print_shape(const int* shape, int ndim);
 int get_flat_index(const Tensor* t, const int* indices);

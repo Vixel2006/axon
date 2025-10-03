@@ -1,5 +1,5 @@
-#ifndef IDRAK_MOVEMENT_GRAD
-#define IDRAK_MOVEMENT_GRAD
+#ifndef AXON_MOVEMENT_GRAD
+#define AXON_MOVEMENT_GRAD
 
 #include "logger.h"
 #include "utils.h"

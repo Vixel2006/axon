@@ -3,13 +3,13 @@ import numpy as np
 import ctypes
 from typing import Any, Dict, List, Tuple, Optional
 
-# Import actual classes and functions from your fajr library
-from fajr.core.tensor import Tensor
-from fajr.core.buffer import LazyBuffer
-from fajr.ops.op import LazyOp
+# Import actual classes and functions from your axon library
+from axon.core.tensor import Tensor
+from axon.core.buffer import LazyBuffer
+from axon.ops.op import LazyOp
 
 # Import specific operations that Tensor uses internally (e.g., for .T)
-from fajr.ops.mop import (
+from axon.ops.mop import (
     Transpose,
     View,
     Unsqueeze,
@@ -21,9 +21,9 @@ from fajr.ops.mop import (
 )
 
 # Import binary, unary, and initialization operations
-from fajr.ops.bop import Add, Sub, Mul, Div, Pow, MatMul, RSub, RDiv, Dot, Conv2D
-from fajr.ops.uop import ReLU, Log, Exp, Abs, Neg, Clip
-from fajr.functions import from_data
+from axon.ops.bop import Add, Sub, Mul, Div, Pow, MatMul, RSub, RDiv, Dot, Conv2D
+from axon.ops.uop import ReLU, Log, Exp, Abs, Neg, Clip
+from axon.functions import from_data
 
 
 class TestTensorCore:

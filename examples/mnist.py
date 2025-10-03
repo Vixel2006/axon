@@ -1,13 +1,13 @@
 import os
-import fajr
+import axon
 import numpy as np
-from fajr import experiment
-import fajr.functions as F
-import fajr.metrics as metrics
-from fajr.data import Dataset, DataLoader
-import fajr.nn as nn
-import fajr.optim as optim
-from fajr.utils.model_io import save_model, load_model
+from axon import experiment
+import axon.functions as F
+import axon.metrics as metrics
+from axon.data import Dataset, DataLoader
+import axon.nn as nn
+import axon.optim as optim
+from axon.utils.model_io import save_model, load_model
 from sklearn.datasets import fetch_openml
 
 # ========== Initializing the dataset for the training ===============
@@ -34,7 +34,7 @@ class Mnist(Dataset):
     def __len__(self) -> int:
         return self.labels.shape[0]
 
-    def __getitem__(self, idx: int | slice) -> tuple[fajr.Tensor, fajr.Tensor]:
+    def __getitem__(self, idx: int | slice) -> tuple[axon.Tensor, axon.Tensor]:
         images_np, labels_np = self.images[idx].reshape(-1, 784), self.labels[idx]
 
         # One-hot encode the labels
@@ -44,7 +44,7 @@ class Mnist(Dataset):
         
         one_hot_labels_np = self.one_hot_encoding(batch_size, labels_np)
         
-        # Convert one-hot encoded numpy array to fajr.Tensor
+        # Convert one-hot encoded numpy array to axon.Tensor
         labels = F.from_data(one_hot_labels_np.shape, one_hot_labels_np)
 
         return images, labels
@@ -94,7 +94,7 @@ testloader = DataLoader(testset, batch_size=1)
 
 # ====== Define a function to run experiements ===========
 def run_experiment():
-    experiment = fajr.Experiment(id="ua1893uae134", name=FFNExperiment.name, description=FFNExperiment.description)
+    experiment = axon.Experiment(id="ua1893uae134", name=FFNExperiment.name, description=FFNExperiment.description)
 
     print(f"Starting experiment {FFNExperiment.name}")
     print("="*20)
@@ -146,7 +146,7 @@ def evaluate_experiment(experiment_id):
     print("="*20)
 
     # Load the experiment we want to evaluate using the id
-    exp = fajr.Experiment.load(experiment_id)
+    exp = axon.Experiment.load(experiment_id)
 
     # Getting the saved model from the experiment and load it (here the model is the only artifact so we can export it easily)
     model_path = exp.artifacts[0]['name']

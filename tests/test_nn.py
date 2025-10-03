@@ -1,16 +1,16 @@
-from fajr.core.tensor import Tensor
-from fajr.nn.activations import ReLU, Tanh, Sigmoid
-from fajr.nn.module import Module
-from fajr.nn.linear import Linear
-from fajr.nn.pipeline import Pipeline
-from fajr.nn.init import (
+from axon.core.tensor import Tensor
+from axon.nn.activations import ReLU, Tanh, Sigmoid
+from axon.nn.module import Module
+from axon.nn.linear import Linear
+from axon.nn.pipeline import Pipeline
+from axon.nn.init import (
     xavier_uniform_,
     xavier_normal_,
     kaiming_uniform_,
     kaiming_normal_,
 )
-from fajr.nn.conv import Conv2d
-from fajr.functions import from_data, zeros
+from axon.nn.conv import Conv2d
+from axon.functions import from_data, zeros
 import numpy as np
 
 

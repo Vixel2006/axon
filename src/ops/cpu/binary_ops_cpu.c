@@ -71,9 +71,8 @@ void add_op(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: add_op: Performing element-wise addition");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)b->data->data, (void*)b->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+             (void*) a->data->data, (void*) a->grad->data, (void*) b->data->data,
+             (void*) b->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     if (!check_tensors(a, b, out, "add_op")) return;
 
@@ -114,9 +113,8 @@ void sub_op(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: sub_op: Performing element-wise subtraction");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)b->data->data, (void*)b->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+             (void*) a->data->data, (void*) a->grad->data, (void*) b->data->data,
+             (void*) b->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     if (!check_tensors(a, b, out, "sub_op")) return;
 
@@ -158,9 +156,8 @@ void mul_op(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: mul_op: Performing element-wise multiplication");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)b->data->data, (void*)b->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+             (void*) a->data->data, (void*) a->grad->data, (void*) b->data->data,
+             (void*) b->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     if (!check_tensors(a, b, out, "mul_op")) return;
 
@@ -201,9 +198,8 @@ void div_op(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: div_op: Performing element-wise division");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)b->data->data, (void*)b->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+             (void*) a->data->data, (void*) a->grad->data, (void*) b->data->data,
+             (void*) b->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     if (!check_tensors(a, b, out, "div_op")) return;
 
@@ -244,9 +240,8 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P)
 {
     LOG_INFO("OP: matmul_op: Performing matrix multiplication (N=%d, K=%d, P=%d)", N, K, P);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)b->data->data, (void*)b->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+             (void*) a->data->data, (void*) a->grad->data, (void*) b->data->data,
+             (void*) b->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     if (!check_tensors(a, b, out, "matmul_op")) return;
 
@@ -422,10 +417,10 @@ void conv2d_op(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size, 
                const int padding)
 {
     LOG_INFO("OP: conv2d_op: Performing 2D convolution");
-    LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | kernel: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)in->data->data, (void*)in->grad->data,
-             (void*)kernel->data->data, (void*)kernel->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+    LOG_INFO(
+        "Tensor Pointers - in: data=%p, grad=%p | kernel: data=%p, grad=%p | out: data=%p, grad=%p",
+        (void*) in->data->data, (void*) in->grad->data, (void*) kernel->data->data,
+        (void*) kernel->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     if (!check_tensors(in, kernel, out, "conv2d_op")) return;
 
@@ -504,9 +499,8 @@ void dot_op(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: dot_op: Performing dot product");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)b->data->data, (void*)b->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+             (void*) a->data->data, (void*) a->grad->data, (void*) b->data->data,
+             (void*) b->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     if (!check_tensors(a, b, out, "dot_op")) return;
 
@@ -561,9 +555,8 @@ void pow_op(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: pow_op: Performing element-wise power");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*)a->data->data, (void*)a->grad->data,
-             (void*)b->data->data, (void*)b->grad->data,
-             (void*)out->data->data, (void*)out->grad->data);
+             (void*) a->data->data, (void*) a->grad->data, (void*) b->data->data,
+             (void*) b->grad->data, (void*) out->data->data, (void*) out->grad->data);
 
     if (!check_tensors(a, b, out, "pow_op")) return;
 

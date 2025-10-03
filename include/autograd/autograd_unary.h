@@ -1,5 +1,5 @@
-#ifndef IDRAK_UNARY_GRAD
-#define IDRAK_UNARY_GRAD
+#ifndef AXON_UNARY_GRAD
+#define AXON_UNARY_GRAD
 #include "logger.h"
 #include "utils.h"
 #include <immintrin.h>

@@ -1,5 +1,5 @@
-#ifndef IDRAK_BINARY_GRAD
-#define IDRAK_BINARY_GRAD
+#ifndef AXON_BINARY_GRAD
+#define AXON_BINARY_GRAD
 #include "logger.h"
 #include "utils.h"
 #include <immintrin.h>
@@ -7,7 +7,8 @@
 #include <sleef.h>
 #include <string.h>
 
-typedef struct {
+typedef struct
+{
     int padding;
     int H_in;
     int W_in;

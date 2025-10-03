@@ -1,6 +1,6 @@
-# 🤝 contributing to fajr
+# 🤝 contributing to Axon
 
-welcome, fellow hacker! fajr is not just another deep learning framework; it's a statement. if you resonate with our philosophy of uncompromising hackability, raw performance, and elegant simplicity, then your contributions are invaluable.
+welcome, fellow hacker! axon is not just another deep learning framework; it's a statement. if you resonate with our philosophy of uncompromising hackability, raw performance, and elegant simplicity, then your contributions are invaluable.
 
 we demand code that is **optimized as fuck**, **smaller and compressed**, and **easy to read as fuck**. if your code doesn't meet these standards, it doesn't belong here.
 
@@ -12,39 +12,39 @@ before you dive in, ensure you have your development environment set up:
 2.  **clone your fork:** `git clone https://github.com/your-username/nawah.git`
 3.  **navigate to the project root:** `cd nawah`
 4.  **install python dependencies:** `pip install -e .`
-5.  **build the c backend:** fajr relies on a high-performance c backend. you'll need `cmake` and a c compiler (like `gcc`).
+5.  **build the c backend:** axon relies on a high-performance c backend. you'll need `cmake` and a c compiler (like `gcc`).
     ```bash
     mkdir build && cd build
     cmake ..
     make
     ```
-    ensure `libfajr.so` (or `libidrak.dylib` on macos) is generated in the `build/` directory.
+    ensure `libaxon.so` (or `libidrak.dylib` on macos) is generated in the `build/` directory.
 
-## 🧠 codebase overview: the fajr architecture
+## 🧠 codebase overview: the axon architecture
 
-fajr's power comes from its hybrid python/c architecture, designed for maximum flexibility and performance.
+axon's power comes from its hybrid python/c architecture, designed for maximum flexibility and performance.
 
-### python frontend (`fajr/`)
+### python frontend (`axon/`)
 
 this is where the user-facing api and high-level logic reside.
 
-*   **`fajr/core/tensor.py`**: defines the python `tensor` object. this is your primary data structure. it manages shape, device, and `requires_grad`, but crucially, it delegates actual data storage and computation to the c backend via `idrak_bindings`. it also overloads python operators (`+`, `*`, `@`, etc.) to construct the lazy computation graph.
-*   **`fajr/core/buffer.py`**: implements `lazybuffer`, the heart of idrak's lazy evaluation and autograd system. it handles topological sorting (`topo_sort`) for efficient execution and `realize()` for triggering computation and `backward()` for gradient propagation.
-*   **`fajr/idrak_bindings/`**: the critical bridge between python and c.
-    *   **`c_library_loader.py`**: dynamically loads the compiled c shared library (`libfajr.so`).
+*   **`axon/core/tensor.py`**: defines the python `tensor` object. this is your primary data structure. it manages shape, device, and `requires_grad`, but crucially, it delegates actual data storage and computation to the c backend via `idrak_bindings`. it also overloads python operators (`+`, `*`, `@`, etc.) to construct the lazy computation graph.
+*   **`axon/core/buffer.py`**: implements `lazybuffer`, the heart of idrak's lazy evaluation and autograd system. it handles topological sorting (`topo_sort`) for efficient execution and `realize()` for triggering computation and `backward()` for gradient propagation.
+*   **`axon/idrak_bindings/`**: the critical bridge between python and c.
+    *   **`c_library_loader.py`**: dynamically loads the compiled c shared library (`libaxon.so`).
     *   **`ctypes_definitions.py`**: defines `ctypes` structures that precisely mirror the c `tensor`, `storage`, and `device` structs. this allows python to directly manipulate c data types.
     *   **`c_function_signatures.py`**: declares the argument and return types for all c functions exposed to python, ensuring correct data marshaling.
     *   **`c_wrapper_functions.py`**: provides convenient python functions that wrap the raw `ctypes` calls to the c backend.
-*   **`fajr/ops/`**: python-side definitions of all tensor operations.
+*   **`axon/ops/`**: python-side definitions of all tensor operations.
     *   **`op.py`**: the abstract base class `lazyop`. every operation (unary, binary, movement, reduction) must inherit from this. it defines the interface for calculating output shapes (`calc_out_shape`), creating c-specific context (`create_ctx_struct`), and the python-side `forward` and `backward` calls that delegate to c. the `create_node` method is fundamental for building the lazy computation graph.
     *   **`uop.py`, `bop.py`, `mop.py`, `rop.py`**: concrete implementations for unary, binary, movement, and reduction operations. these classes define the python logic for an operation and then call the appropriate c wrapper function.
-*   **`fajr/nn/`**: python-side neural network modules.
+*   **`axon/nn/`**: python-side neural network modules.
     *   **`module.py`**: the abstract base class `module`. all neural network layers inherit from this, defining `forward`, `params`, `buffers`, `freeze`, and `reset_parameters`.
     *   **`pipeline.py`**: the `pipeline` class, a `module` that acts as a sequential container for other `module`s. it enables the `>>` operator for chaining layers and supports list-like access (`model[0]`, `model[1:3]`).
     *   **`conv.py`, `linear.py`, `activations.py`**: implementations of standard neural network layers.
-*   **`fajr/functions.py`**: a functional api for common tensor operations (e.g., `zeros`, `add`, `relu`). these functions typically wrap the `lazyop.create_node` calls, providing a more convenient interface.
-*   **`fajr/metrics/`**: python-side implementations of loss functions (e.g., `bce`, `mse`).
-*   **`fajr/optim/`**: python-side wrappers for optimizers (e.g., `adam`, `sgd`).
+*   **`axon/functions.py`**: a functional api for common tensor operations (e.g., `zeros`, `add`, `relu`). these functions typically wrap the `lazyop.create_node` calls, providing a more convenient interface.
+*   **`axon/metrics/`**: python-side implementations of loss functions (e.g., `bce`, `mse`).
+*   **`axon/optim/`**: python-side wrappers for optimizers (e.g., `adam`, `sgd`).
 
 ### c backend (`src/`)
 
@@ -88,16 +88,16 @@ found a bug? don't just complain; help us fix it.
 2.  if not, open a new issue.
 3.  provide a clear, concise description of the bug.
 4.  include steps to reproduce the bug.
-5.  specify your environment (os, python version, fajr version).
+5.  specify your environment (os, python version, axon version).
 6.  (optional but highly appreciated) provide a minimal code example that demonstrates the bug.
 
 ### suggesting features
 
-have an idea to make fajr even more brutal?
+have an idea to make axon even more brutal?
 
 1.  open an issue on the [issue tracker](https://github.com/yushi2006/nawah/issues).
 2.  clearly describe the feature and its use case.
-3.  explain *why* this feature is important and how it aligns with fajr's philosophy.
+3.  explain *why* this feature is important and how it aligns with axon's philosophy.
 
 ### submitting pull requests
 
@@ -122,31 +122,31 @@ ready to contribute code? follow these steps:
     *   implement the `backward` pass (gradient) in `src/autograd/cpu/your_op_grad_cpu.c`. this is where the real magic happens.
     *   add function declarations to `include/ops/your_op.h` and `include/autograd/autograd_your_op.h`.
     *   update `cmakelists.txt` to compile your new c files.
-2.  **ctypes definitions (`fajr/idrak_bindings/ctypes_definitions.py`)**:
+2.  **ctypes definitions (`axon/idrak_bindings/ctypes_definitions.py`)**:
     *   if your operation requires special context for the backward pass (e.g., `conv2dbackwardextras`), define its `ctypes.structure` here.
-3.  **c function signatures (`fajr/idrak_bindings/c_function_signatures.py`)**:
+3.  **c function signatures (`axon/idrak_bindings/c_function_signatures.py`)**:
     *   declare the `argtypes` and `restype` for your new c `forward` and `backward` functions.
-4.  **c wrapper functions (`fajr/idrak_bindings/c_wrapper_functions.py`)**:
+4.  **c wrapper functions (`axon/idrak_bindings/c_wrapper_functions.py`)**:
     *   create python wrapper functions for your new c functions.
-5.  **python `lazyop` (`fajr/ops/your_op.py`)**:
+5.  **python `lazyop` (`axon/ops/your_op.py`)**:
     *   create a new class inheriting from `lazyop` (or `uop`, `bop`, `rop`, `mop` if applicable).
     *   implement `calc_out_shape`, `create_ctx_struct`, `forward`, and `backward` methods, calling your c wrappers.
-    *   add your new `lazyop` to `fajr/ops/__init__.py`.
-6.  **functional api (`fajr/functions.py`)**:
+    *   add your new `lazyop` to `axon/ops/__init__.py`.
+6.  **functional api (`axon/functions.py`)**:
     *   add a high-level functional wrapper for your operation.
 7.  **tests**: write comprehensive tests for your new operation.
 
-#### adding new neural network layers (`fajr/nn/`)
+#### adding new neural network layers (`axon/nn/`)
 
-1.  create a new python file (e.g., `fajr/nn/my_layer.py`).
-2.  define your layer class, inheriting from `fajr.nn.module`.
+1.  create a new python file (e.g., `axon/nn/my_layer.py`).
+2.  define your layer class, inheriting from `axon.nn.module`.
 3.  implement the `__init__`, `forward`, and `reset_parameters` methods.
-4.  use existing `fajr.functions` or `idrak.nn` components.
-5.  add your new layer to `fajr/nn/__init__.py`.
+4.  use existing `axon.functions` or `idrak.nn` components.
+5.  add your new layer to `axon/nn/__init__.py`.
 6.  write tests.
 
 ## 💬 community & support
 
-join the discussion, ask questions, and share your fajr creations! (add links to discord, github discussions, etc., if available).
+join the discussion, ask questions, and share your axon creations! (add links to discord, github discussions, etc., if available).
 
-thank you for contributing to fajr. let's build something truly revolutionary.
+thank you for contributing to axon. let's build something truly revolutionary.

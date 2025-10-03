@@ -1,9 +1,9 @@
 import pytest
 import numpy as np
-from fajr.core.tensor import Tensor
-from fajr.optim.sgd import SGD
-from fajr.optim.adam import Adam
-from fajr.functions import from_data, zeros
+from axon.core.tensor import Tensor
+from axon.optim.sgd import SGD
+from axon.optim.adam import Adam
+from axon.functions import from_data, zeros
 
 
 class TestOptim:

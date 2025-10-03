@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
-from fajr.core.tensor import Tensor
-from fajr.functions import from_data, zeros, ones
-from fajr.metrics import bce, mse, nll_loss
+from axon.core.tensor import Tensor
+from axon.functions import from_data, zeros, ones
+from axon.metrics import bce, mse, nll_loss
 
 
 class TestMetrics:

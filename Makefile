@@ -36,7 +36,7 @@ build: prepare init $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)
 	$(CMAKE) -S . -B $(BUILD_DIR)
 	$(CMAKE) --build $(BUILD_DIR)
-	cp $(BUILD_DIR)/libfajr.so fajr/
+	cp $(BUILD_DIR)/libaxon.so axon/
 	$(PIP) install -e . --force-reinstall
 	@echo "--- Build complete ---"
 

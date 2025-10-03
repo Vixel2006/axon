@@ -1,5 +1,5 @@
-#ifndef IDRAK_UNARY_OPS_H
-#define IDRAK_UNARY_OPS_H
+#ifndef AXON_UNARY_OPS_H
+#define AXON_UNARY_OPS_H
 
 #include "tensor.h"
 

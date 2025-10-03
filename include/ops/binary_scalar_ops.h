@@ -1,5 +1,5 @@
-#ifndef IDRAK_BINARY_SCALAR_H
-#define IDRAK_BINARY_SCALAR_H
+#ifndef AXON_BINARY_SCALAR_H
+#define AXON_BINARY_SCALAR_H
 
 #include "ops/init_ops.h"
 #include "tensor.h"

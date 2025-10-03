@@ -5,28 +5,37 @@
 
 #define SIMD_WIDTH 8
 
-void sgd(Tensor** params, int num_params, float lr) {
+void sgd(Tensor** params, int num_params, float lr)
+{
     __m256 lr_vec = _mm256_set1_ps(lr);
 
-    for (int i = 0; i < num_params; ++i) {
-        if (!params[i] || !params[i]->requires_grad || !params[i]->grad->data || !params[i]->data->data) {
-            LOG_WARN("sgd: Skipping parameter %d due to invalid tensor, missing grad, or missing data.", i);
+    for (int i = 0; i < num_params; ++i)
+    {
+        if (!params[i] || !params[i]->requires_grad || !params[i]->grad->data ||
+            !params[i]->data->data)
+        {
+            LOG_WARN(
+                "sgd: Skipping parameter %d due to invalid tensor, missing grad, or missing data.",
+                i);
             continue;
         }
 
         int num_elements = numel(params[i]->shape, params[i]->ndim);
-        if (num_elements == 0) {
+        if (num_elements == 0)
+        {
             LOG_WARN("sgd: Skipping parameter %d due to zero elements.", i);
             continue;
         }
 
         // --- Contiguous Path ---
-        if (is_contiguous(params[i])) {
+        if (is_contiguous(params[i]))
+        {
             float* data_ptr = params[i]->data->data;
             float* grad_ptr = params[i]->grad->data;
 
             int j = 0;
-            for (; j + SIMD_WIDTH - 1 < num_elements; j += SIMD_WIDTH) {
+            for (; j + SIMD_WIDTH - 1 < num_elements; j += SIMD_WIDTH)
+            {
                 __m256 data_vec = _mm256_loadu_ps(data_ptr + j);
                 __m256 grad_vec = _mm256_loadu_ps(grad_ptr + j);
                 __m256 term = _mm256_mul_ps(lr_vec, grad_vec);
@@ -38,21 +47,25 @@ void sgd(Tensor** params, int num_params, float lr) {
             }
 
             // Scalar fallback
-            for (; j < num_elements; ++j) {
+            for (; j < num_elements; ++j)
+            {
                 data_ptr[j] -= lr * grad_ptr[j];
                 grad_ptr[j] = 0.0f; // Zero gradient
             }
         }
         // --- Non-Contiguous Path ---
-        else {
+        else
+        {
             // Use separate index calculations for data and grad
             int* indices = calloc(params[i]->ndim, sizeof(int));
-            if (!indices) {
+            if (!indices)
+            {
                 LOG_ERROR("sgd: Failed to allocate memory for indices for parameter %d.", i);
                 continue;
             }
 
-            for (int k = 0; k < num_elements; ++k) {
+            for (int k = 0; k < num_elements; ++k)
+            {
                 size_t data_idx = get_flat_index(params[i], indices);
                 // Assuming grad has same layout - if not, calculate separately
                 params[i]->data->data[data_idx] -= lr * params[i]->grad->data[data_idx];
@@ -60,11 +73,15 @@ void sgd(Tensor** params, int num_params, float lr) {
 
                 // Increment indices (your existing logic is fine)
                 int carry = 1;
-                for (int dim = params[i]->ndim - 1; dim >= 0 && carry; --dim) {
+                for (int dim = params[i]->ndim - 1; dim >= 0 && carry; --dim)
+                {
                     indices[dim]++;
-                    if (indices[dim] < params[i]->shape[dim]) {
+                    if (indices[dim] < params[i]->shape[dim])
+                    {
                         break;
-                    } else {
+                    }
+                    else
+                    {
                         indices[dim] = 0;
                         carry = 1;
                     }

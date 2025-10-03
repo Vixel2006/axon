@@ -1,11 +1,11 @@
 import pytest
 import os
 import numpy as np
-from fajr.nn.pipeline import Pipeline
-from fajr.nn.linear import Linear
-from fajr.nn.activations import ReLU, Sigmoid
-from fajr.functions import from_data
-from fajr.utils.model_io import save_model, load_model
+from axon.nn.pipeline import Pipeline
+from axon.nn.linear import Linear
+from axon.nn.activations import ReLU, Sigmoid
+from axon.functions import from_data
+from axon.utils.model_io import save_model, load_model
 
 
 class TestModelIO:

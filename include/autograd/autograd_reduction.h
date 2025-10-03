@@ -1,5 +1,5 @@
-#ifndef IDRAK_REDUCTION_GRAD
-#define IDRAK_REDUCTION_GRAD
+#ifndef AXON_REDUCTION_GRAD
+#define AXON_REDUCTION_GRAD
 
 #include "utils.h"
 #include <immintrin.h>

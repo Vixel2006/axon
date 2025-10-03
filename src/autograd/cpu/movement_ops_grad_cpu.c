@@ -2,60 +2,80 @@
 
 #define SIMD_WIDTH 8
 
-void concat_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
+void concat_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+{
     // Error checking for null tensors
-    if (!out || !out->grad->data || !prev) {
+    if (!out || !out->grad->data || !prev)
+    {
         LOG_ERROR("concat_grad_op ERROR: Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
-                  (void*)out, (void*)out->grad->data, (void*)prev);
+                  (void*) out, (void*) out->grad->data, (void*) prev);
         return;
     }
 
-    for (int tensor_idx = 0; tensor_idx < n_prev; ++tensor_idx) {
-        if (!prev[tensor_idx]) {
+    for (int tensor_idx = 0; tensor_idx < n_prev; ++tensor_idx)
+    {
+        if (!prev[tensor_idx])
+        {
             LOG_ERROR("concat_grad_op ERROR: Previous tensor at index %d is NULL!", tensor_idx);
             return;
         }
-        if (prev[tensor_idx]->requires_grad && !prev[tensor_idx]->grad->data) {
-            LOG_ERROR("concat_grad_op ERROR: Previous tensor at index %d requires grad but its grad is NULL!", tensor_idx);
+        if (prev[tensor_idx]->requires_grad && !prev[tensor_idx]->grad->data)
+        {
+            LOG_ERROR("concat_grad_op ERROR: Previous tensor at index %d requires grad but its "
+                      "grad is NULL!",
+                      tensor_idx);
             return;
         }
     }
 
     int offset = 0;
 
-    LOG_INFO("Starting concat_grad_op: out.numel=%d, n_prev=%d", numel(out->shape, out->ndim), n_prev);
+    LOG_INFO("Starting concat_grad_op: out.numel=%d, n_prev=%d", numel(out->shape, out->ndim),
+             n_prev);
 
-    for (int tensor_idx = 0; tensor_idx < n_prev; ++tensor_idx) {
+    for (int tensor_idx = 0; tensor_idx < n_prev; ++tensor_idx)
+    {
         int size = numel(prev[tensor_idx]->shape, prev[tensor_idx]->ndim);
 
-        LOG_INFO("Processing tensor %d: size=%d, ndim=%d, requires_grad=%d, offset=%d", tensor_idx, size, prev[tensor_idx]->ndim, prev[tensor_idx]->requires_grad, offset);
+        LOG_INFO("Processing tensor %d: size=%d, ndim=%d, requires_grad=%d, offset=%d", tensor_idx,
+                 size, prev[tensor_idx]->ndim, prev[tensor_idx]->requires_grad, offset);
 
-        if (prev[tensor_idx]->requires_grad) {
-            if (!is_contiguous(prev[tensor_idx])) {
+        if (prev[tensor_idx]->requires_grad)
+        {
+            if (!is_contiguous(prev[tensor_idx]))
+            {
                 LOG_WARN("Tensor %d is not contiguous, using strided accumulation", tensor_idx);
 
-                for (int linear = 0; linear < size; ++linear) {
+                for (int linear = 0; linear < size; ++linear)
+                {
                     int idx = linear;
                     int in_offset = 0;
 
-                    for (int d = prev[tensor_idx]->ndim - 1; d >= 0; --d) {
+                    for (int d = prev[tensor_idx]->ndim - 1; d >= 0; --d)
+                    {
                         int coord = idx % prev[tensor_idx]->shape[d];
                         idx /= prev[tensor_idx]->shape[d];
                         in_offset += coord * prev[tensor_idx]->strides[d];
                     }
 
-                    prev[tensor_idx]->grad->data[in_offset] += out->grad->data[offset + linear] * prev[tensor_idx]->data->data[in_offset];
+                    prev[tensor_idx]->grad->data[in_offset] +=
+                        out->grad->data[offset + linear] * prev[tensor_idx]->data->data[in_offset];
 
-                    if (linear < 5) {
-                        LOG_INFO("    [non-contig] linear=%d -> in_offset=%d, grad=%f", linear, in_offset, prev[tensor_idx]->grad->data[in_offset]);
+                    if (linear < 5)
+                    {
+                        LOG_INFO("    [non-contig] linear=%d -> in_offset=%d, grad=%f", linear,
+                                 in_offset, prev[tensor_idx]->grad->data[in_offset]);
                     }
                 }
-            } else {
+            }
+            else
+            {
                 LOG_INFO("Tensor %d is contiguous, using SIMD if possible", tensor_idx);
 
                 int i = 0;
-                for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH) {
+                for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH)
+                {
                     __m256 din = _mm256_loadu_ps(prev[tensor_idx]->grad->data + i);
                     __m256 dout = _mm256_loadu_ps(out->grad->data + i + offset);
                     __m256 dd = _mm256_add_ps(din, dout);
@@ -63,10 +83,12 @@ void concat_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras) {
                     _mm256_store_ps(prev[tensor_idx]->grad->data + i, dd);
                 }
 
-                for (; i < size; ++i) {
+                for (; i < size; ++i)
+                {
                     prev[tensor_idx]->grad->data[i] += out->grad->data[i + offset];
 
-                    if (i < 5) { // show first few elems
+                    if (i < 5)
+                    { // show first few elems
                         LOG_INFO("    [contig] i=%d, grad=%f", i, prev[tensor_idx]->grad->data[i]);
                     }
                 }

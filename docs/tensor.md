@@ -1,6 +1,6 @@
 # Tensor
 
-`fajr.core.tensor.Tensor` is the fundamental data structure in Fajr. It represents multi-dimensional arrays and is the primary vehicle for all computations, supporting automatic differentiation and lazy evaluation.
+`axon.core.tensor.Tensor` is the fundamental data structure in Axon. It represents multi-dimensional arrays and is the primary vehicle for all computations, supporting automatic differentiation and lazy evaluation.
 
 ## Key Features
 
@@ -11,11 +11,11 @@
 
 ## Initialization
 
-While `Tensor` can be directly instantiated, it's often created via functional APIs like `fajr.functions.zeros`, `fajr.functions.ones`, or `fajr.functions.from_data`.
+While `Tensor` can be directly instantiated, it's often created via functional APIs like `axon.functions.zeros`, `axon.functions.ones`, or `axon.functions.from_data`.
 
 ```python
-import fajr
-import fajr.functions as F
+import axon
+import axon.functions as F
 import numpy as np
 
 # Create a tensor of zeros
@@ -51,8 +51,8 @@ print(y.data)
 `Tensor` supports standard arithmetic operations, which automatically build the computation graph:
 
 ```python
-import fajr
-import fajr.functions as F
+import axon
+import axon.functions as F
 
 a = F.ones((2, 2), requires_grad=True)
 b = F.from_data((2, 2), np.array([[1, 2], [3, 4]]), requires_grad=True)

@@ -1,5 +1,5 @@
-#ifndef IDRAK_TENSOR_H
-#define IDRAK_TENSOR_H
+#ifndef AXON_TENSOR_H
+#define AXON_TENSOR_H
 
 #include <stdbool.h>
 #include <stdlib.h>

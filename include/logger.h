@@ -1,5 +1,5 @@
-#ifndef IDRAK_LOGGER
-#define IDRAK_LOGGER
+#ifndef AXON_LOGGER
+#define AXON_LOGGER
 
 #include <stdio.h>
 #include <stdlib.h>
