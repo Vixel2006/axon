@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fajr"
+version = "0.1.0"
+description = "A Deep Learning Library with focus on fast experimentation."
+readme = "README.md"
+authors = [{ name = "Yusuf Shihata (Vixel)" }]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "pyyaml",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License", # Assuming MIT License, user needs to confirm or add LICENSE file
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Development Status :: 3 - Alpha",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Vixel/fajr" # Assuming this is the correct repo URL
+"Bug Tracker" = "https://github.com/Vixel/fajr/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fajr*"]
