@@ -8,7 +8,7 @@ find_path(SLEEF_INCLUDE_DIR sleef.h
 
 find_library(SLEEF_LIBRARY NAMES sleef
              PATHS ${CMAKE_CURRENT_SOURCE_DIR}/vendor/sleef/build/lib
-             NO_DEFAULT_PATH)
+             NO_DEFAULT_PATH STATIC)
 
 if(SLEEF_INCLUDE_DIR AND SLEEF_LIBRARY)
     message(STATUS "Found SLEEF include: ${SLEEF_INCLUDE_DIR}")

@@ -155,7 +155,7 @@ def evaluate_experiment(experiment_id):
     # Now we can use the model to do the evaluation and calculate the accuracy
     all_pred = 0
     true_pred = 0
-    for image, label in testset:
+    for i, (image, label) in enumerate(testset):
         pred = model(image)
 
         testset.display_digit(i)

@@ -3,8 +3,8 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fajr"
-version = "0.1.0"
+name = "axon-dl"
+version = "0.1.3"
 description = "A Deep Learning Library with focus on fast experimentation."
 readme = "README.md"
 authors = [{ name = "Yusuf Shihata (Vixel)" }]
@@ -22,9 +22,9 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/Vixel/fajr" # Assuming this is the correct repo URL
-"Bug Tracker" = "https://github.com/Vixel/fajr/issues"
+"Homepage" = "https://github.com/Vixel2006/axon"
+"Bug Tracker" = "https://github.com/Vixel2006/axon/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["fajr*"]
+include = ["axon*"]
