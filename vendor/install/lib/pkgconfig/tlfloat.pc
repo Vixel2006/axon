@@ -1,0 +1,9 @@
+prefix=/home/vixel/code/fajr/vendor/install
+libdir=/home/vixel/code/fajr/vendor/install/lib
+includedir=/home/vixel/code/fajr/vendor/install/include
+
+Name: TLFloat
+Description: C++ template library for floating point operations
+Version: 1.16.0
+Cflags: -I${includedir}
+Libs: -L${libdir} -ltlfloat
