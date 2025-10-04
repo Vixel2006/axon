@@ -12,7 +12,7 @@ SRC_DIR = src
 INCLUDE_DIR = include
 TEST_DIR = tests
 
-C_SOURCES = $(wildcard $(SRC_DIR)/*.c)
+C_SOURCES = $(shell find $(SRC_DIR) -name "*.c" -o -name "*.cu")
 C_HEADERS = $(wildcard $(INCLUDE_DIR)/*.h)
 PYTHON_TEST_FILES = $(wildcard $(TEST_DIR)/*.py)
 

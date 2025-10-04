@@ -13,6 +13,7 @@ class TestOptim:
         grad = np.array([0.0, 0.0, 0.0], dtype=np.float32)
         tensor = from_data(data.shape, data)
         tensor.requires_grad = True  # Ensure grad buffer is allocated
+        tensor.grad[:] = grad  # Explicitly set the gradient values
         lr = 0.1
         optimizer = SGD(params=[tensor], lr=lr)
 

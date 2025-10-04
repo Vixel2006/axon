@@ -67,7 +67,7 @@ static inline bool can_use_simd(Tensor* a, Tensor* b, Tensor* out)
     return is_contiguous(a) && is_contiguous(b) && is_contiguous(out);
 }
 
-void add_op(Tensor* a, Tensor* b, Tensor* out)
+void add_op_cpu(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: add_op: Performing element-wise addition");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -105,11 +105,11 @@ void add_op(Tensor* a, Tensor* b, Tensor* out)
             data[i] = a->data->data[i] + b->data->data[i];
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void sub_op(Tensor* a, Tensor* b, Tensor* out)
+void sub_op_cpu(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: sub_op: Performing element-wise subtraction");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -148,11 +148,11 @@ void sub_op(Tensor* a, Tensor* b, Tensor* out)
         }
     }
 
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void mul_op(Tensor* a, Tensor* b, Tensor* out)
+void mul_op_cpu(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: mul_op: Performing element-wise multiplication");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -190,11 +190,11 @@ void mul_op(Tensor* a, Tensor* b, Tensor* out)
             data[i] = a->data->data[i] * b->data->data[i];
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void div_op(Tensor* a, Tensor* b, Tensor* out)
+void div_op_cpu(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: div_op: Performing element-wise division");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -232,11 +232,11 @@ void div_op(Tensor* a, Tensor* b, Tensor* out)
             data[i] = a->data->data[i] / b->data->data[i];
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P)
+void matmul_op_cpu(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P)
 {
     LOG_INFO("OP: matmul_op: Performing matrix multiplication (N=%d, K=%d, P=%d)", N, K, P);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -402,7 +402,7 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P)
             }
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     if (!out->data)
     {
         LOG_ERROR("matmul_op ERROR: Failed to set output tensor data.");
@@ -413,8 +413,8 @@ void matmul_op(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P)
     LOG_INFO("OP: matmul_op: Matrix multiplication completed successfully");
 }
 
-void conv2d_op(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size, const int* stride,
-               const int padding)
+void conv2d_op_cpu(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size,
+                   const int* stride, const int padding)
 {
     LOG_INFO("OP: conv2d_op: Performing 2D convolution");
     LOG_INFO(
@@ -491,11 +491,11 @@ void conv2d_op(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size, 
         }
     }
 
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void dot_op(Tensor* a, Tensor* b, Tensor* out)
+void dot_op_cpu(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: dot_op: Performing dot product");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -547,11 +547,11 @@ void dot_op(Tensor* a, Tensor* b, Tensor* out)
         }
         data[0] = sum;
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void pow_op(Tensor* a, Tensor* b, Tensor* out)
+void pow_op_cpu(Tensor* a, Tensor* b, Tensor* out)
 {
     LOG_INFO("OP: pow_op: Performing element-wise power");
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | b: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -589,6 +589,6 @@ void pow_op(Tensor* a, Tensor* b, Tensor* out)
             data[i] = powf(a->data->data[i], b->data->data[i]);
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }

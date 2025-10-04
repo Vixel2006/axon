@@ -2,7 +2,7 @@
 
 #define SIMD_WIDTH 8
 
-void relu_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void relu_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: relu_grad_op: Computing gradient for ReLU");
 
@@ -58,7 +58,7 @@ void relu_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void log_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void log_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: log_grad_op: Computing gradient for natural logarithm");
 
@@ -172,7 +172,7 @@ void log_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void exp_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void exp_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: exp_grad_op: Computing gradient for exponential");
 
@@ -253,7 +253,7 @@ void exp_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void abs_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void abs_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: abs_grad_op: Computing gradient for absolute value");
 
@@ -360,7 +360,7 @@ void abs_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void neg_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void neg_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: neg_grad_op: Computing gradient for negation");
 
@@ -443,7 +443,7 @@ void neg_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void clip_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void clip_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: clip_grad_op: Computing gradient for clipping");
 

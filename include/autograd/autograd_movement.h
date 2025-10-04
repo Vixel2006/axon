@@ -6,6 +6,17 @@
 #include <immintrin.h>
 #include <stdlib.h>
 
-void concat_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
+#include "axon_export.h" // Include the generated export header
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+    AXON_EXPORT void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+
+    AXON_EXPORT void concat_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

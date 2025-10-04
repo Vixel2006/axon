@@ -3,6 +3,7 @@
 #include "ops/unary_ops.h"
 #include "utils.h"
 #include <immintrin.h>
+#include <inttypes.h>
 #include <math.h>
 #include <sleef.h>
 #include <string.h>
@@ -57,7 +58,7 @@ static inline bool can_use_simd_unary(Tensor* in, Tensor* out)
     return is_contiguous(in) && is_contiguous(out);
 }
 
-void relu_op(Tensor* in, Tensor* out)
+void relu_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: relu_op: Performing ReLU activation");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -96,11 +97,11 @@ void relu_op(Tensor* in, Tensor* out)
             data[i] = in->data->data[i] > 0.0f ? in->data->data[i] : 0.0f;
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void log_op(Tensor* in, Tensor* out)
+void log_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: log_op: Performing natural logarithm");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -175,11 +176,11 @@ void log_op(Tensor* in, Tensor* out)
             data[i] = SAFE_LOGF(in->data->data[i]);
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void exp_op(Tensor* in, Tensor* out)
+void exp_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: exp_op: Performing exponential");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -217,11 +218,11 @@ void exp_op(Tensor* in, Tensor* out)
             data[i] = expf(in->data->data[i]);
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void neg_op(Tensor* in, Tensor* out)
+void neg_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: neg_op: Performing negation");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -261,11 +262,11 @@ void neg_op(Tensor* in, Tensor* out)
             data[i] = 0.0f - in->data->data[i];
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void clip_op(Tensor* in, Tensor* out, float min_val, float max_val)
+void clip_op_cpu(Tensor* in, Tensor* out, float min_val, float max_val)
 {
     LOG_INFO("OP: clip_op: Performing clipping");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -330,11 +331,11 @@ void clip_op(Tensor* in, Tensor* out, float min_val, float max_val)
             }
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void abs_op(Tensor* in, Tensor* out)
+void abs_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: abs_op: Performing absolute value");
     LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
@@ -374,6 +375,6 @@ void abs_op(Tensor* in, Tensor* out)
             data[i] = in->data->data[i] >= 0 ? in->data->data[i] : 0.0f - in->data->data[i];
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }

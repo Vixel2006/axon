@@ -11,7 +11,7 @@
 
 #define SIMD_WIDTH 8
 
-void sum_op(Tensor* a, Tensor* out, int axis, bool keepdim)
+void sum_op_cpu(Tensor* a, Tensor* out, int axis, bool keepdim)
 {
     LOG_INFO("OP: sum_op: Performing sum reduction along axis %d (keepdim=%d)", axis, keepdim);
 
@@ -107,11 +107,11 @@ void sum_op(Tensor* a, Tensor* out, int axis, bool keepdim)
     SAFE_FREE(&a_coords, free);
     SAFE_FREE(&out_coords, free);
 
-    from_data(out, data);   // Assuming from_data takes ownership of 'data'
-    SAFE_FREE(&data, free); // 'data' is now owned by 'out' if from_data works this way
+    from_data_cpu(out, data); // Assuming from_data_cpu takes ownership of 'data'
+    SAFE_FREE(&data, free);   // 'data' is now owned by 'out' if from_data_cpu works this way
 }
 
-void mean_op(Tensor* a, Tensor* out, int axis, bool keepdim)
+void mean_op_cpu(Tensor* a, Tensor* out, int axis, bool keepdim)
 {
     LOG_INFO("OP: mean_op: Performing mean reduction along axis %d (keepdim=%d)", axis, keepdim);
 
@@ -122,7 +122,7 @@ void mean_op(Tensor* a, Tensor* out, int axis, bool keepdim)
     }
 
     // First compute the sum. out->data will be set by sum_op.
-    sum_op(a, out, axis, keepdim);
+    sum_op_cpu(a, out, axis, keepdim);
 
     // Check if sum_op failed or returned empty data
     if (!out->data || !out->data->data)
@@ -160,7 +160,7 @@ void mean_op(Tensor* a, Tensor* out, int axis, bool keepdim)
             // This case needs to be careful with strides if out is not contiguous
             // For now, assuming out->data->data is a flat array, and we modify it directly.
             // If out is non-contiguous, it means data access needs to use strides.
-            // However, from_data typically makes 'out' contiguous or handles data pointers.
+            // However, from_data_cpu typically makes 'out' contiguous or handles data pointers.
             // For safety, let's just do scalar division on the underlying data buffer.
             for (size_t i = 0; i < size; i++)
             {
@@ -172,7 +172,7 @@ void mean_op(Tensor* a, Tensor* out, int axis, bool keepdim)
     // 0.
 }
 
-void max_op(Tensor* a, Tensor* out, int axis, bool keepdim)
+void max_op_cpu(Tensor* a, Tensor* out, int axis, bool keepdim)
 {
     LOG_INFO("OP: max_op: Performing max reduction along axis %d (keepdim=%d)", axis, keepdim);
 
@@ -376,11 +376,11 @@ void max_op(Tensor* a, Tensor* out, int axis, bool keepdim)
     SAFE_FREE(&a_coords, free);
     SAFE_FREE(&out_coords, free);
 
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void sum_full_op(Tensor* a, Tensor* out)
+void sum_full_op_cpu(Tensor* a, Tensor* out)
 {
     LOG_INFO("OP: sum_full_op: Performing full sum reduction");
 
@@ -396,7 +396,7 @@ void sum_full_op(Tensor* a, Tensor* out)
 
     if (total_elements == 0)
     {
-        from_data(out, total_sum_ptr);
+        from_data_cpu(out, total_sum_ptr);
         return;
     }
 
@@ -466,15 +466,15 @@ void sum_full_op(Tensor* a, Tensor* out)
         SAFE_FREE(&coords, free);
     }
 
-    from_data(out, total_sum_ptr);
+    from_data_cpu(out, total_sum_ptr);
     SAFE_FREE(&total_sum_ptr, free);
 }
 
-void mean_full_op(Tensor* a, Tensor* out)
+void mean_full_op_cpu(Tensor* a, Tensor* out)
 {
     LOG_INFO("OP: mean_full_op: Performing full mean reduction");
 
-    sum_full_op(a, out); // This will set out->data to the sum
+    sum_full_op_cpu(a, out); // This will set out->data to the sum
 
     if (!out->data || !out->data->data)
     {
@@ -485,7 +485,7 @@ void mean_full_op(Tensor* a, Tensor* out)
     size_t total_elements = numel(a->shape, a->ndim);
     // Directly modify out->data->data as it's already a single float array from sum_full_op
     // We assume out->data->data points to a malloc'd float[1] from sum_full_op
-    // and from_data reallocates/manages its buffer on subsequent calls.
+    // and from_data_cpu reallocates/manages its buffer on subsequent calls.
 
     if (total_elements > 0)
     {
@@ -495,13 +495,13 @@ void mean_full_op(Tensor* a, Tensor* out)
     {
         out->data->data[0] = 0.0f; // Or NaN, depending on desired behavior for empty mean
     }
-    // No need to call from_data again if we modified the data in place,
+    // No need to call from_data_cpu again if we modified the data in place,
     // and out->data->data already points to the correct buffer from sum_full_op.
-    // If from_data always creates a new buffer, then a copy/re-assignment would be needed.
+    // If from_data_cpu always creates a new buffer, then a copy/re-assignment would be needed.
     // Assuming out->data->data is the buffer we operate on.
 }
 
-void max_full_op(Tensor* a, Tensor* out)
+void max_full_op_cpu(Tensor* a, Tensor* out)
 {
     LOG_INFO("OP: max_full_op: Performing full max reduction");
 
@@ -517,7 +517,7 @@ void max_full_op(Tensor* a, Tensor* out)
     if (total_elements == 0)
     {
         data[0] = -FLT_MAX;
-        from_data(out, data); // Set output data even for empty tensor
+        from_data_cpu(out, data); // Set output data even for empty tensor
         // SAFE_FREE(&data, free); // data is owned by out
         return;
     }
@@ -615,6 +615,6 @@ void max_full_op(Tensor* a, Tensor* out)
     }
 
     data[0] = max_val;
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }

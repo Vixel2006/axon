@@ -7,28 +7,48 @@
 #include <sleef.h>
 #include <string.h>
 
-typedef struct
-{
-    int padding;
-    int H_in;
-    int W_in;
-    int Kh;
-    int Kw;
-    int Sh;
-    int Sw;
-    int Hout;
-    int Wout;
-} BackwardConvExtras;
+#include "axon_export.h" // Include the generated export header
 
-void add_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
-void sub_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
-void rsub_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
-void mul_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
-void div_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
-void rdiv_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
-void matmul_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
-void conv2d_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
-void dot_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
-void pow_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+    typedef struct
+    {
+        int padding;
+        int H_in;
+        int W_in;
+        int Kh;
+        int Kw;
+        int Sh;
+        int Sw;
+        int Hout;
+        int Wout;
+    } BackwardConvExtras;
+
+    AXON_EXPORT void add_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void sub_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void rsub_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void mul_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void div_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void rdiv_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void matmul_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void conv2d_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void dot_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void pow_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+
+    AXON_EXPORT void add_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void sub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void rsub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void mul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void div_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void rdiv_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void conv2d_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    AXON_EXPORT void dot_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+#ifdef __cplusplus
+}
+#endif
 
 #endif
