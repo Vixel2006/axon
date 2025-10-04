@@ -4,18 +4,7 @@ import ctypes
 from .op import LazyOp
 from axon.axon_bindings.ctypes_definitions import CTensor
 from axon.axon_bindings.c_wrapper_functions import (
-    c_sum,
-    c_mean,
-    c_max,
-    c_sum_full,
-    c_mean_full,
-    c_max_full,
-    c_sum_grad_op,
-    c_mean_grad_op,
-    c_max_grad_op,
-    c_sum_full_grad_op,
-    c_mean_full_grad_op,
-    c_max_full_grad_op
+    get_op_function
 )
 
 class ROp(LazyOp):
@@ -74,49 +63,49 @@ class Sum(ROp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", *, dim: int | None, keepdim: bool):
         if dim is None:
-            c_sum_full(a.c_tensor_ptr, out.c_tensor_ptr)
+            get_op_function("sum_full", out.device)(a.c_tensor_ptr, out.c_tensor_ptr)
         else:
             if dim < 0:
                 dim = a.ndim + dim
-            c_sum(a.c_tensor_ptr, out.c_tensor_ptr, dim, keepdim)
+            get_op_function("sum", out.device)(a.c_tensor_ptr, out.c_tensor_ptr, dim, keepdim)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
         if extras is None:
-            c_sum_full_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+            get_op_function("sum_full_grad", out_ptr.contents.device)(out_ptr, prev_ptrs, n_prev, extras)
         else:
-            c_sum_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+            get_op_function("sum_grad", out_ptr.contents.device)(out_ptr, prev_ptrs, n_prev, extras)
 
 class Mean(ROp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", *, dim: int | None, keepdim: bool):
         if dim is None:
-            c_mean_full(a.c_tensor_ptr, out.c_tensor_ptr)
+            get_op_function("mean_full", out.device)(a.c_tensor_ptr, out.c_tensor_ptr)
         else:
             if dim < 0:
                 dim = a.ndim + dim
-            c_mean(a.c_tensor_ptr, out.c_tensor_ptr, dim, keepdim)
+            get_op_function("mean", out.device)(a.c_tensor_ptr, out.c_tensor_ptr, dim, keepdim)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
         if extras is None:
-            c_mean_full_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+            get_op_function("mean_full_grad", out_ptr.contents.device)(out_ptr, prev_ptrs, n_prev, extras)
         else:
-            c_mean_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+            get_op_function("mean_grad", out_ptr.contents.device)(out_ptr, prev_ptrs, n_prev, extras)
 
 class Max(ROp):
     @staticmethod
     def forward(out: "Tensor", a: "Tensor", *, dim: int | None, keepdim: bool):
         if dim is None:
-            c_max_full(a.c_tensor_ptr, out.c_tensor_ptr)
+            get_op_function("max_full", out.device)(a.c_tensor_ptr, out.c_tensor_ptr)
         else:
             if dim < 0:
                 dim = a.ndim + dim
-            c_max(a.c_tensor_ptr, out.c_tensor_ptr, dim, keepdim)
+            get_op_function("max", out.device)(a.c_tensor_ptr, out.c_tensor_ptr, dim, keepdim)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
         if extras is None:
-            c_max_full_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+            get_op_function("max_full_grad", out_ptr.contents.device)(out_ptr, prev_ptrs, n_prev, extras)
         else:
-            c_max_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+            get_op_function("max_grad", out_ptr.contents.device)(out_ptr, prev_ptrs, n_prev, extras)

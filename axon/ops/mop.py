@@ -4,16 +4,7 @@ from typing import Any
 import ctypes
 from .op import LazyOp
 from axon.axon_bindings.ctypes_definitions import CTensor
-from axon.axon_bindings.c_wrapper_functions import (
-    c_concat_grad_op,
-    c_view,
-    c_unsqueeze,
-    c_squeeze,
-    c_expand,
-    c_broadcast,
-    c_transpose,
-    c_concat,
-)
+from axon.axon_bindings.c_wrapper_functions import get_op_function
 
 class ViewOp(LazyOp):
     @staticmethod
@@ -98,7 +89,8 @@ class View(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", shape: tuple[int, ...]):
-        c_view(a_tensor.c_tensor_ptr, out.c_tensor_ptr, shape, len(shape))
+        view_op_func = get_op_function("view", a_tensor.device)
+        view_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, shape, len(shape))
 
 
 class Unsqueeze(ViewOp):
@@ -139,7 +131,8 @@ class Unsqueeze(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", dim: int):
-        c_unsqueeze(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim)
+        unsqueeze_op_func = get_op_function("unsqueeze", a_tensor.device)
+        unsqueeze_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
@@ -196,7 +189,8 @@ class Squeeze(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", dim: Optional[int] = None):
-        c_squeeze(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim if dim is not None else -1)
+        squeeze_op_func = get_op_function("squeeze", a_tensor.device)
+        squeeze_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim if dim is not None else -1)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
@@ -248,7 +242,8 @@ class Transpose(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", dim0: int, dim1: int):
-        c_transpose(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim0, dim1)
+        transpose_op_func = get_op_function("transpose", a_tensor.device)
+        transpose_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim0, dim1)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
@@ -300,7 +295,8 @@ class Expand(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", shape: tuple[int, ...]):
-        c_expand(a_tensor.c_tensor_ptr, out.c_tensor_ptr, (ctypes.c_int * len(shape))(*shape))
+        expand_op_func = get_op_function("expand", a_tensor.device)
+        expand_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, (ctypes.c_int * len(shape))(*shape))
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
@@ -350,7 +346,8 @@ class Broadcast(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", shape: tuple[int, ...]):
-        c_broadcast(a_tensor.c_tensor_ptr, out.c_tensor_ptr, shape, len(shape))
+        broadcast_op_func = get_op_function("broadcast", a_tensor.device)
+        broadcast_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, shape, len(shape))
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
@@ -408,11 +405,13 @@ class Concat(LazyOp):
 
         c_inputs_array = (ctypes.POINTER(CTensor) * len(inputs_c_ptrs))(*inputs_c_ptrs)
 
-        c_concat(c_inputs_array, out.c_tensor_ptr, len(inputs_c_ptrs), axis)
+        concat_op_func = get_op_function("concat", a_tensors[0].device)
+        concat_op_func(c_inputs_array, out.c_tensor_ptr, len(inputs_c_ptrs), axis)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_concat_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        concat_grad_op_func = get_op_function("concat_grad", out_ptr.contents.device)
+        concat_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 class Stack(LazyOp):
     @staticmethod
@@ -473,15 +472,17 @@ class Stack(LazyOp):
             unsqueezed_shape_tuple = tuple(unsqueezed_shape)
 
             temp_t = Tensor(shape=unsqueezed_shape_tuple, requires_grad=t.requires_grad)
-            c_unsqueeze(t.c_tensor_ptr, temp_t.c_tensor_ptr, normalized_axis_for_unsqueeze)
+            get_op_function("unsqueeze", t.device)(t.c_tensor_ptr, temp_t.c_tensor_ptr, normalized_axis_for_unsqueeze)
             
             temp_unsqueezed_ptrs.append(temp_t.c_tensor_ptr)
             temp_unsqueezed_tensors.append(temp_t)
 
         c_inputs_array = (ctypes.POINTER(CTensor) * len(temp_unsqueezed_ptrs))(*temp_unsqueezed_ptrs)
-        c_concat(c_inputs_array, out.c_tensor_ptr, len(temp_unsqueezed_ptrs), axis)
+        c_concat_op_func = get_op_function("concat", a_tensors[0].device)
+        c_concat_op_func(c_inputs_array, out.c_tensor_ptr, len(temp_unsqueezed_ptrs), axis)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_concat_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        concat_grad_op_func = get_op_function("concat_grad", out_ptr.contents.device)
+        concat_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 

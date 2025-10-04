@@ -8,7 +8,7 @@
 
 #define SIMD_WIDTH 8
 
-void add_scalar_op(Tensor* a, float b, Tensor* out)
+void add_scalar_op_cpu(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: add_scalar_op: Performing scalar addition (scalar=%.2f)", b);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
@@ -53,11 +53,11 @@ void add_scalar_op(Tensor* a, float b, Tensor* out)
             data[i] = a->data->data[i] + b;
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void sub_scalar_op(Tensor* a, float b, Tensor* out)
+void sub_scalar_op_cpu(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: sub_scalar_op: Performing scalar subtraction (scalar=%.2f)", b);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
@@ -102,11 +102,11 @@ void sub_scalar_op(Tensor* a, float b, Tensor* out)
             data[i] = a->data->data[i] - b;
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void rsub_scalar_op(Tensor* a, float b, Tensor* out)
+void rsub_scalar_op_cpu(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: rsub_scalar_op: Performing reverse scalar subtraction (scalar=%.2f)", b);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
@@ -160,11 +160,11 @@ void rsub_scalar_op(Tensor* a, float b, Tensor* out)
             data[i] = b - a->data->data[i];
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void mul_scalar_op(Tensor* a, float b, Tensor* out)
+void mul_scalar_op_cpu(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: mul_scalar_op: Performing scalar multiplication (scalar=%.2f)", b);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
@@ -209,11 +209,11 @@ void mul_scalar_op(Tensor* a, float b, Tensor* out)
             data[i] = a->data->data[i] * b;
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void div_scalar_op(Tensor* a, float b, Tensor* out)
+void div_scalar_op_cpu(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: div_scalar_op: Performing scalar division (scalar=%.2f)", b);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
@@ -280,11 +280,11 @@ void div_scalar_op(Tensor* a, float b, Tensor* out)
             }
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void rdiv_scalar_op(Tensor* a, float b, Tensor* out)
+void rdiv_scalar_op_cpu(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: rdiv_scalar_op: Performing reverse scalar division (scalar=%.2f)", b);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
@@ -349,11 +349,11 @@ void rdiv_scalar_op(Tensor* a, float b, Tensor* out)
             }
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }
 
-void pow_scalar_op(Tensor* a, float b, Tensor* out)
+void pow_scalar_op_cpu(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: pow_scalar_op: Performing scalar power (exponent=%.2f)", b);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
@@ -398,6 +398,6 @@ void pow_scalar_op(Tensor* a, float b, Tensor* out)
             data[i] = powf(a->data->data[i], b);
         }
     }
-    from_data(out, data);
+    from_data_cpu(out, data);
     SAFE_FREE(&data, free);
 }

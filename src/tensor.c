@@ -1,5 +1,6 @@
 #include "tensor.h"
 #include "logger.h"
+#include <cuda_runtime.h>
 #include <immintrin.h>
 #include <math.h>
 #include <stdbool.h>
@@ -81,7 +82,7 @@ int* compute_strides(const int* shape, int ndim)
     return strides;
 }
 
-Storage* smalloc(float* data, int size)
+Storage* smalloc(float* data, int size, Device device)
 {
     Storage* s = malloc(sizeof(Storage));
 
@@ -92,24 +93,41 @@ Storage* smalloc(float* data, int size)
     }
 
     s->size = size;
-    s->data = malloc(sizeof(float) * size);
 
-    if (!s->data)
+    if (device == CPU)
     {
-        LOG_ERROR("Failed to allocate Storage data");
-        free(s);
-        return NULL;
-    }
+        s->data = malloc(sizeof(float) * size);
 
-    if (data != NULL)
-    {
-        for (int i = 0; i < size; ++i)
-            s->data[i] = data[i];
+        if (!s->data)
+        {
+            LOG_ERROR("Failed to allocate Storage data on cpu.");
+            free(s);
+            return NULL;
+        }
+
+        if (data != NULL)
+        {
+            for (int i = 0; i < size; ++i)
+                s->data[i] = data[i];
+        }
+        else
+        {
+            for (int i = 0; i < size; ++i)
+                s->data[i] = 0.0f;
+        }
     }
     else
     {
-        for (int i = 0; i < size; ++i)
-            s->data[i] = 0.0f;
+        cudaError_t err = cudaMalloc((void**) &s->data, size);
+
+        if (err != cudaSuccess)
+        {
+            LOG_ERROR("Failed to allocate Storage data on cuda device.");
+            free(s);
+            return NULL;
+        }
+
+        cudaMemcpy(s->data, data, size, cudaMemcpyHostToDevice);
     }
 
     s->counter = 1;
@@ -118,7 +136,7 @@ Storage* smalloc(float* data, int size)
     return s;
 }
 
-void sfree(Storage* s)
+void sfree(Storage* s, Device device)
 {
     if (!s) return;
     s->counter--;
@@ -128,7 +146,15 @@ void sfree(Storage* s)
         if (s->data)
         {
             LOG_INFO("Storage data freed at %p", s->data);
-            SAFE_FREE(&s->data, free);
+            if (device == CPU)
+            {
+                SAFE_FREE(&s->data, free);
+            }
+            else
+            {
+                cudaFree(s->data);
+                s->data = NULL;
+            }
         }
         SAFE_FREE(&s, free);
     }
@@ -140,7 +166,8 @@ void gmalloc(Tensor* t, float init)
 
     if (t->grad)
     {
-        SAFE_FREE(&t->grad, sfree);
+        sfree(t->grad, t->device);
+        t->grad = NULL;
     }
 
     t->grad = malloc(sizeof(Storage));
@@ -151,17 +178,34 @@ void gmalloc(Tensor* t, float init)
     }
 
     t->grad->size = size;
-    t->grad->data = malloc(sizeof(float) * size);
-    if (!t->grad->data)
-    {
-        LOG_ERROR("Failed to allocate Storage data for grad");
-        SAFE_FREE(&t->grad, sfree);
-        return;
-    }
 
-    for (int i = 0; i < size; ++i)
+    if (t->device == CPU)
     {
-        t->grad->data[i] = init;
+        t->grad->data = malloc(sizeof(float) * size);
+        if (!t->grad->data)
+        {
+            LOG_ERROR("Failed to allocate Storage data for grad on cpu.");
+            sfree(t->grad, t->device);
+            t->grad = NULL;
+            return;
+        }
+
+        for (int i = 0; i < size; ++i)
+        {
+            t->grad->data[i] = init;
+        }
+    }
+    else
+    {
+        cudaError_t err = cudaMalloc((void**) &t->grad->data, size);
+        if (err != cudaSuccess)
+        {
+            LOG_ERROR("Failed to allocate Storage data for grad on cuda device.");
+            sfree(t->grad, t->device);
+            t->grad = NULL;
+            return;
+        }
+        cudaMemset(t->grad->data, init, size);
     }
 
     t->grad->counter = 1;
@@ -172,7 +216,7 @@ void gfree(Tensor* t)
 {
     if (t->grad)
     {
-        sfree(t->grad);
+        sfree(t->grad, t->device);
         t->grad = NULL;
     }
 }
@@ -232,12 +276,14 @@ void tfree(Tensor* t)
 
     if (t->data)
     {
-        SAFE_FREE(&t->data, sfree);
+        sfree(t->data, t->device);
+        t->data = NULL;
     }
 
     if (t->grad)
     {
-        SAFE_FREE(&t->grad, sfree);
+        sfree(t->grad, t->device);
+        t->grad = NULL;
     }
 
     SAFE_FREE(&t, free);

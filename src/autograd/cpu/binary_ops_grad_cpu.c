@@ -164,7 +164,7 @@ void binary_grad_noncontig(Tensor* out, Tensor* a, Tensor* b, binary_grad_fn da_
     }
 }
 
-void add_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void add_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: add_grad_op: Computing gradient for subtraction");
 
@@ -258,7 +258,7 @@ void add_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void sub_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void sub_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: sub_grad_op: Computing gradient for subtraction");
 
@@ -352,7 +352,7 @@ void sub_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void rsub_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void rsub_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: rsub_grad_op: Computing gradient for reverse "
              "subtraction");
@@ -417,7 +417,7 @@ void rsub_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void mul_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void mul_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: mul_grad_op: Computing gradient for multiplication");
 
@@ -515,7 +515,7 @@ void mul_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void pow_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void pow_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: pow_grad_op: Computing gradient for power operation");
 
@@ -684,7 +684,7 @@ void pow_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void div_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void div_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: div_grad_op: Computing gradient for division");
 
@@ -840,7 +840,7 @@ void div_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void rdiv_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void rdiv_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: rdiv_grad_op: Computing gradient for reverse "
              "division");
@@ -880,7 +880,7 @@ void rdiv_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void matmul_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void matmul_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: matmul_grad_op: Computing gradient for matrix "
              "multiplication");
@@ -1123,7 +1123,7 @@ void matmul_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
              "successfully");
 }
 
-void conv2d_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void conv2d_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: conv2d_grad_op: Computing gradient for 2D convolution");
 
@@ -1255,7 +1255,7 @@ void conv2d_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void dot_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void dot_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: dot_grad_op: Computing gradient for dot product");
 

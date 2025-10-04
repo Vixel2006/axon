@@ -2,7 +2,7 @@
 
 #define SIMD_WIDTH 8
 
-void concat_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     // Error checking for null tensors
     if (!out || !out->grad->data || !prev)

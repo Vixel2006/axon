@@ -189,7 +189,7 @@ void broadcast_op(Tensor* in, Tensor* out, int ndim, const int* shape)
     borrow(out, in->data, in->grad);
 }
 
-void concat_op(Tensor** in, Tensor* out, int num_tensors, int axis)
+void concat_op_cpu(Tensor** in, Tensor* out, int num_tensors, int axis)
 {
     if (!in || !out || num_tensors < 1)
     {
@@ -290,7 +290,7 @@ void concat_op(Tensor** in, Tensor* out, int num_tensors, int axis)
         }
     }
 
-    from_data(out, data);
+    from_data_cpu(out, data);
     free(cum_sizes);
     free(data);
 }

@@ -2,7 +2,7 @@ from __future__ import annotations
 import ctypes
 from .op import LazyOp
 from axon.axon_bindings.ctypes_definitions import CTensor, ClipExtras
-from axon.axon_bindings.c_wrapper_functions import c_relu, c_log, c_exp, c_abs, c_neg, c_relu_grad_op, c_log_grad_op, c_abs_grad_op, c_exp_grad_op, c_neg_grad_op, c_clip, c_clip_grad_op
+from axon.axon_bindings.c_wrapper_functions import get_op_function
 
 class UOp(LazyOp):
     @classmethod
@@ -23,45 +23,59 @@ class UOp(LazyOp):
 
 class ReLU(UOp):
     def forward(self, out: "Tensor", a: "Tensor", **kwargs):
-        c_relu(a.c_tensor_ptr, out.c_tensor_ptr)
+        relu_op_func = get_op_function("relu", a.device)
+        relu_op_func(a.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
-        c_relu_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        relu_grad_op_func = get_op_function("relu_grad", out_tensor_struct.device)
+        relu_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 class Log(UOp):
     def forward(self, out: "Tensor", a: "Tensor", **kwargs):
-        c_log(a.c_tensor_ptr, out.c_tensor_ptr)
+        log_op_func = get_op_function("log", a.device)
+        log_op_func(a.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
-        c_log_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        log_grad_op_func = get_op_function("log_grad", out_tensor_struct.device)
+        log_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 class Exp(UOp):
     def forward(self, out: "Tensor", a: "Tensor", **kwargs):
-        c_exp(a.c_tensor_ptr, out.c_tensor_ptr)
+        exp_op_func = get_op_function("exp", a.device)
+        exp_op_func(a.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
-        c_exp_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        exp_grad_op_func = get_op_function("exp_grad", out_tensor_struct.device)
+        exp_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class Abs(UOp):
     def forward(self, out: "Tensor", a: "Tensor", **kwargs):
-        c_abs(a.c_tensor_ptr, out.c_tensor_ptr)
+        abs_op_func = get_op_function("abs", a.device)
+        abs_op_func(a.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
-        c_abs_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        abs_grad_op_func = get_op_function("abs_grad", out_tensor_struct.device)
+        abs_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 class Neg(UOp):
-
     def forward(self, out: "Tensor", a: "Tensor", **kwargs):
-        c_neg(a.c_tensor_ptr, out.c_tensor_ptr)
+        neg_op_func = get_op_function("neg", a.device)
+        neg_op_func(a.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
-        c_neg_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        neg_grad_op_func = get_op_function("neg_grad", out_tensor_struct.device)
+        neg_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 class Clip(UOp):
     @classmethod
@@ -81,10 +95,13 @@ class Clip(UOp):
     def forward(self, out: "Tensor", a: "Tensor", **kwargs):
         min_val = kwargs["min_val"]
         max_val = kwargs["max_val"]
-        c_clip(a.c_tensor_ptr, out.c_tensor_ptr, min_val, max_val)
+        clip_op_func = get_op_function("clip", a.device)
+        clip_op_func(a.c_tensor_ptr, out.c_tensor_ptr, min_val, max_val)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras):
-        c_clip_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        clip_grad_op_func = get_op_function("clip_grad", out_tensor_struct.device)
+        clip_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 

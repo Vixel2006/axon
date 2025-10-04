@@ -7,7 +7,7 @@
 #define SIMD_WIDTH 8
 
 // Forward declaration
-void max_full_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras);
+void max_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
 
 // Helper function to properly map input indices to output indices
 static void map_in_coords_to_out_offset(int* in_coords, int in_ndim, int reduced_dim, Tensor* out,
@@ -35,7 +35,7 @@ static void map_in_coords_to_out_offset(int* in_coords, int in_ndim, int reduced
     *out_offset_result = out_idx;
 }
 
-void sum_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void sum_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: sum_grad_op: Computing gradient for sum reduction");
 
@@ -129,7 +129,6 @@ void sum_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!is_contiguous(in) || !is_contiguous(out))
     {
-        // Non-contiguous path - FIX: Proper coordinate mapping
         int* in_coords = malloc(in_ndim * sizeof(int));
         if (!in_coords)
         {
@@ -193,7 +192,7 @@ void sum_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void mean_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void mean_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: mean_grad_op: Computing gradient for mean reduction");
 
@@ -289,7 +288,6 @@ void mean_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!is_contiguous(in) || !is_contiguous(out))
     {
-        // Non-contiguous path - FIX: Proper coordinate mapping
         int* in_coords = malloc(in_ndim * sizeof(int));
         if (!in_coords)
         {
@@ -352,7 +350,7 @@ void mean_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void max_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void max_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     if (!out || !out->grad || !out->grad->data || !prev)
     {
@@ -394,7 +392,7 @@ void max_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     // If output is a scalar, it's a full reduction. Delegate to max_full_grad_op.
     if (out->ndim == 0)
     {
-        max_full_grad_op(out, prev, n_prev, extras);
+        max_full_grad_op_cpu(out, prev, n_prev, extras);
         return;
     }
 
@@ -453,7 +451,6 @@ void max_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!is_contiguous(in) || !is_contiguous(out))
     {
-        // Non-contiguous path - FIX: Proper coordinate mapping
         int* in_coords = malloc(in_ndim * sizeof(int));
         if (!in_coords)
         {
@@ -528,7 +525,7 @@ void max_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void sum_full_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void sum_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: sum_full_grad_op: Computing gradient for full sum reduction");
 
@@ -610,7 +607,7 @@ void sum_full_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void mean_full_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void mean_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: mean_full_grad_op: Computing gradient for full mean reduction");
 
@@ -694,7 +691,7 @@ void mean_full_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
 }
 
-void max_full_grad_op(Tensor* out, Tensor** prev, int n_prev, void* extras)
+void max_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("GRAD: max_full_grad_op: Computing gradient for full max reduction");
 

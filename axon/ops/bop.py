@@ -4,34 +4,7 @@ import ctypes
 import math
 from .op import LazyOp
 from axon.axon_bindings.ctypes_definitions import CTensor, Conv2DBackwardExtras
-from axon.axon_bindings.c_wrapper_functions import (
-    c_add,
-    c_sub,
-    c_mul,
-    c_matmul,
-    c_div,
-    c_pow_scalar,
-    c_pow,
-    c_div_scalar,
-    c_add_scalar,
-    c_sub_scalar,
-    c_rsub_scalar,
-    c_mul_scalar,
-    c_conv,
-    c_rdiv_scalar,
-    c_rdiv_scalar,
-    c_add_grad_op,
-    c_sub_grad_op,
-    c_mul_grad_op,
-    c_pow_grad_op,
-    c_matmul_grad_op,
-    c_div_grad_op,
-    c_rdiv_grad_op,
-    c_rsub_grad_op,
-    c_conv_grad_op,
-    c_dot,
-    c_dot_grad_op
-)
+from axon.axon_bindings.c_wrapper_functions import get_op_function
 
 class BOp(LazyOp):
     @staticmethod
@@ -117,17 +90,21 @@ class Add(BOp):
         if b_tensor is not None:
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
-            c_add(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
+            add_op_func = get_op_function("add", a_tensor.device)
+            add_op_func(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
             a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_add_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            add_scalar_op_func = get_op_function("add_scalar", a_tensor.device)
+            add_scalar_op_func(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Add operation requires either a Tensor or a scalar for its second operand.")
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_add_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        add_grad_op_func = get_op_function("add_grad", out_tensor_struct.device)
+        add_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class Sub(BOp):
@@ -140,17 +117,21 @@ class Sub(BOp):
         if b_tensor is not None:
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
-            c_sub(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
+            sub_op_func = get_op_function("sub", a_tensor.device)
+            sub_op_func(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
             a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_sub_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            sub_scalar_op_func = get_op_function("sub_scalar", a_tensor.device)
+            sub_scalar_op_func(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Sub operation requires either a Tensor or a scalar for its second operand.")
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_sub_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        sub_grad_op_func = get_op_function("sub_grad", out_tensor_struct.device)
+        sub_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class RSub(BOp):
@@ -173,11 +154,14 @@ class RSub(BOp):
     def forward(out: "Tensor", b_tensor: "Tensor", r_scalar_val: float):
         b_realized = b_tensor.realize()
         scalar = ctypes.c_float(r_scalar_val)
-        c_rsub_scalar(scalar, b_realized.c_tensor_ptr, out.c_tensor_ptr)
+        rsub_scalar_op_func = get_op_function("rsub_scalar", b_tensor.device)
+        rsub_scalar_op_func(scalar, b_realized.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_rsub_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        rsub_grad_op_func = get_op_function("rsub_grad", out_tensor_struct.device)
+        rsub_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class Mul(BOp):
@@ -190,17 +174,21 @@ class Mul(BOp):
         if b_tensor is not None:
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
-            c_mul(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
+            mul_op_func = get_op_function("mul", a_tensor.device)
+            mul_op_func(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
             a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_mul_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            mul_scalar_op_func = get_op_function("mul_scalar", a_tensor.device)
+            mul_scalar_op_func(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Mul operation requires either a Tensor or a scalar for its second operand.")
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_mul_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        mul_grad_op_func = get_op_function("mul_grad", out_tensor_struct.device)
+        mul_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class Div(BOp):
@@ -213,17 +201,21 @@ class Div(BOp):
         if b_tensor is not None:
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
-            c_div(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
+            div_op_func = get_op_function("div", a_tensor.device)
+            div_op_func(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
             a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_div_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            div_scalar_op_func = get_op_function("div_scalar", a_tensor.device)
+            div_scalar_op_func(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Div operation requires either a Tensor or a scalar for its second operand.")
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_div_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        div_grad_op_func = get_op_function("div_grad", out_tensor_struct.device)
+        div_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class RDiv(BOp):
@@ -245,11 +237,14 @@ class RDiv(BOp):
     def forward(out: "Tensor", b_tensor: "Tensor", r_scalar_val: float):
         b_realized = b_tensor.realize()
         scalar = ctypes.c_float(r_scalar_val)
-        c_rdiv_scalar(scalar, b_realized.c_tensor_ptr, out.c_tensor_ptr)
+        rdiv_scalar_op_func = get_op_function("rdiv_scalar", b_tensor.device)
+        rdiv_scalar_op_func(scalar, b_realized.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_rdiv_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        rdiv_grad_op_func = get_op_function("rdiv_grad", out_tensor_struct.device)
+        rdiv_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class Pow(BOp):
@@ -262,17 +257,21 @@ class Pow(BOp):
         if b_tensor is not None:
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
-            c_pow(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
+            pow_op_func = get_op_function("pow", a_tensor.device)
+            pow_op_func(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
         elif scalar_val is not None:
             a_realized = a_tensor.realize()
             scalar = ctypes.c_float(scalar_val)
-            c_pow_scalar(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
+            pow_scalar_op_func = get_op_function("pow_scalar", a_tensor.device)
+            pow_scalar_op_func(a_realized.c_tensor_ptr, scalar, out.c_tensor_ptr)
         else:
             raise ValueError("Pow operation requires either a Tensor or a scalar for its second operand.")
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_pow_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        pow_grad_op_func = get_op_function("pow_grad", out_tensor_struct.device)
+        pow_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class MatMul(BOp):
@@ -364,11 +363,14 @@ class MatMul(BOp):
         if a_broadcasted.shape[-1] != (b_broadcasted.shape[-2] if b_broadcasted.ndim >= 2 else b_broadcasted.shape[-1]):
              raise RuntimeError(f"Internal error: Matmul broadcasted dimensions incompatible: {a_broadcasted.shape} and {b_broadcasted.shape}")
 
-        c_matmul(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr, N=N_final, K=K_final, P=M_final)
+        matmul_op_func = get_op_function("matmul", a_tensor.device)
+        matmul_op_func(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr, N=N_final, K=K_final, P=M_final)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_matmul_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        matmul_grad_op_func = get_op_function("matmul_grad", out_tensor_struct.device)
+        matmul_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class Conv2D(BOp):
@@ -465,7 +467,8 @@ class Conv2D(BOp):
         ):
         a_realized = a_tensor.realize()
         b_realized = b_tensor.realize()
-        c_conv(
+        conv_op_func = get_op_function("conv", a_tensor.device)
+        conv_op_func(
             a_realized.c_tensor_ptr,
             b_realized.c_tensor_ptr,
             out.c_tensor_ptr,
@@ -476,7 +479,9 @@ class Conv2D(BOp):
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: ctypes.POINTER(Conv2DBackwardExtras)):
-        c_conv_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        conv_grad_op_func = get_op_function("conv_grad", out_tensor_struct.device)
+        conv_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 
 
 class Dot(BOp):
@@ -531,9 +536,12 @@ class Dot(BOp):
         b_target_shape = batch_shape + (K,)
         a_broadcasted = a_tensor.broadcast(a_target_shape).realize()
         b_broadcasted = b_tensor.broadcast(b_target_shape).realize()
-        c_dot(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
+        dot_op_func = get_op_function("dot", a_tensor.device)
+        dot_op_func(a_broadcasted.c_tensor_ptr, b_broadcasted.c_tensor_ptr, out.c_tensor_ptr)
 
     @staticmethod
     def backward(out_ptr: ctypes.POINTER(CTensor), prev_ptrs: ctypes.POINTER(ctypes.POINTER(CTensor)), n_prev: int, extras: Any):
-        c_dot_grad_op(out_ptr, prev_ptrs, n_prev, extras)
+        out_tensor_struct = out_ptr.contents
+        dot_grad_op_func = get_op_function("dot_grad", out_tensor_struct.device)
+        dot_grad_op_func(out_ptr, prev_ptrs, n_prev, extras)
 

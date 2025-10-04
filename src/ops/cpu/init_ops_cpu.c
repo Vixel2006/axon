@@ -14,7 +14,7 @@
         }                                                                                          \
     } while (0)
 
-void zeros(Tensor* t)
+void zeros_cpu(Tensor* t)
 {
     int size;
     float* data;
@@ -27,7 +27,7 @@ void zeros(Tensor* t)
 
     // t->data = malloc(sizeof(Storage));
 
-    t->data = smalloc(data, size);
+    t->data = smalloc(data, size, t->device);
 
     SAFE_FREE(&data, free);
 
@@ -42,7 +42,7 @@ void zeros(Tensor* t)
              (void*) t->grad->data);
 }
 
-void ones(Tensor* t)
+void ones_cpu(Tensor* t)
 {
     int size;
     float* data;
@@ -53,7 +53,7 @@ void ones(Tensor* t)
         data[i] = 1.0;
     }
 
-    t->data = smalloc(data, size);
+    t->data = smalloc(data, size, t->device);
     SAFE_FREE(&data, free);
 
     gmalloc(t, 0.0f);
@@ -65,7 +65,7 @@ void ones(Tensor* t)
     }
 }
 
-void randn(Tensor* t)
+void randn_cpu(Tensor* t)
 {
     int size;
     float* data;
@@ -77,7 +77,7 @@ void randn(Tensor* t)
         data[i] = (float) rand() / RAND_MAX;
     }
 
-    t->data = smalloc(data, size);
+    t->data = smalloc(data, size, t->device);
     SAFE_FREE(&data, free);
 
     gmalloc(t, 0.0f);
@@ -89,7 +89,7 @@ void randn(Tensor* t)
     }
 }
 
-void uniform(Tensor* t, float low, float high)
+void uniform_cpu(Tensor* t, float low, float high)
 {
     int size;
     float* data;
@@ -101,7 +101,7 @@ void uniform(Tensor* t, float low, float high)
         data[i] = low + (high - low) * ((float) rand() / RAND_MAX);
     }
 
-    t->data = smalloc(data, size);
+    t->data = smalloc(data, size, t->device);
     SAFE_FREE(&data, free);
 
     gmalloc(t, 0.0f);
@@ -113,16 +113,17 @@ void uniform(Tensor* t, float low, float high)
     }
 }
 
-void from_data(Tensor* t, float* data)
+void from_data_cpu(Tensor* t, float* data)
 {
     int size = numel(t->shape, t->ndim);
 
     if (t->data)
     {
-        SAFE_FREE(&t->data, sfree);
+        sfree(t->data, t->device);
+        t->data = NULL;
     }
 
-    t->data = smalloc(data, size);
+    t->data = smalloc(data, size, t->device);
 
     if (t->requires_grad)
     {

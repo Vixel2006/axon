@@ -14,12 +14,14 @@ if tensor_lib:
 
     tensor_lib.smalloc.argtypes = [
         ctypes.POINTER(ctypes.c_float),
-        ctypes.c_int
+        ctypes.c_int,
+        CDevice
     ]
-    tensor_lib.smalloc.restype = None
+    tensor_lib.smalloc.restype = ctypes.POINTER(CStorage)
 
     tensor_lib.sfree.argtypes = [
-        ctypes.POINTER(CStorage)
+        ctypes.POINTER(CStorage),
+        CDevice
     ]
     tensor_lib.sfree.restype = None
  
@@ -45,33 +47,61 @@ if tensor_lib:
     tensor_lib.tfree.argtypes = [ctypes.POINTER(CTensor)]
     tensor_lib.tfree.restype = None
 
-    tensor_lib.zeros.argtypes = [
+    tensor_lib.zeros_cpu.argtypes = [
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.zeros.restype = None
+    tensor_lib.zeros_cpu.restype = None
 
-    tensor_lib.ones.argtypes = [
+    tensor_lib.zeros_cuda.argtypes = [
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.ones.restype = None
+    tensor_lib.zeros_cuda.restype = None
 
-    tensor_lib.randn.argtypes = [
+    tensor_lib.ones_cpu.argtypes = [
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.randn.restype = None 
+    tensor_lib.ones_cpu.restype = None
 
-    tensor_lib.uniform.argtypes = [
+    tensor_lib.ones_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.ones_cuda.restype = None
+
+    tensor_lib.randn_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.randn_cpu.restype = None
+
+    tensor_lib.randn_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.randn_cuda.restype = None 
+
+    tensor_lib.uniform_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.c_float,
         ctypes.c_float,
     ]
-    tensor_lib.uniform.restype = None
+    tensor_lib.uniform_cpu.restype = None
 
-    tensor_lib.from_data.argtypes = [
+    tensor_lib.uniform_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.c_float,
+    ]
+    tensor_lib.uniform_cuda.restype = None
+
+    tensor_lib.from_data_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.c_float)
     ]
-    tensor_lib.from_data.restype = None
+    tensor_lib.from_data_cpu.restype = None
+
+    tensor_lib.from_data_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.c_float)
+    ]
+    tensor_lib.from_data_cuda.restype = None
 
     tensor_lib.borrow.argtypes = [
         ctypes.POINTER(CTensor),
@@ -81,291 +111,571 @@ if tensor_lib:
     ]
     tensor_lib.borrow.restype = None
 
-    tensor_lib.add_grad_op.argtypes = [
+    # Gradient operations
+    tensor_lib.add_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.add_grad_op.restype = None
+    tensor_lib.add_grad_op_cpu.restype = None
 
-    tensor_lib.sub_grad_op.argtypes = [
+    tensor_lib.add_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.sub_grad_op.restype = None
+    tensor_lib.add_grad_op_cuda.restype = None
 
-    tensor_lib.rsub_grad_op.argtypes = [
+    tensor_lib.sub_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.rsub_grad_op.restype = None
+    tensor_lib.sub_grad_op_cpu.restype = None
 
-    tensor_lib.mul_grad_op.argtypes = [
+    tensor_lib.sub_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.mul_grad_op.restype = None
+    tensor_lib.sub_grad_op_cuda.restype = None
 
-    tensor_lib.pow_grad_op.argtypes = [
+    tensor_lib.rsub_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.pow_grad_op.restype = None
+    tensor_lib.rsub_grad_op_cpu.restype = None
 
-    tensor_lib.div_grad_op.argtypes = [
+    tensor_lib.rsub_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.div_grad_op.restype = None
+    tensor_lib.rsub_grad_op_cuda.restype = None
 
-    tensor_lib.rdiv_grad_op.argtypes = [
+    tensor_lib.mul_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.rdiv_grad_op.restype = None
+    tensor_lib.mul_grad_op_cpu.restype = None
 
-    tensor_lib.matmul_grad_op.argtypes = [
+    tensor_lib.mul_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.matmul_grad_op.restype = None
+    tensor_lib.mul_grad_op_cuda.restype = None
 
-    tensor_lib.conv2d_grad_op.argtypes = [
+    tensor_lib.pow_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.conv2d_grad_op.restype = None
+    tensor_lib.pow_grad_op_cpu.restype = None
 
-    tensor_lib.dot_grad_op.argtypes = [
+    tensor_lib.pow_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.dot_grad_op.restype = None
+    tensor_lib.pow_grad_op_cuda.restype = None
 
-    tensor_lib.relu_grad_op.argtypes = [
+    tensor_lib.div_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.relu_grad_op.restype = None
+    tensor_lib.div_grad_op_cpu.restype = None
 
-    tensor_lib.log_grad_op.argtypes = [
+    tensor_lib.div_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.log_grad_op.restype = None
+    tensor_lib.div_grad_op_cuda.restype = None
 
-    tensor_lib.exp_grad_op.argtypes = [
+    tensor_lib.rdiv_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.exp_grad_op.restype = None
+    tensor_lib.rdiv_grad_op_cpu.restype = None
 
-    tensor_lib.abs_grad_op.argtypes = [
+    tensor_lib.rdiv_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.abs_grad_op.restype = None
+    tensor_lib.rdiv_grad_op_cuda.restype = None
 
-    tensor_lib.neg_grad_op.argtypes = [
+    tensor_lib.matmul_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.neg_grad_op.restype = None
+    tensor_lib.matmul_grad_op_cpu.restype = None
 
-    tensor_lib.clip_grad_op.argtypes = [
+    tensor_lib.matmul_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.clip_grad_op.restype = None
+    tensor_lib.matmul_grad_op_cuda.restype = None
 
-    # Reduction operatiosn grad
-    tensor_lib.sum_grad_op.argtypes = [
+    tensor_lib.conv2d_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.conv2d_grad_op_cpu.restype = None
+
+    tensor_lib.conv2d_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.conv2d_grad_op_cuda.restype = None
+
+    tensor_lib.dot_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.dot_grad_op_cpu.restype = None
+
+    tensor_lib.dot_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.dot_grad_op_cuda.restype = None
+
+    tensor_lib.relu_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.relu_grad_op_cpu.restype = None
+
+    tensor_lib.relu_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.relu_grad_op_cuda.restype = None
+
+    tensor_lib.log_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.log_grad_op_cpu.restype = None
+
+    tensor_lib.log_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.log_grad_op_cuda.restype = None
+
+    tensor_lib.exp_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.exp_grad_op_cpu.restype = None
+
+    tensor_lib.exp_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.exp_grad_op_cuda.restype = None
+
+    tensor_lib.abs_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.abs_grad_op_cpu.restype = None
+
+    tensor_lib.abs_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.abs_grad_op_cuda.restype = None
+
+    tensor_lib.neg_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.neg_grad_op_cpu.restype = None
+
+    tensor_lib.neg_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.neg_grad_op_cuda.restype = None
+
+    tensor_lib.clip_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.clip_grad_op_cpu.restype = None
+
+    tensor_lib.clip_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.clip_grad_op_cuda.restype = None
+
+    # Reduction operations grad
+    tensor_lib.sum_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
 
-    tensor_lib.sum_grad_op.restype = None
+    tensor_lib.sum_grad_op_cpu.restype = None
 
-    tensor_lib.mean_grad_op.argtypes = [
+    tensor_lib.sum_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
 
-    tensor_lib.mean_grad_op.restype = None
+    tensor_lib.sum_grad_op_cuda.restype = None
 
-    tensor_lib.max_grad_op.argtypes = [
+    tensor_lib.mean_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
 
-    tensor_lib.max_grad_op.restype = None
+    tensor_lib.mean_grad_op_cpu.restype = None
+
+    tensor_lib.mean_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+
+    tensor_lib.mean_grad_op_cuda.restype = None
+
+    tensor_lib.max_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+
+    tensor_lib.max_grad_op_cpu.restype = None
+
+    tensor_lib.max_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+
+    tensor_lib.max_grad_op_cuda.restype = None
 
     # Movement operations grad
-    tensor_lib.concat_grad_op.argtypes = [
+    tensor_lib.concat_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.concat_grad_op.restype = None
+    tensor_lib.concat_grad_op_cpu.restype = None
+
+    tensor_lib.concat_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.concat_grad_op_cuda.restype = None
 
     # Unary operations
-    tensor_lib.relu_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.relu_op.restype = None
+    tensor_lib.relu_op_cpu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.relu_op_cpu.restype = None
 
-    tensor_lib.log_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.log_op.restype = None
+    tensor_lib.relu_op_cuda.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.relu_op_cuda.restype = None
 
-    tensor_lib.exp_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.exp_op.restype = None
+    tensor_lib.log_op_cpu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.log_op_cpu.restype = None
 
-    tensor_lib.abs_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.abs_op.restype = None
+    tensor_lib.log_op_cuda.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.log_op_cuda.restype = None
 
-    tensor_lib.neg_op.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
-    tensor_lib.neg_op.restype = None
+    tensor_lib.exp_op_cpu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.exp_op_cpu.restype = None
 
-    tensor_lib.clip_op.argtypes = [
+    tensor_lib.exp_op_cuda.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.exp_op_cuda.restype = None
+
+    tensor_lib.abs_op_cpu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.abs_op_cpu.restype = None
+
+    tensor_lib.abs_op_cuda.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.abs_op_cuda.restype = None
+
+    tensor_lib.neg_op_cpu.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.neg_op_cpu.restype = None
+
+    tensor_lib.neg_op_cuda.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+    tensor_lib.neg_op_cuda.restype = None
+
+    tensor_lib.clip_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.c_float,ctypes.c_float
     ]
-    tensor_lib.clip_op.restype = None
+    tensor_lib.clip_op_cpu.restype = None
+
+    tensor_lib.clip_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,ctypes.c_float
+    ]
+    tensor_lib.clip_op_cuda.restype = None
 
     # Reduction operations
-    tensor_lib.max_op.argtypes = [
+    tensor_lib.max_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.c_int,
         ctypes.c_bool,
     ]
-    tensor_lib.max_op.restype = None
+    tensor_lib.max_op_cpu.restype = None
 
-    tensor_lib.mean_op.argtypes = [
+    tensor_lib.max_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.c_int,
         ctypes.c_bool,
     ]
-    tensor_lib.mean_op.restype = None
+    tensor_lib.max_op_cuda.restype = None
 
-    tensor_lib.sum_op.argtypes = [
+    tensor_lib.mean_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.c_int,
         ctypes.c_bool,
     ]
-    tensor_lib.sum_op.restype = None
+    tensor_lib.mean_op_cpu.restype = None
 
-    tensor_lib.sum_full_op.argtypes = [
+    tensor_lib.mean_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
+    tensor_lib.mean_op_cuda.restype = None
+
+    tensor_lib.sum_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
+    tensor_lib.sum_op_cpu.restype = None
+
+    tensor_lib.sum_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_bool,
+    ]
+    tensor_lib.sum_op_cuda.restype = None
+
+    tensor_lib.sum_full_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.sum_full_op.restype = None
+    tensor_lib.sum_full_op_cpu.restype = None
 
-    tensor_lib.mean_full_op.argtypes = [
+    tensor_lib.sum_full_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.mean_full_op.restype = None
+    tensor_lib.sum_full_op_cuda.restype = None
 
-    tensor_lib.max_full_op.argtypes = [
+    tensor_lib.mean_full_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.mean_full_op_cpu.restype = None
+
+    tensor_lib.mean_full_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.mean_full_op_cuda.restype = None
+
+    tensor_lib.max_full_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
    ]
-    tensor_lib.max_full_op.restype = None
+    tensor_lib.max_full_op_cpu.restype = None
 
-    tensor_lib.sum_full_grad_op.argtypes = [
+    tensor_lib.max_full_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+   ]
+    tensor_lib.max_full_op_cuda.restype = None
+
+    tensor_lib.sum_full_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.sum_full_grad_op.restype = None
+    tensor_lib.sum_full_grad_op_cpu.restype = None
 
-    tensor_lib.mean_full_grad_op.argtypes = [
+    tensor_lib.sum_full_grad_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.mean_full_grad_op.restype = None
+    tensor_lib.sum_full_grad_op_cuda.restype = None
 
-    tensor_lib.max_full_grad_op.argtypes = [
+    tensor_lib.mean_full_grad_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_void_p,
     ]
-    tensor_lib.max_full_grad_op.restype = None
+    tensor_lib.mean_full_grad_op_cpu.restype = None
+
+    tensor_lib.mean_full_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.mean_full_grad_op_cuda.restype = None
+
+    tensor_lib.max_full_grad_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.max_full_grad_op_cpu.restype = None
+
+    tensor_lib.max_full_grad_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_void_p,
+    ]
+    tensor_lib.max_full_grad_op_cuda.restype = None
 
     # Binary operations
-    tensor_lib.add_op.argtypes = [
+    tensor_lib.add_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.add_op.restype = None
+    tensor_lib.add_op_cpu.restype = None
 
-    tensor_lib.sub_op.argtypes = [
+    tensor_lib.add_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.sub_op.restype = None
+    tensor_lib.add_op_cuda.restype = None
 
-    tensor_lib.mul_op.argtypes = [
+    tensor_lib.sub_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.mul_op.restype = None
+    tensor_lib.sub_op_cpu.restype = None
 
-    tensor_lib.div_op.argtypes = [
+    tensor_lib.sub_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.div_op.restype = None
+    tensor_lib.sub_op_cuda.restype = None
 
-    tensor_lib.matmul_op.argtypes = [
+    tensor_lib.mul_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.mul_op_cpu.restype = None
+
+    tensor_lib.mul_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.mul_op_cuda.restype = None
+
+    tensor_lib.div_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.div_op_cpu.restype = None
+
+    tensor_lib.div_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.div_op_cuda.restype = None
+
+    tensor_lib.matmul_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
@@ -373,9 +683,19 @@ if tensor_lib:
         ctypes.c_int,
         ctypes.c_int,
     ]
-    tensor_lib.matmul_op.restype = None
+    tensor_lib.matmul_op_cpu.restype = None
 
-    tensor_lib.conv2d_op.argtypes = [
+    tensor_lib.matmul_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
+    tensor_lib.matmul_op_cuda.restype = None
+
+    tensor_lib.conv2d_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
@@ -383,64 +703,144 @@ if tensor_lib:
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,
     ]
-    tensor_lib.conv2d_op.restype = None
+    tensor_lib.conv2d_op_cpu.restype = None
 
-    tensor_lib.dot_op.argtypes = [
+    tensor_lib.conv2d_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_int,
+    ]
+    tensor_lib.conv2d_op_cuda.restype = None
+
+    tensor_lib.dot_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.dot_op.restype = None
+    tensor_lib.dot_op_cpu.restype = None
+
+    tensor_lib.dot_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.dot_op_cuda.restype = None
 
     # Binary operations with scalars
-    tensor_lib.add_scalar_op.argtypes = [
+    tensor_lib.add_scalar_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.c_float,
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.add_scalar_op.restype = None
+    tensor_lib.add_scalar_op_cpu.restype = None
 
-    tensor_lib.sub_scalar_op.argtypes = [
+    tensor_lib.add_scalar_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.c_float,
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.sub_scalar_op.restype = None
+    tensor_lib.add_scalar_op_cuda.restype = None
 
-    tensor_lib.rsub_scalar_op.argtypes = [
+    tensor_lib.sub_scalar_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
         ctypes.c_float,
         ctypes.POINTER(CTensor),
-        ctypes.POINTER(CTensor),
     ]
-    tensor_lib.rsub_scalar_op.restype = None
+    tensor_lib.sub_scalar_op_cpu.restype = None
 
-    tensor_lib.mul_scalar_op.argtypes = [
+    tensor_lib.sub_scalar_op_cuda.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.c_float,
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.mul_scalar_op.restype = None
+    tensor_lib.sub_scalar_op_cuda.restype = None
 
-    tensor_lib.div_scalar_op.argtypes = [
-        ctypes.POINTER(CTensor),
+    tensor_lib.rsub_scalar_op_cpu.argtypes = [
         ctypes.c_float,
         ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
     ]
-    tensor_lib.div_scalar_op.restype = None
+    tensor_lib.rsub_scalar_op_cpu.restype = None
 
-    tensor_lib.rdiv_scalar_op.argtypes = [
+    tensor_lib.rsub_scalar_op_cuda.argtypes = [
         ctypes.c_float,
         ctypes.POINTER(CTensor),
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.rdiv_scalar_op.restype = None
+    tensor_lib.rsub_scalar_op_cuda.restype = None
 
-    tensor_lib.pow_scalar_op.argtypes = [
+    tensor_lib.mul_scalar_op_cpu.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.c_float,
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.pow_scalar_op.restype = None
+    tensor_lib.mul_scalar_op_cpu.restype = None
+
+    tensor_lib.mul_scalar_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.mul_scalar_op_cuda.restype = None
+
+    tensor_lib.div_scalar_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.div_scalar_op_cpu.restype = None
+
+    tensor_lib.div_scalar_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.div_scalar_op_cuda.restype = None
+
+    tensor_lib.rdiv_scalar_op_cpu.argtypes = [
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.rdiv_scalar_op_cpu.restype = None
+
+    tensor_lib.rdiv_scalar_op_cuda.argtypes = [
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.rdiv_scalar_op_cuda.restype = None
+
+    tensor_lib.pow_scalar_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.pow_scalar_op_cpu.restype = None
+
+    tensor_lib.pow_scalar_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.c_float,
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.pow_scalar_op_cuda.restype = None
+
+    tensor_lib.pow_op_cpu.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.pow_op_cpu.restype = None
+
+    tensor_lib.pow_op_cuda.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CTensor),
+    ]
+    tensor_lib.pow_op_cuda.restype = None
 
     # Movement operations
     tensor_lib.view_op.argtypes = [
@@ -489,14 +889,21 @@ if tensor_lib:
     tensor_lib.broadcast_op.restype = None
 
 
-    tensor_lib.concat_op.argtypes = [
+    tensor_lib.concat_op_cpu.argtypes = [
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.POINTER(CTensor),
         ctypes.c_int,
         ctypes.c_int,
     ]
-    tensor_lib.concat_op.restype = None
+    tensor_lib.concat_op_cpu.restype = None
 
+    tensor_lib.concat_op_cuda.argtypes = [
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.POINTER(CTensor),
+        ctypes.c_int,
+        ctypes.c_int,
+    ]
+    tensor_lib.concat_op_cuda.restype = None
 
     # Optimizers
     tensor_lib.sgd.argtypes = [
@@ -524,4 +931,3 @@ if tensor_lib:
         ctypes.c_int,
     ]
     tensor_lib.zero_grad.restype = None
-
