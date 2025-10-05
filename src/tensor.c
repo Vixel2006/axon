@@ -118,7 +118,7 @@ Storage* smalloc(float* data, int size, Device device)
     }
     else
     {
-        cudaError_t err = cudaMalloc((void**) &s->data, size);
+        cudaError_t err = cudaMalloc((void**) &s->data, size * sizeof(float));
 
         if (err != cudaSuccess)
         {
@@ -127,7 +127,14 @@ Storage* smalloc(float* data, int size, Device device)
             return NULL;
         }
 
-        cudaMemcpy(s->data, data, size, cudaMemcpyHostToDevice);
+        if (data != NULL)
+        {
+            cudaMemcpy(s->data, data, size * sizeof(float), cudaMemcpyHostToDevice);
+        }
+        else
+        {
+            cudaMemset(s->data, 0, size * sizeof(float)); // Initialize to zeros if no data provided
+        }
     }
 
     s->counter = 1;
@@ -197,7 +204,7 @@ void gmalloc(Tensor* t, float init)
     }
     else
     {
-        cudaError_t err = cudaMalloc((void**) &t->grad->data, size);
+        cudaError_t err = cudaMalloc((void**) &t->grad->data, size * sizeof(float));
         if (err != cudaSuccess)
         {
             LOG_ERROR("Failed to allocate Storage data for grad on cuda device.");
@@ -205,7 +212,7 @@ void gmalloc(Tensor* t, float init)
             t->grad = NULL;
             return;
         }
-        cudaMemset(t->grad->data, init, size);
+        cudaMemset(t->grad->data, 0, size * sizeof(float));
     }
 
     t->grad->counter = 1;

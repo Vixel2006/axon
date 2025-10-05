@@ -88,6 +88,8 @@ __global__ void clip_kernel(const float* a, float* b, const float min_val, const
     }
 }
 
+// TODO: There's too many memory copies in this implementation we will need to fix this in the
+// future
 void relu_op_cuda(Tensor* in, Tensor* out)
 {
     LOG_INFO("ReLU operation on CUDA running......");
@@ -96,21 +98,22 @@ void relu_op_cuda(Tensor* in, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    float* d_data;
-    cudaMalloc((void**) &d_data, sizeof(float) * N);
+    float* h_out;
+    float* d_out;
 
-    relu_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, d_data, N);
+    cudaMallocHost((void**) &h_out, sizeof(float) * N);
+    cudaMalloc((void**) &d_out, sizeof(float) * N);
+
+    relu_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, d_out, N);
+
+    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
+
+    from_data(out, h_out);
+
+    SAFE_FREE(&d_out, cudaFree);
+    SAFE_FREE(&h_out, cudaFreeHost);
 
     CHECK_CUDA();
-
-    float* h_data;
-    cudaMallocHost((void**) &h_data, sizeof(float) * N);
-    cudaMemcpy(h_data, d_data, N * sizeof(float), cudaMemcpyDeviceToHost);
-
-    from_data(out, h_data);
-
-    SAFE_FREE(&h_data, cudaFreeHost);
-    SAFE_FREE(&d_data, cudaFree);
 
     LOG_INFO("ReLU operation done on CUDA successfully.");
 }
@@ -123,7 +126,19 @@ void log_op_cuda(Tensor* in, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    log_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data, N);
+    float* h_out;
+    float* d_out;
+
+    cudaMallocHost((void**) &h_out, sizeof(float) * N);
+    cudaMalloc((void**) &d_out, sizeof(float) * N);
+
+    log_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, d_out, N);
+
+    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
+    from_data(out, h_out);
+
+    SAFE_FREE(&d_out, cudaFree);
+    SAFE_FREE(&h_out, cudaFreeHost);
 
     CHECK_CUDA();
 
@@ -138,7 +153,19 @@ void exp_op_cuda(Tensor* in, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    exp_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data, N);
+    float* h_out;
+    float* d_out;
+
+    cudaMallocHost((void**) &h_out, sizeof(float) * N);
+    cudaMalloc((void**) &d_out, sizeof(float) * N);
+
+    exp_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, d_out, N);
+
+    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
+    from_data(out, h_out);
+
+    SAFE_FREE(&d_out, cudaFree);
+    SAFE_FREE(&h_out, cudaFreeHost);
 
     CHECK_CUDA();
 
@@ -153,7 +180,19 @@ void neg_op_cuda(Tensor* in, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    neg_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data, N);
+    float* h_out;
+    float* d_out;
+
+    cudaMallocHost((void**) &h_out, sizeof(float) * N);
+    cudaMalloc((void**) &d_out, sizeof(float) * N);
+
+    neg_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, d_out, N);
+
+    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
+    from_data(out, h_out);
+
+    SAFE_FREE(&d_out, cudaFree);
+    SAFE_FREE(&h_out, cudaFreeHost);
 
     CHECK_CUDA();
 
@@ -168,7 +207,19 @@ void abs_op_cuda(Tensor* in, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    abs_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data, N);
+    float* h_out;
+    float* d_out;
+
+    cudaMallocHost((void**) &h_out, sizeof(float) * N);
+    cudaMalloc((void**) &d_out, sizeof(float) * N);
+
+    abs_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, d_out, N);
+
+    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
+    from_data(out, h_out);
+
+    SAFE_FREE(&d_out, cudaFree);
+    SAFE_FREE(&h_out, cudaFreeHost);
 
     CHECK_CUDA();
 
@@ -183,8 +234,19 @@ void clip_op_cuda(Tensor* in, Tensor* out, float min_val, float max_val)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    clip_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data, min_val,
-                                                       max_val, N);
+    float* h_out;
+    float* d_out;
+
+    cudaMallocHost((void**) &h_out, sizeof(float) * N);
+    cudaMalloc((void**) &d_out, sizeof(float) * N);
+
+    clip_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, d_out, min_val, max_val, N);
+
+    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
+    from_data(out, h_out);
+
+    SAFE_FREE(&d_out, cudaFree);
+    SAFE_FREE(&h_out, cudaFreeHost);
 
     CHECK_CUDA();
 
