@@ -7,28 +7,29 @@ from axon.ops.mop import *
 from axon.ops.rop import *
 
 from axon.ops.bop import Conv2D
-from axon.axon_bindings.c_wrapper_functions import get_op_function
+from axon.axon_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_uniform, c_from_data
+import ctypes
 
 # =========== Initialization Operations ============
 def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor:
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
-    get_op_function("zeros", out.device)(out.c_tensor_ptr)
+    c_zeros(out.c_tensor_ptr)
     return out
 
 def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True,) -> Tensor:
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
-    get_op_function("ones", out.device)(out.c_tensor_ptr)
+    c_ones(out.c_tensor_ptr)
     return out
 
 def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str = "cpu", requires_grad: bool = True) -> Tensor:
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
     # NOTE: We need to add the seed to the randn function
-    get_op_function("randn", out.device)(out.c_tensor_ptr)
+    c_randn(out.c_tensor_ptr)
     return out
 
 def uniform(shape: tuple[int, ...] | list[int], low: float = 0.0, high: float = 1.0, device: str = "cpu", requires_grad: bool = True) -> Tensor:
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
-    get_op_function("uniform", out.device)(out.c_tensor_ptr, low, high)
+    c_uniform(out.c_tensor_ptr, low, high)
     return out
 
 def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] | np.ndarray, device: str = "cpu", requires_grad: bool = True) -> Tensor:
@@ -42,7 +43,7 @@ def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] 
         raise TypeError(f"Unsupported data type for from_data: {type(data)}. Expected list, tuple, or numpy.ndarray.")
 
     data_ptr = out._data_np.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-    get_op_function("from_data", out.device)(out.c_tensor_ptr, data_ptr)
+    c_from_data(out.c_tensor_ptr, data_ptr)
     return out
 
 
@@ -119,8 +120,8 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: retu
 if __name__ == "__main__":
     a = from_data((2, 2), [[1, 2], [3, 4]], device="cuda")
 
-    b = a * 2
+    b = relu(a)
 
     b.realize()
 
-
+    print(b)

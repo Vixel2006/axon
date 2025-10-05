@@ -290,7 +290,7 @@ void concat_op_cpu(Tensor** in, Tensor* out, int num_tensors, int axis)
         }
     }
 
-    from_data_cpu(out, data);
+    from_data(out, data);
     free(cum_sizes);
     free(data);
 }

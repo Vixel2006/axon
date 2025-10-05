@@ -14,7 +14,7 @@
         }                                                                                          \
     } while (0)
 
-void zeros_cpu(Tensor* t)
+void zeros(Tensor* t)
 {
     int size;
     float* data;
@@ -42,7 +42,7 @@ void zeros_cpu(Tensor* t)
              (void*) t->grad->data);
 }
 
-void ones_cpu(Tensor* t)
+void ones(Tensor* t)
 {
     int size;
     float* data;
@@ -65,7 +65,7 @@ void ones_cpu(Tensor* t)
     }
 }
 
-void randn_cpu(Tensor* t)
+void randn(Tensor* t)
 {
     int size;
     float* data;
@@ -89,7 +89,7 @@ void randn_cpu(Tensor* t)
     }
 }
 
-void uniform_cpu(Tensor* t, float low, float high)
+void uniform(Tensor* t, float low, float high)
 {
     int size;
     float* data;
@@ -113,7 +113,7 @@ void uniform_cpu(Tensor* t, float low, float high)
     }
 }
 
-void from_data_cpu(Tensor* t, float* data)
+void from_data(Tensor* t, float* data)
 {
     int size = numel(t->shape, t->ndim);
 
