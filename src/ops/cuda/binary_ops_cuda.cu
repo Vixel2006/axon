@@ -2,6 +2,18 @@
 #include "ops/binary_ops.h"
 #include <cuda_runtime.h>
 
+#define CHECK_CUDA()                                                                               \
+    do                                                                                             \
+    {                                                                                              \
+        cudaError_t err = cudaGetLastError();                                                      \
+        if (err != cudaSuccess)                                                                    \
+        {                                                                                          \
+            LOG_ERROR("CUDA runtime error at %s:%d: %s", __FILE__, __LINE__,                       \
+                      cudaGetErrorString(err));                                                    \
+            return;                                                                                \
+        }                                                                                          \
+    } while (0)
+
 __global__ void add_kernel(const float* a, const float* b, float* out, const int n)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -70,11 +82,8 @@ void add_op_cuda(Tensor* a, Tensor* b, Tensor* out)
 
     cudaError_t err = cudaGetLastError();
 
-    if (err != cudaSuccess)
-    {
-        LOG_ERROR("Addition kernel running error");
-        return;
-    }
+    CHECK_CUDA();
+
     LOG_INFO("Add kernel done successfully");
 }
 
@@ -89,13 +98,8 @@ void sub_op_cuda(Tensor* a, Tensor* b, Tensor* out)
     sub_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
                                                       N);
 
-    cudaError_t err = cudaGetLastError();
+    CHECK_CUDA();
 
-    if (err != cudaSuccess)
-    {
-        LOG_ERROR("Sub kernel running error.");
-        return;
-    }
     LOG_INFO("Sub kernel done successfully");
 }
 
@@ -109,14 +113,8 @@ void mul_op_cuda(Tensor* a, Tensor* b, Tensor* out)
 
     mul_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
                                                       N);
+    CHECK_CUDA();
 
-    cudaError_t err = cudaGetLastError();
-
-    if (err != cudaSuccess)
-    {
-        LOG_ERROR("Mul kernel running error.");
-        return;
-    }
     LOG_INFO("Mul kernel done successfully");
 }
 
@@ -133,12 +131,24 @@ void div_op_cuda(Tensor* a, Tensor* b, Tensor* out)
 
     cudaError_t err = cudaGetLastError();
 
-    if (err != cudaSuccess)
-    {
-        LOG_ERROR("Div kernel running error.");
-        return;
-    }
+    CHECK_CUDA();
+
     LOG_INFO("Div kernel done successfully");
+}
+
+void pow_op_cuda(Tensor* a, Tensor* b, Tensor* out)
+{
+    LOG_INFO("Pow kernel starts");
+    int N = numel(a->shape, a->ndim);
+
+    int num_threads_per_block = 256;
+    int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
+
+    pow_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
+                                                      N);
+    CHECK_CUDA();
+
+    LOG_INFO("Pow kernel done successfully");
 }
 
 void matmul_op_cuda(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P)
@@ -170,25 +180,4 @@ void dot_op_cuda(Tensor* a, Tensor* b, Tensor* out)
     (void) b;
     (void) out;
     LOG_WARN("dot_op_cuda: CUDA implementation not available yet.");
-}
-
-void pow_op_cuda(Tensor* a, Tensor* b, Tensor* out)
-{
-    LOG_INFO("Pow kernel starts");
-    int N = numel(a->shape, a->ndim);
-
-    int num_threads_per_block = 256;
-    int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
-
-    pow_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
-                                                      N);
-
-    cudaError_t err = cudaGetLastError();
-
-    if (err != cudaSuccess)
-    {
-        LOG_ERROR("Pow kernel running error.");
-        return;
-    }
-    LOG_INFO("Pow kernel done successfully");
 }

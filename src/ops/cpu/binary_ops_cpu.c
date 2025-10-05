@@ -105,7 +105,7 @@ void add_op_cpu(Tensor* a, Tensor* b, Tensor* out)
             data[i] = a->data->data[i] + b->data->data[i];
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -148,7 +148,7 @@ void sub_op_cpu(Tensor* a, Tensor* b, Tensor* out)
         }
     }
 
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -190,7 +190,7 @@ void mul_op_cpu(Tensor* a, Tensor* b, Tensor* out)
             data[i] = a->data->data[i] * b->data->data[i];
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -232,7 +232,7 @@ void div_op_cpu(Tensor* a, Tensor* b, Tensor* out)
             data[i] = a->data->data[i] / b->data->data[i];
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -402,7 +402,7 @@ void matmul_op_cpu(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P)
             }
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     if (!out->data)
     {
         LOG_ERROR("matmul_op ERROR: Failed to set output tensor data.");
@@ -491,7 +491,7 @@ void conv2d_op_cpu(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_si
         }
     }
 
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -547,7 +547,7 @@ void dot_op_cpu(Tensor* a, Tensor* b, Tensor* out)
         }
         data[0] = sum;
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -589,6 +589,6 @@ void pow_op_cpu(Tensor* a, Tensor* b, Tensor* out)
             data[i] = powf(a->data->data[i], b->data->data[i]);
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }

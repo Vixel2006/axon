@@ -60,35 +60,23 @@ if tensor_lib:
     def c_tfree(tensor_ptr):
         tensor_lib.tfree(tensor_ptr)
 
-    def c_zeros_cpu(tensor_ptr):
-        return tensor_lib.zeros_cpu(tensor_ptr)
+    def c_copy_storage_to_host(storage_ptr, device, size, host_buffer):
+        tensor_lib.copy_storage_to_host(storage_ptr, device, size, host_buffer)
 
-    def c_zeros_cuda(tensor_ptr):
-        return tensor_lib.zeros_cuda(tensor_ptr)
+    def c_zeros(tensor_ptr):
+        return tensor_lib.zeros(tensor_ptr)
 
-    def c_ones_cpu(tensor_ptr):
-        return tensor_lib.ones_cpu(tensor_ptr)
+    def c_ones(tensor_ptr):
+        return tensor_lib.ones(tensor_ptr)
 
-    def c_ones_cuda(tensor_ptr):
-        return tensor_lib.ones_cuda(tensor_ptr)
+    def c_randn(tensor_ptr):
+        return tensor_lib.randn(tensor_ptr)
 
-    def c_randn_cpu(tensor_ptr):
-        return tensor_lib.randn_cpu(tensor_ptr)
+    def c_uniform(tensor_ptr, low, high):
+        return tensor_lib.uniform(tensor_ptr, low, high)
 
-    def c_randn_cuda(tensor_ptr):
-        return tensor_lib.randn_cuda(tensor_ptr)
-
-    def c_uniform_cpu(tensor_ptr, low, high):
-        return tensor_lib.uniform_cpu(tensor_ptr, low, high)
-
-    def c_uniform_cuda(tensor_ptr, low, high):
-        return tensor_lib.uniform_cuda(tensor_ptr, low, high)
-
-    def c_from_data_cpu(tensor_ptr, data):
-        return tensor_lib.from_data_cpu(tensor_ptr, data)
-
-    def c_from_data_cuda(tensor_ptr, data):
-        return tensor_lib.from_data_cuda(tensor_ptr, data)
+    def c_from_data(tensor_ptr, data):
+        return tensor_lib.from_data(tensor_ptr, data)
 
     def c_borrow(out_tensor_ptr, storage_ptr, grad_storage_ptr):
         return tensor_lib.borrow(out_tensor_ptr, storage_ptr, grad_storage_ptr)
@@ -546,10 +534,4 @@ if tensor_lib:
     _register_op("expand", c_expand, None)
     _register_op("broadcast", c_broadcast, None)
     _register_op("concat", c_concat_cpu, c_concat_cuda)
-
-    _register_op("zeros", c_zeros_cpu, c_zeros_cuda)
-    _register_op("ones", c_ones_cpu, c_ones_cuda)
-    _register_op("randn", c_randn_cpu, c_randn_cuda)
-    _register_op("uniform", c_uniform_cpu, c_uniform_cuda)
-    _register_op("from_data", c_from_data_cpu, c_from_data_cuda)
 

@@ -61,9 +61,6 @@ static inline bool can_use_simd_unary(Tensor* in, Tensor* out)
 void relu_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: relu_op: Performing ReLU activation");
-    LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
-             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "relu_op")) return;
 
@@ -97,16 +94,13 @@ void relu_op_cpu(Tensor* in, Tensor* out)
             data[i] = in->data->data[i] > 0.0f ? in->data->data[i] : 0.0f;
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
 void log_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: log_op: Performing natural logarithm");
-    LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
-             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "log_op")) return;
 
@@ -176,16 +170,13 @@ void log_op_cpu(Tensor* in, Tensor* out)
             data[i] = SAFE_LOGF(in->data->data[i]);
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
 void exp_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: exp_op: Performing exponential");
-    LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
-             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "exp_op")) return;
 
@@ -218,16 +209,13 @@ void exp_op_cpu(Tensor* in, Tensor* out)
             data[i] = expf(in->data->data[i]);
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
 void neg_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: neg_op: Performing negation");
-    LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
-             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "neg_op")) return;
 
@@ -262,16 +250,13 @@ void neg_op_cpu(Tensor* in, Tensor* out)
             data[i] = 0.0f - in->data->data[i];
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
 void clip_op_cpu(Tensor* in, Tensor* out, float min_val, float max_val)
 {
     LOG_INFO("OP: clip_op: Performing clipping");
-    LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
-             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "clip_op")) return;
 
@@ -331,16 +316,13 @@ void clip_op_cpu(Tensor* in, Tensor* out, float min_val, float max_val)
             }
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
 void abs_op_cpu(Tensor* in, Tensor* out)
 {
     LOG_INFO("OP: abs_op: Performing absolute value");
-    LOG_INFO("Tensor Pointers - in: data=%p, grad=%p | out: data=%p, grad=%p",
-             (void*) in->data->data, (void*) in->grad->data, (void*) out->data->data,
-             (void*) out->grad->data);
 
     if (!check_tensors_unary(in, out, "abs_op")) return;
 
@@ -375,6 +357,6 @@ void abs_op_cpu(Tensor* in, Tensor* out)
             data[i] = in->data->data[i] >= 0 ? in->data->data[i] : 0.0f - in->data->data[i];
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }

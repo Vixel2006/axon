@@ -58,6 +58,7 @@ extern "C"
     AXON_EXPORT int* compute_strides(const int* shape, int ndim);
     AXON_EXPORT bool is_contiguous(Tensor* t);
     AXON_EXPORT bool shapes_equal(const int* shape1, int ndim1, const int* shape2, int ndim2);
+    AXON_EXPORT void copy_storage_to_host(Storage* s, Device device, int size, float* host_buffer);
 
 #ifdef __cplusplus
 }

@@ -288,3 +288,17 @@ void tfree(Tensor* t)
 
     SAFE_FREE(&t, free);
 }
+
+void copy_storage_to_host(Storage* s, Device device, int size, float* host_buffer)
+{
+    if (!s || !host_buffer) return;
+
+    if (device == CPU)
+    {
+        memcpy(host_buffer, s->data, size * sizeof(float));
+    }
+    else
+    {
+        cudaMemcpy(host_buffer, s->data, size * sizeof(float), cudaMemcpyDeviceToHost);
+    }
+}

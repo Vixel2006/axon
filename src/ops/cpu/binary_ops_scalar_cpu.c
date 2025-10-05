@@ -53,7 +53,7 @@ void add_scalar_op_cpu(Tensor* a, float b, Tensor* out)
             data[i] = a->data->data[i] + b;
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -102,7 +102,7 @@ void sub_scalar_op_cpu(Tensor* a, float b, Tensor* out)
             data[i] = a->data->data[i] - b;
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -160,7 +160,7 @@ void rsub_scalar_op_cpu(Tensor* a, float b, Tensor* out)
             data[i] = b - a->data->data[i];
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -209,7 +209,7 @@ void mul_scalar_op_cpu(Tensor* a, float b, Tensor* out)
             data[i] = a->data->data[i] * b;
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -280,7 +280,7 @@ void div_scalar_op_cpu(Tensor* a, float b, Tensor* out)
             }
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -349,7 +349,7 @@ void rdiv_scalar_op_cpu(Tensor* a, float b, Tensor* out)
             }
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }
 
@@ -398,6 +398,6 @@ void pow_scalar_op_cpu(Tensor* a, float b, Tensor* out)
             data[i] = powf(a->data->data[i], b);
         }
     }
-    from_data_cpu(out, data);
+    from_data(out, data);
     SAFE_FREE(&data, free);
 }

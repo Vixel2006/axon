@@ -47,61 +47,41 @@ if tensor_lib:
     tensor_lib.tfree.argtypes = [ctypes.POINTER(CTensor)]
     tensor_lib.tfree.restype = None
 
-    tensor_lib.zeros_cpu.argtypes = [
+    tensor_lib.copy_storage_to_host.argtypes = [
+        ctypes.POINTER(CStorage),
+        CDevice,
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_float),
+    ]
+    tensor_lib.copy_storage_to_host.restype = None
+
+    tensor_lib.zeros.argtypes = [
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.zeros_cpu.restype = None
+    tensor_lib.zeros.restype = None
 
-    tensor_lib.zeros_cuda.argtypes = [
+    tensor_lib.ones.argtypes = [
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.zeros_cuda.restype = None
+    tensor_lib.ones.restype = None
 
-    tensor_lib.ones_cpu.argtypes = [
+    tensor_lib.randn.argtypes = [
         ctypes.POINTER(CTensor),
     ]
-    tensor_lib.ones_cpu.restype = None
+    tensor_lib.randn.restype = None 
 
-    tensor_lib.ones_cuda.argtypes = [
-        ctypes.POINTER(CTensor),
-    ]
-    tensor_lib.ones_cuda.restype = None
-
-    tensor_lib.randn_cpu.argtypes = [
-        ctypes.POINTER(CTensor),
-    ]
-    tensor_lib.randn_cpu.restype = None
-
-    tensor_lib.randn_cuda.argtypes = [
-        ctypes.POINTER(CTensor),
-    ]
-    tensor_lib.randn_cuda.restype = None 
-
-    tensor_lib.uniform_cpu.argtypes = [
+    tensor_lib.uniform.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.c_float,
         ctypes.c_float,
     ]
-    tensor_lib.uniform_cpu.restype = None
+    tensor_lib.uniform.restype = None
 
-    tensor_lib.uniform_cuda.argtypes = [
-        ctypes.POINTER(CTensor),
-        ctypes.c_float,
-        ctypes.c_float,
-    ]
-    tensor_lib.uniform_cuda.restype = None
-
-    tensor_lib.from_data_cpu.argtypes = [
+    tensor_lib.from_data.argtypes = [
         ctypes.POINTER(CTensor),
         ctypes.POINTER(ctypes.c_float)
     ]
-    tensor_lib.from_data_cpu.restype = None
-
-    tensor_lib.from_data_cuda.argtypes = [
-        ctypes.POINTER(CTensor),
-        ctypes.POINTER(ctypes.c_float)
-    ]
-    tensor_lib.from_data_cuda.restype = None
+    tensor_lib.from_data.restype = None
 
     tensor_lib.borrow.argtypes = [
         ctypes.POINTER(CTensor),
