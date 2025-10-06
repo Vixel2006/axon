@@ -290,6 +290,28 @@ class TestFunctions:
         # expected_e = 10.0 + a_np
         # assert np.allclose(e.realize().data, expected_e)
 
+
+    def test_add_function_cuda(self):
+        a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+        b_np = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)
+        a = from_data(a_np.shape, a_np, device="cuda")
+        b = from_data(b_np.shape, b_np, device="cuda")
+
+        c = add(a, b)
+        assert c.shape == a.shape  # Shape should be the same
+        # expected_c = a_np + b_np
+        # assert np.allclose(c.realize().data, expected_c)
+
+        d = add(a, 10.0)
+        assert d.shape == a.shape  # Shape should be the same
+        # expected_d = a_np + 10.0
+        # assert np.allclose(d.realize().data, expected_d)
+
+        e = add(10.0, a)
+        assert e.shape == a.shape  # Shape should be the same
+        # expected_e = 10.0 + a_np
+        # assert np.allclose(e.realize().data, expected_e)
+
     def test_sub_function(self):
         a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
         b_np = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)

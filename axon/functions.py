@@ -119,9 +119,10 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: retu
 
 if __name__ == "__main__":
     a = from_data((2, 2), [[1, 2], [3, 4]], device="cuda")
+    b = from_data((2, 2), [[1, 2], [3, 4]], device="cuda")
 
-    b = log(a)
+    c = a @ b
 
-    b.realize()
+    c.realize()
 
-    print(b)
+    print(c)
