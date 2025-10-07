@@ -43,8 +43,23 @@ class LazyOp(ABC):
                             requires_grad_flag = True
         
         output_requires_grad = kwargs.pop('requires_grad', requires_grad_flag)
+        
+        output_device = "cpu"
+        for arg in args:
+            if isinstance(arg, Tensor):
+                if arg.device == "cuda":
+                    output_device = "cuda"
+                    break
+            elif isinstance(arg, (list, tuple)):
+                for item in arg:
+                    if isinstance(item, Tensor):
+                        if item.device == "cuda":
+                            output_device = "cuda"
+                            break
+                if output_device == "cuda":
+                    break
 
-        out = Tensor(shape=out_shape, requires_grad=output_requires_grad)
+        out = Tensor(shape=out_shape, device=output_device, requires_grad=output_requires_grad)
 
         forward_kwargs, backward_ctx = cls.create_ctx_struct(*args, **kwargs)
 

@@ -70,7 +70,7 @@ def add(a: Tensor | float, b: Tensor | float) -> Tensor: return Add.create_node(
 def mul(a: Tensor | float, b: Tensor | float) -> Tensor: return Mul.create_node(a, b)
 def pow(a: Tensor, b: Tensor | float) -> Tensor: return Pow.create_node(a, b)
 def matmul(a: Tensor, b: Tensor) -> Tensor: return MatMul.create_node(a, b)
-def dot(a: Tensor, b: Tensor) -> Tensor: return Dot.create_node(a, b)
+def dot(a: Tensor, b: Tensor) -> Tensor: return MatMul.create_node(a, b)
 
 def conv2d(a: Tensor, b: Tensor, kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int) -> Tensor: return Conv2D.create_node(a, b, kernel_size=kernel_size, stride=stride, padding=padding)
 
@@ -118,10 +118,9 @@ def mean(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: ret
 def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
 
 if __name__ == "__main__":
-    a = from_data((2, 2), [[1, 2], [3, 4]], device="cuda")
-    b = from_data((2, 2), [[1, 2], [3, 4]], device="cuda")
+    a = from_data((2, 3), [[1, 2], [3, 4]], device="cuda")
 
-    c = a @ b
+    c = max(a)
 
     c.realize()
 
