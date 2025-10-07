@@ -290,7 +290,6 @@ class TestFunctions:
         # expected_e = 10.0 + a_np
         # assert np.allclose(e.realize().data, expected_e)
 
-
     def test_add_function_cuda(self):
         a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
         b_np = np.array([[5.0, 6.0], [7.0, 8.0]], dtype=np.float32)

@@ -88,10 +88,10 @@ __global__ void matmul_kernel(const float* a, const float* b, float* out, const 
     const float* b_batch = b + batch * K * M;
     float* c_batch = out + batch * N * M;
 
-    for (int t = 0; t < K / TILE_DIM; ++t)
+    for (int t = 0; t < (K + TILE_DIM - 1) / TILE_DIM; ++t) // Corrected outer loop
     {
         int tiledColA = t * TILE_DIM + threadIdx.x;
-        int tiledRowB = (K * row) * (t * TILE_DIM) + threadIdx.y;
+        int tiledRowB = t * TILE_DIM + threadIdx.y;
 
         a_tile[threadIdx.y][threadIdx.x] =
             (row < N && tiledColA < K) ? a_batch[row * K + tiledColA] : 0.0f;
@@ -100,7 +100,7 @@ __global__ void matmul_kernel(const float* a, const float* b, float* out, const 
             (tiledRowB < K && col < M) ? b_batch[tiledRowB * M + col] : 0.0f;
         __syncthreads();
 
-        for (int k = 0; k < K; ++k)
+        for (int k = 0; k < TILE_DIM; ++k) // Corrected inner loop
         {
             sum += a_tile[threadIdx.y][k] * b_tile[k][threadIdx.x];
         }
