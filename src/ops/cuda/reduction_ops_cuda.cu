@@ -135,7 +135,66 @@ __global__ void mean_kernel(float* a, float* out, int n, int axis_dim, int outer
     }
 }
 
-__global__ void max_kernel() {}
+template <int block_size>
+__device__ __forceinline__ void wrap_max_reduce(volatile float* rdata, int tid)
+{
+    if (block_size >= 64) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 32]);
+    if (block_size >= 32) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 16]);
+    if (block_size >= 16) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 8]);
+    if (block_size >= 8) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 4]);
+    if (block_size >= 4) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 2]);
+    if (block_size >= 2) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 1]);
+}
+
+template <int block_size>
+__global__ void max_kernel(float* a, float* out, int n, int axis_dim, int inner_dim, int outer_dim)
+{
+    extern __shared__ float rdata[];
+    int tid = threadIdx.x;
+    int outer_idx = blockIdx.x;
+    int inner_idx = blockIdx.y;
+
+    rdata[tid] = -FLT_MAX;
+    __syncthreads();
+
+    for (int i = tid; i < axis_dim; i += block_size)
+    {
+        int index = outer_idx * axis_dim * inner_dim + i * inner_dim + inner_idx;
+        rdata[tid] = fmaxf(rdata[tid], a[index]);
+    }
+
+    if (block_size >= 512)
+    {
+        if (tid < 256)
+        {
+            rdata[tid] = fmaxf(rdata[tid], rdata[tid + 256]);
+        }
+    }
+
+    if (block_size >= 256)
+    {
+        if (tid < 128)
+        {
+            rdata[tid] = fmaxf(rdata[tid], rdata[tid + 128]);
+        }
+    }
+
+    if (block_size >= 128)
+    {
+        if (tid < 64)
+        {
+            rdata[tid] = fmaxf(rdata[tid], rdata[tid + 64]);
+        }
+    }
+
+    if (block_size >= 64) wrap_max_reduce<block_size>(rdata, tid);
+
+    if (tid == 0)
+    {
+        int output_idx = outer_idx * inner_dim + inner_idx;
+        out[output_idx] = fmaxf(out[output_idx], rdata[0]);
+    }
+}
 
 template <int block_size> __global__ void full_sum_kernel(const float* a, float* out, int n)
 {
@@ -182,17 +241,6 @@ template <int block_size> __global__ void full_sum_kernel(const float* a, float*
     if (block_size >= 64) wrap_sum_reduce<block_size>(rdata, tid);
 
     if (tid == 0) out[blockIdx.x] = rdata[0];
-}
-
-template <int block_size>
-__device__ __forceinline__ void wrap_max_reduce(volatile float* rdata, int tid)
-{
-    if (block_size >= 64) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 32]);
-    if (block_size >= 32) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 16]);
-    if (block_size >= 16) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 8]);
-    if (block_size >= 8) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 4]);
-    if (block_size >= 4) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 2]);
-    if (block_size >= 2) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 1]);
 }
 
 template <int block_size> __global__ void full_max_kernel(float* a, float* out, int n)
@@ -399,7 +447,78 @@ void mean_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
 
 void max_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
 {
-    LOG_WARN("max_op_cuda: CUDA implementation not available yet.");
+    LOG_INFO("max operation on cuda starting......");
+
+    if (axis < 0 || axis >= a->ndim)
+    {
+        LOG_ERROR("max_op_cuda: Axis %d is out of bounds for tensor with %d dimensions.", axis,
+                  a->ndim);
+        return;
+    }
+
+    int outer_dim = 1;
+    for (int i = 0; i < axis; ++i)
+    {
+        outer_dim *= a->shape[i];
+    }
+
+    int axis_dim = a->shape[axis];
+
+    int inner_dim = 1;
+    for (int i = axis + 1; i < a->ndim; ++i)
+    {
+        inner_dim *= a->shape[i];
+    }
+
+    int num_threads_per_block = 256;
+    dim3 grid_dims(outer_dim, inner_dim);
+
+    float* h_out;
+    float* d_out;
+
+    int output_numel = outer_dim * inner_dim;
+    cudaMallocHost((void**) &h_out, sizeof(float) * output_numel);
+    cudaMalloc((void**) &d_out, sizeof(float) * output_numel);
+
+    max_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
+        a->data->data, d_out, outer_dim, axis_dim, inner_dim, inner_dim);
+
+    cudaMemcpy(h_out, d_out, sizeof(float) * output_numel, cudaMemcpyDeviceToHost);
+
+    int out_ndim = keepdim ? a->ndim : a->ndim - 1;
+    int* out_shape = (int*) malloc(sizeof(int) * out_ndim);
+    if (!out_shape)
+    {
+        LOG_ERROR("max_op_cuda: Failed to allocate memory for out_shape");
+        SAFE_FREE(&h_out, cudaFreeHost);
+        SAFE_FREE(&d_out, cudaFree);
+        return;
+    }
+
+    int current_out_dim = 0;
+    for (int i = 0; i < a->ndim; ++i)
+    {
+        if (i == axis)
+        {
+            if (keepdim)
+            {
+                out_shape[current_out_dim++] = 1;
+            }
+        }
+        else
+        {
+            out_shape[current_out_dim++] = a->shape[i];
+        }
+    }
+
+    from_data(out, h_out);
+    SAFE_FREE(&out_shape, free);
+
+    SAFE_FREE(&d_out, cudaFree);
+    SAFE_FREE(&h_out, cudaFreeHost);
+
+    CHECK_CUDA();
+    LOG_INFO("max operation on cuda done.");
 }
 
 void sum_full_op_cuda(Tensor* a, Tensor* out)
