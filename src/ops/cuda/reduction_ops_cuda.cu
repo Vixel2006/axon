@@ -40,8 +40,11 @@ __global__ void sum_kernel(float* a, float* out, int n, int axis_dim, int outer_
 
     for (int i = tid; i < axis_dim; i += block_size)
     {
-        int input_idx = outer_idx * axis_dim * inner_dim + i * inner_dim + inner_idx;
-        rdata[tid] += a[input_idx];
+        int current_index = outer_idx * (axis_dim * inner_dim) + i * inner_dim + inner_idx;
+        if (current_index < n)
+        {
+            rdata[tid] += a[current_index];
+        }
     }
     __syncthreads();
 
@@ -92,10 +95,14 @@ __global__ void mean_kernel(float* a, float* out, int n, int axis_dim, int outer
     rdata[tid] = 0.0f;
     __syncthreads();
 
-    for (int i = tid; i < axis_dim; i += block_size)
+    for (int i = tid; i < axis_dim; i += 2 * block_size)
     {
-        int input_idx = outer_idx * axis_dim * inner_dim + i * inner_dim + inner_idx;
-        rdata[tid] += a[input_idx];
+        int left_index = outer_idx * axis_dim * inner_dim + i * inner_dim + inner_idx;
+        int right_index =
+            outer_idx * axis_dim * inner_dim + (i + block_size) * inner_dim + inner_idx;
+        float left_val = left_index < n ? a[left_index] : 0.0f;
+        float right_val = right_index < n ? a[right_index] : 0.0f;
+        rdata[tid] += left_val + right_val;
     }
     __syncthreads();
 
@@ -159,8 +166,12 @@ __global__ void max_kernel(float* a, float* out, int n, int axis_dim, int inner_
 
     for (int i = tid; i < axis_dim; i += block_size)
     {
-        int index = outer_idx * axis_dim * inner_dim + i * inner_dim + inner_idx;
-        rdata[tid] = fmaxf(rdata[tid], a[index]);
+        int left_index = outer_idx * axis_dim * inner_dim + i * inner_dim + inner_idx;
+        int right_index =
+            outer_idx * axis_dim * inner_dim + (i + block_size) * inner_dim + inner_idx;
+        float left_val = left_index < n ? a[left_index] : -FLT_MAX;
+        float right_val = right_index < n ? a[right_index] : -FLT_MAX;
+        rdata[tid] = fmaxf(rdata[tid], fmaxf(left_val, right_val));
     }
 
     if (block_size >= 512)
@@ -297,6 +308,8 @@ void sum_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
 {
     LOG_INFO("Sum operation on cuda starting......");
 
+    int N = numel(a->shape, a->ndim);
+
     if (axis < 0 || axis >= a->ndim)
     {
         LOG_ERROR("sum_op_cuda: Axis %d is out of bounds for tensor with %d dimensions.", axis,
@@ -329,7 +342,7 @@ void sum_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
     cudaMalloc((void**) &d_out, sizeof(float) * output_numel);
 
     sum_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out, outer_dim, axis_dim, inner_dim, inner_dim);
+        a->data->data, d_out, N, axis_dim, outer_dim, inner_dim);
 
     cudaMemcpy(h_out, d_out, sizeof(float) * output_numel, cudaMemcpyDeviceToHost);
 
@@ -373,6 +386,8 @@ void mean_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
 {
     LOG_INFO("mean operation on cuda starting......");
 
+    int N = numel(a->shape, a->ndim);
+
     if (axis < 0 || axis >= a->ndim)
     {
         LOG_ERROR("mean_op_cuda: Axis %d is out of bounds for tensor with %d dimensions.", axis,
@@ -405,7 +420,7 @@ void mean_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
     cudaMalloc((void**) &d_out, sizeof(float) * output_numel);
 
     mean_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out, outer_dim, axis_dim, inner_dim, inner_dim);
+        a->data->data, d_out, N, axis_dim, outer_dim, inner_dim);
 
     cudaMemcpy(h_out, d_out, sizeof(float) * output_numel, cudaMemcpyDeviceToHost);
 
@@ -449,6 +464,8 @@ void max_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
 {
     LOG_INFO("max operation on cuda starting......");
 
+    int N = numel(a->shape, a->ndim);
+
     if (axis < 0 || axis >= a->ndim)
     {
         LOG_ERROR("max_op_cuda: Axis %d is out of bounds for tensor with %d dimensions.", axis,
@@ -481,7 +498,7 @@ void max_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
     cudaMalloc((void**) &d_out, sizeof(float) * output_numel);
 
     max_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out, outer_dim, axis_dim, inner_dim, inner_dim);
+        a->data->data, d_out, N, axis_dim, inner_dim, outer_dim);
 
     cudaMemcpy(h_out, d_out, sizeof(float) * output_numel, cudaMemcpyDeviceToHost);
 
