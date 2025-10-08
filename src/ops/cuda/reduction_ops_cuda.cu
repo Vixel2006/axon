@@ -1,5 +1,6 @@
 #include "logger.h"
 #include "ops/reduction_ops.h"
+#include <cuda_runtime.h>
 #include <float.h>
 #include <math.h>
 
@@ -55,7 +56,7 @@ template <int block_size> __global__ void full_sum_kernel(const float* a, float*
     {
         if (tid < 64)
         {
-            rdata[tid] += rdata[tid + 32];
+            rdata[tid] += rdata[tid + 64];
         }
         __syncthreads();
     }
@@ -65,7 +66,8 @@ template <int block_size> __global__ void full_sum_kernel(const float* a, float*
     if (tid == 0) out[blockIdx.x] = rdata[0];
 }
 
-template <int block_size> __device__ __forceinline__ void wrap_max_reduce(float* rdata, int tid)
+template <int block_size>
+__device__ __forceinline__ void wrap_max_reduce(volatile float* rdata, int tid)
 {
     if (block_size >= 64) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 32]);
     if (block_size >= 32) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 16]);
@@ -82,6 +84,7 @@ template <int block_size> __global__ void full_max_kernel(float* a, float* out, 
     int idx = blockIdx.x * (block_size * 2) + threadIdx.x;
     int grid_size = blockDim.x * 2 * gridDim.x;
     rdata[tid] = -FLT_MAX;
+    __syncthreads();
 
     while (idx < n)
     {
@@ -142,10 +145,10 @@ void max_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
 void sum_full_op_cuda(Tensor* a, Tensor* out)
 {
     LOG_INFO("Sum operation on cuda starting......");
-    int size = numel(a->shape, a->ndim);
+    int N = numel(a->shape, a->ndim);
 
     int num_threads_per_block = 256;
-    int blocks = (size + (num_threads_per_block * 2) - 1) / (num_threads_per_block * 2);
+    int blocks = (N + (num_threads_per_block * 2) - 1) / (num_threads_per_block * 2);
 
     float* h_out_partial_sums;
     float* d_out_partial_sums;
@@ -153,8 +156,8 @@ void sum_full_op_cuda(Tensor* a, Tensor* out)
     cudaMallocHost((void**) &h_out_partial_sums, sizeof(float) * blocks);
     cudaMalloc((void**) &d_out_partial_sums, sizeof(float) * blocks);
 
-    full_sum_kernel<512><<<blocks, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out_partial_sums, size);
+    full_sum_kernel<256><<<blocks, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
+        a->data->data, d_out_partial_sums, N);
 
     cudaMemcpy(h_out_partial_sums, d_out_partial_sums, sizeof(float) * blocks,
                cudaMemcpyDeviceToHost);
@@ -187,10 +190,10 @@ void sum_full_op_cuda(Tensor* a, Tensor* out)
 void mean_full_op_cuda(Tensor* a, Tensor* out)
 {
     LOG_INFO("mean operation on cuda starting......");
-    int size = numel(a->shape, a->ndim);
+    int N = numel(a->shape, a->ndim);
 
     int num_threads_per_block = 256;
-    int blocks = (size + (num_threads_per_block * 2) - 1) / (num_threads_per_block * 2);
+    int blocks = (N + (num_threads_per_block * 2) - 1) / (num_threads_per_block * 2);
 
     float* h_out_partial_sums;
     float* d_out_partial_sums;
@@ -198,8 +201,8 @@ void mean_full_op_cuda(Tensor* a, Tensor* out)
     cudaMallocHost((void**) &h_out_partial_sums, sizeof(float) * blocks);
     cudaMalloc((void**) &d_out_partial_sums, sizeof(float) * blocks);
 
-    full_sum_kernel<512><<<blocks, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out_partial_sums, size);
+    full_sum_kernel<256><<<blocks, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
+        a->data->data, d_out_partial_sums, N);
 
     cudaMemcpy(h_out_partial_sums, d_out_partial_sums, sizeof(float) * blocks,
                cudaMemcpyDeviceToHost);
@@ -218,7 +221,7 @@ void mean_full_op_cuda(Tensor* a, Tensor* out)
         SAFE_FREE(&d_out_partial_sums, cudaFree);
         return;
     }
-    final_sum_ptr[0] = total_sum / size;
+    final_sum_ptr[0] = total_sum / N;
 
     from_data(out, final_sum_ptr);
     SAFE_FREE(&final_sum_ptr, free);
@@ -232,10 +235,10 @@ void mean_full_op_cuda(Tensor* a, Tensor* out)
 void max_full_op_cuda(Tensor* a, Tensor* out)
 {
     LOG_INFO("max operation on cuda starting......");
-    int size = numel(a->shape, a->ndim);
+    int N = numel(a->shape, a->ndim);
 
     int num_threads_per_block = 256;
-    int blocks = (size + (num_threads_per_block * 2) - 1) / (num_threads_per_block * 2);
+    int blocks = (N + (num_threads_per_block * 2) - 1) / (num_threads_per_block * 2);
 
     float* h_out_partial_maxs;
     float* d_out_partial_maxs;
@@ -243,14 +246,14 @@ void max_full_op_cuda(Tensor* a, Tensor* out)
     cudaMallocHost((void**) &h_out_partial_maxs, sizeof(float) * blocks);
     cudaMalloc((void**) &d_out_partial_maxs, sizeof(float) * blocks);
 
-    full_max_kernel<512><<<blocks, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out_partial_maxs, size);
+    full_max_kernel<256><<<blocks, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
+        a->data->data, d_out_partial_maxs, N);
 
     cudaMemcpy(h_out_partial_maxs, d_out_partial_maxs, sizeof(float) * blocks,
                cudaMemcpyDeviceToHost);
 
     float max = h_out_partial_maxs[0];
-    for (int i = 1; i < blocks; ++i)
+    for (int i = 0; i < blocks; ++i)
     {
         max = fmaxf(max, h_out_partial_maxs[i]);
     }
