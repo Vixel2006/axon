@@ -69,25 +69,36 @@ class Tensor:
 
     @property
     def grad(self) -> np.ndarray:
+        num_elements = self.c_tensor_ptr.contents.grad.contents.size
         out_array = np.empty(self.shape, dtype=np.float32)
 
-        c_raw_data_ptr = self.c_tensor_ptr.contents.grad.contents.data
-        c_strides_ptr = self.c_tensor_ptr.contents.strides
+        if self.device == "cpu":
+            c_raw_data_ptr = self.c_tensor_ptr.contents.grad.contents.data
+            c_strides_ptr = self.c_tensor_ptr.contents.strides
 
-        it = np.nditer(out_array, flags=['multi_index'], op_flags=['writeonly'])
-        while not it.finished:
-            logical_coords = it.multi_index
-            
-            c_memory_offset_elements = 0
-            for i, coord in enumerate(logical_coords):
-                c_memory_offset_elements += coord * c_strides_ptr[i]
+            it = np.nditer(out_array, flags=['multi_index'], op_flags=['writeonly'])
+            while not it.finished:
+                logical_coords = it.multi_index
+                
+                c_memory_offset_elements = 0
+                for i, coord in enumerate(logical_coords):
+                    c_memory_offset_elements += coord * c_strides_ptr[i]
 
-            value = c_raw_data_ptr[c_memory_offset_elements]
-            
-            out_array[logical_coords] = value
-            it.iternext()
+                value = c_raw_data_ptr[c_memory_offset_elements]
+                
+                out_array[logical_coords] = value
+                it.iternext()
+        else: # CUDA device
+            # Create a ctypes pointer to the numpy array's data buffer
+            host_buffer_ptr = out_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+            c_copy_storage_to_host(
+                self.c_tensor_ptr.contents.grad,
+                self.c_tensor_ptr.contents.device,
+                num_elements,
+                host_buffer_ptr
+            )
 
-        return out_array.copy()
+        return out_array
 
     @property
     def shape(self) -> Tuple[int]:
