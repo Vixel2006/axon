@@ -212,7 +212,35 @@ void gmalloc(Tensor* t, float init)
             t->grad = NULL;
             return;
         }
-        cudaMemset(t->grad->data, 0, size * sizeof(float));
+
+        // Allocate a temporary host buffer and fill it with the init value
+        float* host_init_buffer = (float*) malloc(size * sizeof(float));
+        if (!host_init_buffer)
+        {
+            LOG_ERROR("Failed to allocate host_init_buffer for grad initialization.");
+            cudaFree(t->grad->data);
+            sfree(t->grad, t->device);
+            t->grad = NULL;
+            return;
+        }
+        for (int i = 0; i < size; ++i)
+        {
+            host_init_buffer[i] = init;
+        }
+
+        // Copy the initialized host buffer to the device
+        err = cudaMemcpy(t->grad->data, host_init_buffer, size * sizeof(float),
+                         cudaMemcpyHostToDevice);
+        if (err != cudaSuccess)
+        {
+            LOG_ERROR("Failed to copy init value to grad on cuda device.");
+            SAFE_FREE(&host_init_buffer, free);
+            SAFE_FREE(&t->grad->data, cudaFree);
+            sfree(t->grad, t->device);
+            t->grad = NULL;
+            return;
+        }
+        free(host_init_buffer);
     }
 
     t->grad->counter = 1;

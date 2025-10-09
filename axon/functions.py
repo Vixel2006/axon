@@ -119,9 +119,11 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: retu
 
 if __name__ == "__main__":
     a = from_data((2, 2, 2), [[[1, 2], [3, 5]], [[2, 6], [3, 4]]], device="cuda")
+    #b = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cuda")
 
-    c = max(a, dim=0, keepdim=False)
+    c = a
 
-    c.realize()
+    c.backward()
 
     print(c)
+    print(a.grad)
