@@ -79,7 +79,7 @@ __global__ void base_pow_grad_kernel(const float* out_grad, float* base_data, fl
 
     for (int i = idx; i < n; i += stride)
     {
-        base_grad[i] += power_data[i] * powf(base_data[i], power_grad[i]) * out_grad[i];
+        base_grad[i] += power_data[i] * powf(base_data[i], power_data[i] - 1) * out_grad[i];
     }
 }
 
