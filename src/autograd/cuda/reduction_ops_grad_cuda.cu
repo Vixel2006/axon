@@ -14,6 +14,11 @@
         }                                                                                          \
     } while (0)
 
+typedef struct
+{
+    int axis;
+} ReductionExtras;
+
 __global__ void sum_full_grad_kernel(float* in_grad_data, float* output_grad, int in_size)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -48,21 +53,101 @@ __global__ void max_full_grad_kernel(float* in_grad_data, float* in_data, float*
     }
 }
 
-__global__ void sum_grad_kernel() {}
+__global__ void sum_grad_kernel(const float* out_grad, float* in_grad, const int* shape, int ndim,
+                                int axis, int n)
+{
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+
+    int coords[8];
+    int tmp = idx;
+
+    for (int d = ndim - 1; d >= 0; --d)
+    {
+        coords[d] = tmp % shape[d];
+        tmp /= shape[d];
+    }
+
+    int out_idx = 0;
+    int strides = 1;
+
+    for (int d = ndim - 1; d >= 0; --d)
+    {
+        if (d == axis) continue;
+        out_idx += coords[d] * strides;
+        strides *= shape[d];
+    }
+    in_grad[idx] = out_grad[out_idx];
+}
+
+__global__ void mean_grad_kernel(const float* out_grad, float* in_grad, const int* shape, int ndim,
+                                 int axis, int n)
+{
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+
+    int coords[8];
+    int tmp = idx;
+
+    for (int d = ndim - 1; d >= 0; --d)
+    {
+        coords[d] = tmp % shape[d];
+        tmp /= shape[d];
+    }
+
+    int out_idx = 0;
+    int strides = 1;
+
+    for (int d = ndim - 1; d >= 0; --d)
+    {
+        if (d == axis) continue;
+        out_idx += coords[d] * strides;
+        strides *= shape[d];
+    }
+    in_grad[idx] = out_grad[out_idx] / shape[axis];
+}
 
 void sum_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_WARN("sum_grad_op_cuda: CUDA implementation not available yet.");
+    LOG_INFO("sum_grad_op_cuda: CUDA implementation called.");
+    Tensor* a = prev[0];
+    int N = numel(a->shape, a->ndim);
+
+    ReductionExtras* reduction_extras = (ReductionExtras*) extras;
+    int axis = reduction_extras->axis;
+
+    int num_threads_per_block = 256;
+    int num_blocks = (N + num_threads_per_block - 1) / N;
+
+    sum_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data, a->grad->data, a->shape,
+                                                           a->ndim, axis, N);
+
+    CHECK_CUDA();
+
+    LOG_INFO("sum_grad_op_cuda: CUDA implementation finished successfully.");
 }
 
 void mean_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: mean_grad_op_cuda: Computing gradient for mean reduction (CUDA)");
+    LOG_INFO("mean_grad_op_cuda: CUDA implementation called.");
+    Tensor* a = prev[0];
+    int N = numel(a->shape, a->ndim);
+
+    ReductionExtras* reduction_extras = (ReductionExtras*) extras;
+    int axis = reduction_extras->axis;
+
+    int num_threads_per_block = 256;
+    int num_blocks = (N + num_threads_per_block - 1) / N;
+
+    mean_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data, a->grad->data,
+                                                            a->shape, a->ndim, axis, N);
+
+    CHECK_CUDA();
+
+    LOG_INFO("mean_grad_op_cuda: CUDA implementation finished successfully.");
 }
 
 void max_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_WARN("max_grad_op_cuda: CUDA implementation not available yet.");
+    // TODO: Finish the max grad kernel
 }
 
 void sum_full_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
