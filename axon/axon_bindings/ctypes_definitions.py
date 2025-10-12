@@ -43,3 +43,8 @@ class ClipExtras(ctypes.Structure):
         ("min_val", ctypes.c_float),
         ("max_val", ctypes.c_float),
     ]
+
+class ReductionExtras(ctypes.Structure):
+    _fields_ = [
+        ("axis", ctypes.c_int),
+    ]

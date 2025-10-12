@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any
 import ctypes
 from .op import LazyOp
-from axon.axon_bindings.ctypes_definitions import CTensor
+from axon.axon_bindings.ctypes_definitions import CTensor, ReductionExtras
 from axon.axon_bindings.c_wrapper_functions import (
     get_op_function
 )
@@ -54,9 +54,16 @@ class ROp(LazyOp):
         
         backward_ctx: Any = None
         if dim is not None:
-            backward_ctx = ctypes.c_int(0)
+            extras = ReductionExtras()
+            if dim < 0:
+                dim = a_tensor.ndim + dim
+            extras.axis = dim
+            backward_ctx = extras
+            extras_ptr = ctypes.cast(ctypes.pointer(extras), ctypes.c_void_p)
+        else:
+            extras_ptr = None
         
-        return forward_kwargs, None
+        return forward_kwargs, extras_ptr
 
 
 class Sum(ROp):
