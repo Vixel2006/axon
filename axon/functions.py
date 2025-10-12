@@ -121,7 +121,7 @@ if __name__ == "__main__":
     a = from_data((2, 2, 2), [[[1, 2], [3, 5]], [[2, 6], [3, 4]]], device="cuda")
     #b = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cuda")
 
-    c = max(a)
+    c = max(a, dim=0)
 
     c.backward()
 

@@ -164,7 +164,7 @@ __global__ void max_kernel(float* a, float* out, int n, int axis_dim, int inner_
     rdata[tid] = -FLT_MAX;
     __syncthreads();
 
-    for (int i = tid; i < axis_dim; i += block_size)
+    for (int i = tid; i < axis_dim; i += 2 * block_size)
     {
         int left_index = outer_idx * axis_dim * inner_dim + i * inner_dim + inner_idx;
         int right_index =
