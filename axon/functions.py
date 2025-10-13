@@ -126,3 +126,6 @@ if __name__ == "__main__":
 
     d = c ** 2
     d.backward()
+
+    print(d)
+    print(a.grad)

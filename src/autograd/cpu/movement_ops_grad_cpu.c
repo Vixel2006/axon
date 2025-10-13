@@ -80,7 +80,7 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                     __m256 dout = _mm256_loadu_ps(out->grad->data + i + offset);
                     __m256 dd = _mm256_add_ps(din, dout);
 
-                    _mm256_store_ps(prev[tensor_idx]->grad->data + i, dd);
+                    _mm256_storeu_ps(prev[tensor_idx]->grad->data + i, dd);
                 }
 
                 for (; i < size; ++i)
