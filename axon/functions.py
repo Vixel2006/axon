@@ -118,13 +118,11 @@ def mean(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: ret
 def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
 
 if __name__ == "__main__":
-    a = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cuda")
-    #b = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cuda")
+    a = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cpu")
+    b = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cpu")
+    z = ones((2, 2, 2, 2))
 
-    c = max(a, dim=-1)
+    c = concat([a, b])
 
-    c.backward()
-
-
-    print(c)
-    print(a.grad)
+    d = c ** 2
+    d.backward()
