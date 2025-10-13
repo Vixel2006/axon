@@ -394,8 +394,7 @@ class Concat(LazyOp):
         axis = kwargs.get("axis", 0)
         forward_kwargs = {"axis": axis}
         input_shapes = [t.shape for t in args[0] if isinstance(t, Tensor)]
-        backward_ctx = {"axis": axis, "input_shapes": input_shapes}
-        return forward_kwargs, backward_ctx
+        return forward_kwargs, None
 
     @staticmethod
     def forward(out: "Tensor", *a_tensors: "Tensor", axis: int):
@@ -451,8 +450,7 @@ class Stack(LazyOp):
         axis = kwargs.get("axis", 0)
         forward_kwargs = {"axis": axis}
         input_shape = args[0][0].shape if args[0] else ()
-        backward_ctx = {"axis": axis, "input_shape": input_shape}
-        return forward_kwargs, backward_ctx
+        return forward_kwargs, None
 
     @staticmethod
     def forward(out: "Tensor", *a_tensors: "Tensor", axis: int):

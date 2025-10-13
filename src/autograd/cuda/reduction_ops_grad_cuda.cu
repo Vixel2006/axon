@@ -105,6 +105,7 @@ __global__ void mean_grad_kernel(const float* out_grad, float* in_grad, const in
     in_grad[idx] = out_grad[out_offset] / shape[axis];
 }
 
+// WARNING: This kernel is very stupid, there is million places it can do warp divergence in.
 __global__ void max_grad_kernel(const float* out_grad, float* in_grad, const float* in_data,
                                 const float* out_data, const int* shape, const int* in_strides,
                                 const int* out_strides, int in_ndim, int out_ndim, int reduced_dim,

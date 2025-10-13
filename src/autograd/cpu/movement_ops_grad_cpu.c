@@ -60,7 +60,7 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                     }
 
                     prev[tensor_idx]->grad->data[in_offset] +=
-                        out->grad->data[offset + linear] * prev[tensor_idx]->data->data[in_offset];
+                        out->grad->data[offset + linear];
 
                     if (linear < 5)
                     {
@@ -93,10 +93,9 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                     }
                 }
             }
-
-            offset += size;
-            LOG_INFO("Finished tensor %d, new offset=%d", tensor_idx, offset);
         }
+        offset += size;
+        LOG_INFO("Finished tensor %d, new offset=%d", tensor_idx, offset);
     }
 
     LOG_INFO("Finished concat_grad_op");

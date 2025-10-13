@@ -26,7 +26,7 @@ add_library(axon SHARED
   src/ops/cpu/binary_ops_cpu.c src/ops/cpu/binary_ops_scalar_cpu.c src/ops/cpu/movement_ops_cpu.c
   src/autograd/cpu/binary_ops_grad_cpu.c src/autograd/cpu/unary_ops_grad_cpu.c
   src/autograd/cpu/reduction_ops_grad_cpu.c src/utils.c src/autograd/autograd_utils.c 
-  src/optimizers/sgd.c src/optimizers/adam.c src/optimizers/zero_grad.c src/autograd/cpu/movement_ops_grad_cpu.c
+  src/optimizers/cpu/sgd.c src/optimizers/cpu/adam.c src/optimizers/cpu/zero_grad.c src/autograd/cpu/movement_ops_grad_cpu.c
   src/ops/cuda/binary_ops_cuda.cu src/ops/cuda/init_ops_cuda.cu src/ops/cuda/binary_ops_scalar_cuda.cu
   src/ops/cuda/unary_ops_cuda.cu src/ops/cuda/reduction_ops_cuda.cu src/ops/cuda/movement_ops_cuda.cu
   src/autograd/cuda/binary_ops_grad_cuda.cu src/autograd/cuda/reduction_ops_grad_cuda.cu src/autograd/cuda/movement_ops_grad_cuda.cu
