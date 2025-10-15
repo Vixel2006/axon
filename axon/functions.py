@@ -120,12 +120,23 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: retu
 if __name__ == "__main__":
     a = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cpu")
     b = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cpu")
-    z = ones((2, 2, 2, 2))
 
-    c = concat([a, b])
+    c = concat([a, b], axis=0)
 
-    d = c ** 2
-    d.backward()
-
-    print(d)
+    c.backward()
+    print("-----------------------------------")
+    print(b.grad)
+    print("-----------------------------------")
     print(a.grad)
+
+    x = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cuda")
+    y = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cuda")
+
+    z = concat([x, y], axis=0)
+
+    z.backward()
+
+    print(y.grad)
+    print("-----------------------------------")
+    print(x.grad)
+    print("-----------------------------------")
