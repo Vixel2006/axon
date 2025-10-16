@@ -121,7 +121,7 @@ if __name__ == "__main__":
     a = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cpu")
     b = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cpu")
 
-    c = concat([a, b], axis=0)
+    c = stack([a, b], axis=1)
 
     c.backward()
     print("-----------------------------------")
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     x = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cuda")
     y = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cuda")
 
-    z = concat([x, y], axis=0)
+    z = stack([x, y], axis=1)
 
     z.backward()
 

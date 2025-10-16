@@ -1,102 +1,104 @@
 #include "autograd/autograd_movement.h"
+#include "logger.h"
+#include "tensor.h"
+#include <stdlib.h>
 
 #define SIMD_WIDTH 8
+#define MAX_DIMS 32
 
 void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    // Error checking for null tensors
-    if (!out || !out->grad->data || !prev)
+    ConcatExtras* concat_extras = (ConcatExtras*) extras;
+    int axis = concat_extras->axis;
+
+    LOG_INFO("Starting concat_grad_op_cpu: out.numel=%d, n_prev=%d, axis=%d",
+             numel(out->shape, out->ndim), n_prev, axis);
+
+    if (out->grad == NULL || out->grad->data == NULL)
     {
-        LOG_ERROR("concat_grad_op ERROR: Output tensor, output gradient, or previous "
-                  "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
-                  (void*) out, (void*) out->grad->data, (void*) prev);
+        LOG_WARN("Output tensor has no gradient data, skipping backward pass for concat.");
         return;
     }
 
-    for (int tensor_idx = 0; tensor_idx < n_prev; ++tensor_idx)
+    int outer_size = 1;
+    for (int i = 0; i < axis; ++i)
+        outer_size *= out->shape[i];
+
+    int inner_size = 1;
+    for (int i = axis + 1; i < out->ndim; ++i)
+        inner_size *= out->shape[i];
+
+    int out_concat_axis_size = out->shape[axis];
+    int offset_in_axis = 0;
+
+    for (int i = 0; i < n_prev; ++i)
     {
-        if (!prev[tensor_idx])
+        Tensor* current_prev = prev[i];
+
+        if (current_prev->requires_grad)
         {
-            LOG_ERROR("concat_grad_op ERROR: Previous tensor at index %d is NULL!", tensor_idx);
-            return;
-        }
-        if (prev[tensor_idx]->requires_grad && !prev[tensor_idx]->grad->data)
-        {
-            LOG_ERROR("concat_grad_op ERROR: Previous tensor at index %d requires grad but its "
-                      "grad is NULL!",
-                      tensor_idx);
-            return;
-        }
-    }
-
-    int offset = 0;
-
-    LOG_INFO("Starting concat_grad_op: out.numel=%d, n_prev=%d", numel(out->shape, out->ndim),
-             n_prev);
-
-    for (int tensor_idx = 0; tensor_idx < n_prev; ++tensor_idx)
-    {
-        int size = numel(prev[tensor_idx]->shape, prev[tensor_idx]->ndim);
-
-        LOG_INFO("Processing tensor %d: size=%d, ndim=%d, requires_grad=%d, offset=%d", tensor_idx,
-                 size, prev[tensor_idx]->ndim, prev[tensor_idx]->requires_grad, offset);
-
-        if (prev[tensor_idx]->requires_grad)
-        {
-            if (!is_contiguous(prev[tensor_idx]))
+            if (current_prev->grad == NULL || current_prev->grad->data == NULL)
             {
-                LOG_WARN("Tensor %d is not contiguous, using strided accumulation", tensor_idx);
+                LOG_WARN(
+                    "concat_grad_op_cpu: prev tensor %d has no gradient data buffer, skipping.",
+                    i);
+                offset_in_axis += current_prev->shape[axis];
+                continue;
+            }
 
-                for (int linear = 0; linear < size; ++linear)
+            int N = numel(current_prev->shape, current_prev->ndim);
+            int prev_concat_axis_size = current_prev->shape[axis];
+
+            if (is_contiguous(current_prev))
+            {
+                // Here comes the contiguous path with SIMD
+                for (int j = 0; j < N; ++j)
                 {
-                    int idx = linear;
-                    int in_offset = 0;
-
-                    for (int d = prev[tensor_idx]->ndim - 1; d >= 0; --d)
-                    {
-                        int coord = idx % prev[tensor_idx]->shape[d];
-                        idx /= prev[tensor_idx]->shape[d];
-                        in_offset += coord * prev[tensor_idx]->strides[d];
-                    }
-
-                    prev[tensor_idx]->grad->data[in_offset] +=
-                        out->grad->data[offset + linear];
-
-                    if (linear < 5)
-                    {
-                        LOG_INFO("    [non-contig] linear=%d -> in_offset=%d, grad=%f", linear,
-                                 in_offset, prev[tensor_idx]->grad->data[in_offset]);
-                    }
+                    int outer_i = j / (prev_concat_axis_size * inner_size);
+                    int remainder = j % (prev_concat_axis_size * inner_size);
+                    int out_idx = outer_i * (out_concat_axis_size * inner_size) +
+                                  (offset_in_axis * inner_size) + remainder;
+                    current_prev->grad->data[j] += out->grad->data[out_idx];
                 }
             }
             else
             {
-                LOG_INFO("Tensor %d is contiguous, using SIMD if possible", tensor_idx);
-
-                int i = 0;
-                for (; i + SIMD_WIDTH - 1 < size; i += SIMD_WIDTH)
+                // Here comes the uncontiguous path without SIMD
+                if (current_prev->ndim > MAX_DIMS)
                 {
-                    __m256 din = _mm256_loadu_ps(prev[tensor_idx]->grad->data + i);
-                    __m256 dout = _mm256_loadu_ps(out->grad->data + i + offset);
-                    __m256 dd = _mm256_add_ps(din, dout);
-
-                    _mm256_storeu_ps(prev[tensor_idx]->grad->data + i, dd);
+                    LOG_ERROR("Tensor dimensions %d exceed MAX_DIMS %d", current_prev->ndim,
+                              MAX_DIMS);
+                    return;
                 }
-
-                for (; i < size; ++i)
+                for (int j = 0; j < N; ++j)
                 {
-                    prev[tensor_idx]->grad->data[i] += out->grad->data[i + offset];
+                    int coords[MAX_DIMS];
+                    int temp_j = j;
 
-                    if (i < 5)
-                    { // show first few elems
-                        LOG_INFO("    [contig] i=%d, grad=%f", i, prev[tensor_idx]->grad->data[i]);
+                    for (int d = current_prev->ndim - 1; d >= 0; --d)
+                    {
+                        coords[d] = temp_j % current_prev->shape[d];
+                        temp_j /= current_prev->shape[d];
                     }
+
+                    int prev_idx = 0;
+                    for (int d = 0; d < current_prev->ndim; ++d)
+                    {
+                        prev_idx += coords[d] * current_prev->strides[d];
+                    }
+
+                    int outer_i = j / (prev_concat_axis_size * inner_size);
+                    int remainder = j % (prev_concat_axis_size * inner_size);
+                    int out_idx = outer_i * (out_concat_axis_size * inner_size) +
+                                  (offset_in_axis * inner_size) + remainder;
+
+                    current_prev->grad->data[prev_idx] += out->grad->data[out_idx];
                 }
             }
         }
-        offset += size;
-        LOG_INFO("Finished tensor %d, new offset=%d", tensor_idx, offset);
+
+        offset_in_axis += current_prev->shape[axis];
     }
 
-    LOG_INFO("Finished concat_grad_op");
+    LOG_INFO("Finished concat_grad_op_cpu successfully.");
 }

@@ -3,7 +3,7 @@ import math
 from typing import Any
 import ctypes
 from .op import LazyOp
-from axon.axon_bindings.ctypes_definitions import CTensor
+from axon.axon_bindings.ctypes_definitions import CTensor, ConcatExtras
 from axon.axon_bindings.c_wrapper_functions import get_op_function
 
 class ViewOp(LazyOp):
@@ -394,7 +394,9 @@ class Concat(LazyOp):
         axis = kwargs.get("axis", 0)
         forward_kwargs = {"axis": axis}
         input_shapes = [t.shape for t in args[0] if isinstance(t, Tensor)]
-        return forward_kwargs, None
+        concat_extras = ConcatExtras(axis)
+        ctx = ctypes.pointer(concat_extras)
+        return forward_kwargs, ctypes.cast(ctx, ctypes.c_void_p)
 
     @staticmethod
     def forward(out: "Tensor", *a_tensors: "Tensor", axis: int):
@@ -450,7 +452,9 @@ class Stack(LazyOp):
         axis = kwargs.get("axis", 0)
         forward_kwargs = {"axis": axis}
         input_shape = args[0][0].shape if args[0] else ()
-        return forward_kwargs, None
+        stack_extras = ConcatExtras(axis)
+        ctx = ctypes.pointer(stack_extras)
+        return forward_kwargs, ctypes.cast(ctx, ctypes.c_void_p)
 
     @staticmethod
     def forward(out: "Tensor", *a_tensors: "Tensor", axis: int):

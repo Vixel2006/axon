@@ -48,3 +48,9 @@ class ReductionExtras(ctypes.Structure):
     _fields_ = [
         ("axis", ctypes.c_int),
     ]
+
+class ConcatExtras(ctypes.Structure):
+    _fields_ = [
+        ("axis", ctypes.c_int),
+    ]
+
