@@ -3,7 +3,7 @@
 #include "utils.h"
 #include <string.h>
 
-void zero_grad(Tensor** parameters, int num_parameters)
+void zero_grad_cpu(Tensor** parameters, int num_parameters)
 {
     LOG_INFO("zero_grad: Zeroing gradients for %d parameters", num_parameters);
 
@@ -31,12 +31,12 @@ void zero_grad(Tensor** parameters, int num_parameters)
         }
 
         size_t size = numel(t->shape, t->ndim);
-        if (size > 0 && t->grad && t->grad->data)
-        { // Ensure grad and its data exist
+        if (size > 0 && t->grad && t->grad->data && t->grad->data->data)
+        {
             // Set all elements in the gradient data to 0.0f
             for (size_t j = 0; j < size; ++j)
             {
-                t->grad->data[j] = 0.0f;
+                t->grad->data->data[j] = 0.0f;
             }
             LOG_INFO("zero_grad: Zeroed gradient for parameter %d (size=%zu)", i, size);
         }

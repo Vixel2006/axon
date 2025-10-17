@@ -1,19 +1,23 @@
 import pytest
 import numpy as np
+import ctypes
 from axon.core.tensor import Tensor
 from axon.optim.sgd import SGD
 from axon.optim.adam import Adam
 from axon.functions import from_data, zeros
+from axon.axon_bindings.c_wrapper_functions import c_from_data
 
 
 class TestOptim:
 
     def test_sgd_step(self):
         data = np.array([1.0, 2.0, 3.0], dtype=np.float32)
-        grad = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        tensor = from_data(data.shape, data)
-        tensor.requires_grad = True  # Ensure grad buffer is allocated
-        tensor.grad[:] = grad  # Explicitly set the gradient values
+        grad = np.array([0.1, 0.2, 0.3], dtype=np.float32)
+        tensor = from_data(data.shape, data, requires_grad=True)
+        
+        grad_ptr = tensor.grad.c_tensor_ptr
+        c_from_data(grad_ptr, grad.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+
         lr = 0.1
         optimizer = SGD(params=[tensor], lr=lr)
 
@@ -24,20 +28,22 @@ class TestOptim:
 
     def test_sgd_zero_grad(self):
         data = np.array([1.0, 2.0, 3.0], dtype=np.float32)
-        tensor = from_data(data.shape, data)
-        tensor.requires_grad = True
+        tensor = from_data(data.shape, data, requires_grad=True)
         lr = 0.1
         optimizer = SGD(params=[tensor], lr=lr)
 
         optimizer.zero_grad()
 
-        assert np.allclose(tensor.grad, np.zeros_like(data))
+        assert np.allclose(tensor.grad.data, np.zeros_like(data))
 
     def test_adam_step(self):
         data = np.array([1.0, 2.0, 3.0], dtype=np.float32)
-        grad = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        tensor = from_data(data.shape, data)
-        tensor.requires_grad = True
+        grad = np.array([0.1, 0.2, 0.3], dtype=np.float32)
+        tensor = from_data(data.shape, data, requires_grad=True)
+        
+        grad_ptr = tensor.grad.c_tensor_ptr
+        c_from_data(grad_ptr, grad.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+
         lr = 0.1
         optimizer = Adam(params=[tensor], lr=lr)
 
@@ -45,7 +51,7 @@ class TestOptim:
         optimizer.step()
 
         # Adam's update rule is complex, so we'll just check if the data has changed
-        assert np.allclose(tensor.data, initial_data)
+        assert not np.allclose(tensor.data, initial_data)
         # After step, grad should be zeroed by the optimizer's zero_grad call (if it happens internally)
         # or it should be non-zero if zero_grad is called separately.
         # For now, let's just assert it's not None.
@@ -54,12 +60,14 @@ class TestOptim:
     def test_adam_zero_grad(self):
         data = np.array([1.0, 2.0, 3.0], dtype=np.float32)
         grad = np.array([0.1, 0.2, 0.3], dtype=np.float32)
-        tensor = from_data(data.shape, data)
-        tensor.requires_grad = True
-        tensor.grad[:] = grad
+        tensor = from_data(data.shape, data, requires_grad=True)
+
+        grad_ptr = tensor.grad.c_tensor_ptr
+        c_from_data(grad_ptr, grad.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+
         lr = 0.1
         optimizer = Adam(params=[tensor], lr=lr)
 
         optimizer.zero_grad()
 
-        assert np.allclose(tensor.grad, np.zeros_like(data))
+        assert np.allclose(tensor.grad.data, np.zeros_like(data))

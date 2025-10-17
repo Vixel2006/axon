@@ -40,8 +40,7 @@ class TestTensorCore:
     def test_tensor_init_no_grad(self):
         t = Tensor((2, 2), requires_grad=False)
         assert t.requires_grad is False
-        with pytest.raises((ValueError, AttributeError)):
-            _ = t.grad
+        assert t.grad is None
 
     def test_tensor_init_cuda(self):
         # This test assumes a CUDA device is available and the C bindings handle it.
@@ -255,8 +254,8 @@ class TestTensorCore:
         )
         d = a_orig + 1.0
         d.backward()
-        assert np.all(a_orig.grad == 1.0)  # Should still work
-
+        assert np.all(a_orig.grad.data == 1.0)  # Should still work
+    
     def test_tensor_exp(self):
         a_np = np.array([[0.0, 1.0], [2.0, 3.0]], dtype=np.float32)
         a = from_data(a_np.shape, a_np)
@@ -268,7 +267,7 @@ class TestTensorCore:
         # Test backward
         b.backward()
         expected_a_grad = np.exp(a_np)  # d(exp(x))/dx = exp(x)
-        assert np.allclose(a.grad, expected_a_grad)
+        assert np.allclose(a.grad.data, expected_a_grad)
 
     def test_tensor_log(self):
         a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -281,7 +280,7 @@ class TestTensorCore:
         # Test backward
         b.backward()
         expected_a_grad = 1.0 / a_np  # d(log(x))/dx = 1/x
-        assert np.allclose(a.grad, expected_a_grad)
+        assert np.allclose(a.grad.data, expected_a_grad)
 
     def test_tensor_abs(self):
         a_np = np.array([[-1.0, 2.0], [-3.0, 4.0]], dtype=np.float32)
@@ -294,7 +293,7 @@ class TestTensorCore:
         # Test backward
         b.backward()
         expected_a_grad = np.sign(a_np)  # d(|x|)/dx = sign(x)
-        assert np.allclose(a.grad, expected_a_grad)
+        assert np.allclose(a.grad.data, expected_a_grad)
 
     def test_tensor_relu(self):
         a_np = np.array([[-1.0, 0.0], [2.0, -3.0]], dtype=np.float32)
@@ -309,7 +308,7 @@ class TestTensorCore:
         expected_a_grad = (a_np > 0).astype(
             np.float32
         )  # d(relu(x))/dx = 1 if x > 0 else 0
-        assert np.allclose(a.grad, expected_a_grad)
+        assert np.allclose(a.grad.data, expected_a_grad)
 
     def test_tensor_neg(self):
         a_np = np.array([[-1.0, 2.0], [-3.0, 4.0]], dtype=np.float32)
@@ -322,7 +321,7 @@ class TestTensorCore:
         # Test backward
         b.backward()
         expected_a_grad = np.array([[-1.0, -1.0], [-1.0, -1.0]], dtype=np.float32)
-        assert np.allclose(a.grad, expected_a_grad)
+        assert np.allclose(a.grad.data, expected_a_grad)
 
     def test_tensor_add(self):
         a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -335,8 +334,8 @@ class TestTensorCore:
         expected_c = a_np + b_np
         assert np.allclose(c.realize().data, expected_c)
         c.backward()
-        assert np.allclose(a.grad, np.ones_like(a_np))
-        assert np.allclose(b.grad, np.ones_like(b_np))
+        assert np.allclose(a.grad.data, np.ones_like(a_np))
+        assert np.allclose(b.grad.data, np.ones_like(b_np))
 
         # Tensor + scalar
         d = a + 10.0
@@ -344,7 +343,7 @@ class TestTensorCore:
         assert np.allclose(d.realize().data, expected_d)
         d.backward()
         assert np.allclose(
-            a.grad, np.ones_like(a_np) * 2
+            a.grad.data, np.ones_like(a_np) * 2
         )  # Accumulated from previous backward
 
         # scalar + Tensor (__radd__)
@@ -354,7 +353,7 @@ class TestTensorCore:
         expected_f = 20.0 + e_np
         assert np.allclose(f.realize().data, expected_f)
         f.backward()
-        assert np.allclose(e.grad, np.ones_like(e_np))
+        assert np.allclose(e.grad.data, np.ones_like(e_np))
 
     def test_tensor_sub(self):
         a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -367,8 +366,8 @@ class TestTensorCore:
         expected_c = a_np - b_np
         assert np.allclose(c.realize().data, expected_c)
         c.backward()
-        assert np.allclose(a.grad, np.ones_like(a_np))
-        assert np.allclose(b.grad, -np.ones_like(b_np))
+        assert np.allclose(a.grad.data, np.ones_like(a_np))
+        assert np.allclose(b.grad.data, -np.ones_like(b_np))
 
         # Tensor - scalar
         d = a - 10.0
@@ -376,7 +375,7 @@ class TestTensorCore:
         assert np.allclose(d.realize().data, expected_d)
         d.backward()
         assert np.allclose(
-            a.grad, np.ones_like(a_np) * 2
+            a.grad.data, np.ones_like(a_np) * 2
         )  # Accumulated from previous backward
 
         # scalar - Tensor (__rsub__)
@@ -386,7 +385,7 @@ class TestTensorCore:
         expected_f = 20.0 - e_np
         assert np.allclose(f.realize().data, expected_f)
         f.backward()
-        assert np.allclose(e.grad, -np.ones_like(e_np))
+        assert np.allclose(e.grad.data, -np.ones_like(e_np))
 
     def test_tensor_mul(self):
         a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -399,15 +398,15 @@ class TestTensorCore:
         expected_c = a_np * b_np
         assert np.allclose(c.realize().data, expected_c)
         c.backward()
-        assert np.allclose(a.grad, b_np)
-        assert np.allclose(b.grad, a_np)
+        assert np.allclose(a.grad.data, b_np)
+        assert np.allclose(b.grad.data, a_np)
 
         # Tensor * scalar
         d = a * 10.0
         expected_d = a_np * 10.0
         assert np.allclose(d.realize().data, expected_d)
         d.backward()
-        assert np.allclose(a.grad, b_np + 10.0)  # Accumulated
+        assert np.allclose(a.grad.data, b_np + 10.0)  # Accumulated
 
         # scalar * Tensor (__rmul__)
         e_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -416,7 +415,7 @@ class TestTensorCore:
         expected_f = 20.0 * e_np
         assert np.allclose(f.realize().data, expected_f)
         f.backward()
-        assert np.allclose(e.grad, np.ones_like(e_np) * 20.0)
+        assert np.allclose(e.grad.data, np.ones_like(e_np) * 20.0)
 
     def test_tensor_div(self):
         a_np = np.array([[10.0, 20.0], [30.0, 40.0]], dtype=np.float32)
@@ -429,15 +428,15 @@ class TestTensorCore:
         expected_c = a_np / b_np
         assert np.allclose(c.realize().data, expected_c)
         c.backward()
-        assert np.allclose(a.grad, 1.0 / b_np)
-        assert np.allclose(b.grad, -a_np / (b_np**2))
+        assert np.allclose(a.grad.data, 1.0 / b_np)
+        assert np.allclose(b.grad.data, -a_np / (b_np**2))
 
         # Tensor / scalar
         d = a / 2.0
         expected_d = a_np / 2.0
         assert np.allclose(d.realize().data, expected_d)
         d.backward()
-        assert np.allclose(a.grad, (1.0 / b_np) + (1.0 / 2.0))  # Accumulated
+        assert np.allclose(a.grad.data, (1.0 / b_np) + (1.0 / 2.0))  # Accumulated
 
         # scalar / Tensor (__rtruediv__)
         e_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -446,7 +445,7 @@ class TestTensorCore:
         expected_f = 20.0 / e_np
         assert np.allclose(f.realize().data, expected_f)
         f.backward()
-        assert np.allclose(e.grad, -20.0 / (e_np**2))
+        assert np.allclose(e.grad.data, -20.0 / (e_np**2))
 
     def test_tensor_pow(self):
         a_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
@@ -462,8 +461,8 @@ class TestTensorCore:
         c.backward()
         # d(a^b)/da = b * a^(b-1)
         # d(a^b)/db = a^b * log(a)
-        assert np.allclose(a.grad, b_np * (a_np ** (b_np - 1)))
-        assert np.allclose(b.grad, (a_np**b_np) * np.log(a_np))
+        assert np.allclose(a.grad.data, b_np * (a_np ** (b_np - 1)))
+        assert np.allclose(b.grad.data, (a_np**b_np) * np.log(a_np))
 
         # Tensor ** scalar
         d = a**3.0
@@ -471,7 +470,7 @@ class TestTensorCore:
         assert np.allclose(d.realize().data, expected_d)
         d.backward()
         assert np.allclose(
-            a.grad, (b_np * (a_np ** (b_np - 1))) + (3.0 * (a_np**2))
+            a.grad.data, (b_np * (a_np ** (b_np - 1))) + (3.0 * (a_np**2))
         )  # Accumulated
 
     def test_tensor_matmul(self):
@@ -488,10 +487,10 @@ class TestTensorCore:
         # dL/dA = dL/dC @ B.T
         # dL/dB = A.T @ dL/dC
         assert np.allclose(
-            a.grad, np.ones_like(expected_c) @ b_np.T, rtol=1e-4, atol=1e-4
+            a.grad.data, np.ones_like(expected_c) @ b_np.T, rtol=1e-4, atol=1e-4
         )
         assert np.allclose(
-            b.grad, a_np.T @ np.ones_like(expected_c), rtol=1e-4, atol=1e-4
+            b.grad.data, a_np.T @ np.ones_like(expected_c), rtol=1e-4, atol=1e-4
         )
 
         # Batch matrix multiplication (example: (2, 2, 3) @ (2, 3, 2))
@@ -514,8 +513,8 @@ class TestTensorCore:
         expected_k_grad = np.einsum(
             "...ki,...il->...kl", np.swapaxes(j_np, -1, -2), np.ones_like(expected_l)
         )
-        assert np.allclose(j.grad, expected_j_grad, rtol=1e-4, atol=1e-4)
-        assert np.allclose(k.grad, expected_k_grad, rtol=1e-4, atol=1e-4)
+        assert np.allclose(j.grad.data, expected_j_grad, rtol=1e-4, atol=1e-4)
+        assert np.allclose(k.grad.data, expected_k_grad, rtol=1e-4, atol=1e-4)
 
 
 class TestLazyBufferCore:
@@ -656,13 +655,13 @@ class TestLazyBufferCore:
         # 4. Add.backward is called.
 
         # Verify c.grad (should be all ones as it's the final output of the backward call)
-        assert np.allclose(c.grad, 1.0, rtol=1e-4, atol=1e-4)
+        assert np.allclose(c.grad.data, 1.0, rtol=1e-4, atol=1e-4)
 
         # Verify a.grad
         # For c = a + S, dc/da = 1. So, gradient of a should be the gradient of c.
         # The `c_add_grad_op` should propagate `out_grad_ptr` to the `prev_ptrs`.
         # Assuming `c_add_grad_op` correctly copies the gradient:
-        assert np.allclose(a.grad, 1.0, rtol=1e-4, atol=1e-4)
+        assert np.allclose(a.grad.data, 1.0, rtol=1e-4, atol=1e-4)
 
     def test_lazy_buffer_backward_complex_graph(self):
         # Graph: a --- (mul) ---> c --- (relu) ---> d
@@ -724,6 +723,6 @@ class TestLazyBufferCore:
         expected_b_grad = expected_c_add_grad * a.data  # dL/dc_mul * dc_mul/db
 
         # Due to potential floating point inaccuracies from C operations, use `np.isclose`
-        assert np.allclose(d.grad, expected_d_grad, rtol=1e-4, atol=1e-4)
-        assert np.allclose(a.grad, expected_a_grad, rtol=1e-4, atol=1e-4)
-        assert np.allclose(b.grad, expected_b_grad, rtol=1e-4, atol=1e-4)
+        assert np.allclose(d.grad.data, expected_d_grad, rtol=1e-4, atol=1e-4)
+        assert np.allclose(a.grad.data, expected_a_grad, rtol=1e-4, atol=1e-4)
+        assert np.allclose(b.grad.data, expected_b_grad, rtol=1e-4, atol=1e-4)

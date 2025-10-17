@@ -171,88 +171,54 @@ void gmalloc(Tensor* t, float init)
 {
     int size = numel(t->shape, t->ndim);
 
-    if (t->grad)
-    {
-        sfree(t->grad, t->device);
-        t->grad = NULL;
-    }
-
-    t->grad = malloc(sizeof(Storage));
     if (!t->grad)
     {
-        LOG_ERROR("Failed to allocate Storage for grad");
-        return;
-    }
-
-    t->grad->size = size;
-
-    if (t->device == CPU)
-    {
-        t->grad->data = malloc(sizeof(float) * size);
-        if (!t->grad->data)
+        t->grad = tmalloc(t->shape, t->ndim, t->device, false);
+        if (!t->grad)
         {
-            LOG_ERROR("Failed to allocate Storage data for grad on cpu.");
-            sfree(t->grad, t->device);
-            t->grad = NULL;
+            LOG_ERROR("Failed to allocate Tensor for grad");
             return;
         }
 
+        t->grad->data = smalloc(NULL, size, t->device);
+        if (!t->grad->data)
+        {
+            LOG_ERROR("Failed to allocate Storage for grad data");
+            tfree(t->grad);
+            t->grad = NULL;
+            return;
+        }
+        LOG_INFO("Tensor allocated for grad at %p (data=%p) with size=%d", t->grad,
+                 t->grad->data->data, size);
+    }
+
+    if (t->device == CPU)
+    {
         for (int i = 0; i < size; ++i)
         {
-            t->grad->data[i] = init;
+            t->grad->data->data[i] = init;
         }
     }
     else
     {
-        cudaError_t err = cudaMalloc((void**) &t->grad->data, size * sizeof(float));
-        if (err != cudaSuccess)
-        {
-            LOG_ERROR("Failed to allocate Storage data for grad on cuda device.");
-            sfree(t->grad, t->device);
-            t->grad = NULL;
-            return;
-        }
-
-        // Allocate a temporary host buffer and fill it with the init value
         float* host_init_buffer = (float*) malloc(size * sizeof(float));
         if (!host_init_buffer)
         {
             LOG_ERROR("Failed to allocate host_init_buffer for grad initialization.");
-            cudaFree(t->grad->data);
-            sfree(t->grad, t->device);
-            t->grad = NULL;
             return;
         }
         for (int i = 0; i < size; ++i)
         {
             host_init_buffer[i] = init;
         }
-
-        // Copy the initialized host buffer to the device
-        err = cudaMemcpy(t->grad->data, host_init_buffer, size * sizeof(float),
-                         cudaMemcpyHostToDevice);
+        cudaError_t err = cudaMemcpy(t->grad->data->data, host_init_buffer, size * sizeof(float),
+                                     cudaMemcpyHostToDevice);
         if (err != cudaSuccess)
         {
-            LOG_ERROR("Failed to copy init value to grad on cuda device.");
-            SAFE_FREE(&host_init_buffer, free);
-            SAFE_FREE(&t->grad->data, cudaFree);
-            sfree(t->grad, t->device);
-            t->grad = NULL;
-            return;
+            LOG_ERROR("Failed to copy init value to grad on cuda device: %s",
+                      cudaGetErrorString(err));
         }
         free(host_init_buffer);
-    }
-
-    t->grad->counter = 1;
-    LOG_INFO("Storage allocated for grad at %p with size=%d", t->grad, size);
-}
-
-void gfree(Tensor* t)
-{
-    if (t->grad)
-    {
-        sfree(t->grad, t->device);
-        t->grad = NULL;
     }
 }
 
@@ -274,6 +240,14 @@ Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad)
         return NULL;
     }
 
+    if (ndim > 0 && !shape)
+    {
+        LOG_ERROR("Shape cannot be NULL for ndim > 0 in tmalloc");
+        SAFE_FREE(&t->shape, free);
+        SAFE_FREE(&t, tfree);
+        return NULL;
+    }
+
     for (int i = 0; i < t->ndim; ++i)
         t->shape[i] = shape[i];
 
@@ -292,8 +266,6 @@ Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad)
 void tfree(Tensor* t)
 {
     if (!t) return;
-
-    LOG_INFO("tfree: t=%p, t->shape=%p, t->strides=%p", t, t->shape, t->strides);
 
     LOG_INFO("Freeing Tensor at %p", t);
 
@@ -317,7 +289,7 @@ void tfree(Tensor* t)
 
     if (t->grad)
     {
-        sfree(t->grad, t->device);
+        tfree(t->grad);
         t->grad = NULL;
     }
 

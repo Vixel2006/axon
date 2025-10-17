@@ -16,7 +16,7 @@ class CTensor(ctypes.Structure):
 
 CTensor._fields_ = [
     ("data", ctypes.POINTER(CStorage)),
-    ("grad", ctypes.POINTER(CStorage)),
+    ("grad", ctypes.POINTER(CTensor)),
     ("shape", ctypes.POINTER(ctypes.c_int)),
     ("strides", ctypes.POINTER(ctypes.c_int)),
     ("device", CDevice),
@@ -42,6 +42,11 @@ class ClipExtras(ctypes.Structure):
     _fields_ = [
         ("min_val", ctypes.c_float),
         ("max_val", ctypes.c_float),
+    ]
+
+class ReductionExtras(ctypes.Structure):
+    _fields_ = [
+        ("axis", ctypes.c_int),
     ]
 
 class ReductionExtras(ctypes.Structure):

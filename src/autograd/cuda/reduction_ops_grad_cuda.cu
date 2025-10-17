@@ -167,8 +167,8 @@ void sum_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / N;
 
-    sum_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data, a->grad->data, a->shape,
-                                                           a->ndim, axis, N);
+    sum_grad_kernel<<<num_blocks, num_threads_per_block>>>(
+        out->grad->data->data, a->grad->data->data, a->shape, a->ndim, axis, N);
 
     CHECK_CUDA();
 
@@ -187,8 +187,8 @@ void mean_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / N;
 
-    mean_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data, a->grad->data,
-                                                            a->shape, a->ndim, axis, N);
+    mean_grad_kernel<<<num_blocks, num_threads_per_block>>>(
+        out->grad->data->data, a->grad->data->data, a->shape, a->ndim, axis, N);
 
     CHECK_CUDA();
 
@@ -209,8 +209,8 @@ void max_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     max_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-        out->grad->data, a->grad->data, a->data->data, out->data->data, a->shape, a->strides,
-        out->strides, a->ndim, out->ndim, axis, N);
+        out->grad->data->data, a->grad->data->data, a->data->data, out->data->data, a->shape,
+        a->strides, out->strides, a->ndim, out->ndim, axis, N);
 
     CHECK_CUDA();
 
@@ -226,7 +226,8 @@ void sum_full_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    sum_full_grad_kernel<<<num_blocks, num_threads_per_block>>>(a->grad->data, out->grad->data, N);
+    sum_full_grad_kernel<<<num_blocks, num_threads_per_block>>>(a->grad->data->data,
+                                                                out->grad->data->data, N);
 
     CHECK_CUDA();
 
@@ -242,7 +243,8 @@ void mean_full_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    mean_full_grad_kernel<<<num_blocks, num_threads_per_block>>>(a->grad->data, out->grad->data, N);
+    mean_full_grad_kernel<<<num_blocks, num_threads_per_block>>>(a->grad->data->data,
+                                                                 out->grad->data->data, N);
 
     CHECK_CUDA();
 
@@ -259,7 +261,7 @@ void max_full_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     max_full_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-        a->grad->data, a->data->data, out->grad->data, N, out->data->data);
+        a->grad->data->data, a->data->data, out->grad->data->data, N, out->data->data);
 
     CHECK_CUDA();
 

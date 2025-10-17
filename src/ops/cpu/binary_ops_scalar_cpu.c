@@ -59,7 +59,7 @@ void sub_scalar_op_cpu(Tensor* a, float b, Tensor* out)
 {
     LOG_INFO("OP: sub_scalar_op: Performing scalar subtraction (scalar=%.2f)", b);
     LOG_INFO("Tensor Pointers - a: data=%p, grad=%p | out: data=%p, grad=%p", (void*) a->data->data,
-             (void*) a->grad->data, (void*) out->data->data, (void*) out->grad->data);
+             (void*) a->grad->data->data, (void*) out->data->data, (void*) out->grad->data->data);
 
     int size = numel(a->shape, a->ndim);
     float* data = malloc(sizeof(float) * size);

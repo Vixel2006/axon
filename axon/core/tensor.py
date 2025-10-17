@@ -20,19 +20,25 @@ import numpy as np
 import ctypes
 from typing import List, Optional, Tuple, Union, Any
 from enum import Enum
-import weakref
 
 class Tensor:
     _lazy_buffer: Optional[Any]
+    _grad: Optional[Tensor] = None
     
-    def __init__(self, shape: Tuple[int], device: str = "cpu", requires_grad: bool = True):
+    def __init__(self, shape: Tuple[int], device: str = "cpu", requires_grad: bool = True, c_tensor_ptr: ctypes.POINTER(CTensor) | None = None, is_grad_view: bool = False):
         device_ = 0 if device == "cpu" else 1
         ndim = len(shape)
-        self.c_tensor_ptr = c_tmalloc(shape, ndim, device_, requires_grad)
+        if not c_tensor_ptr:
+            self.c_tensor_ptr = c_tmalloc(shape, ndim, device_, requires_grad)
+        else:
+            self.c_tensor_ptr = c_tensor_ptr
+
         if not self.c_tensor_ptr:
             raise RuntimeError("tmalloc failed to allocate tensor")
 
         self._lazy_buffer = None
+        self._grad = None
+        self.is_grad_view = is_grad_view
 
     @property
     def data(self) -> np.ndarray:
@@ -55,8 +61,7 @@ class Tensor:
                 
                 out_array[logical_coords] = value
                 it.iternext()
-        else: # CUDA device
-            # Create a ctypes pointer to the numpy array's data buffer
+        else:
             host_buffer_ptr = out_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
             c_copy_storage_to_host(
                 self.c_tensor_ptr.contents.data,
@@ -68,37 +73,12 @@ class Tensor:
         return out_array
 
     @property
-    def grad(self) -> np.ndarray:
-        num_elements = self.c_tensor_ptr.contents.grad.contents.size
-        out_array = np.empty(self.shape, dtype=np.float32)
-
-        if self.device == "cpu":
-            c_raw_data_ptr = self.c_tensor_ptr.contents.grad.contents.data
-            c_strides_ptr = self.c_tensor_ptr.contents.strides
-
-            it = np.nditer(out_array, flags=['multi_index'], op_flags=['writeonly'])
-            while not it.finished:
-                logical_coords = it.multi_index
-                
-                c_memory_offset_elements = 0
-                for i, coord in enumerate(logical_coords):
-                    c_memory_offset_elements += coord * c_strides_ptr[i]
-
-                value = c_raw_data_ptr[c_memory_offset_elements]
-                
-                out_array[logical_coords] = value
-                it.iternext()
-        else: # CUDA device
-            # Create a ctypes pointer to the numpy array's data buffer
-            host_buffer_ptr = out_array.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
-            c_copy_storage_to_host(
-                self.c_tensor_ptr.contents.grad,
-                self.c_tensor_ptr.contents.device,
-                num_elements,
-                host_buffer_ptr
-            )
-
-        return out_array
+    def grad(self) -> Tensor:
+        if not self.c_tensor_ptr.contents.grad:
+            return None
+        if self._grad is None:
+            self._grad = Tensor(self.shape, c_tensor_ptr=self.c_tensor_ptr.contents.grad, is_grad_view=True)
+        return self._grad
 
     @property
     def shape(self) -> Tuple[int]:
@@ -136,11 +116,14 @@ class Tensor:
             return self._lazy_buffer.realize()
         return self
 
-    def detach(self):
-        from axon.functions import from_data
-        # Create a new Tensor with the same data as self, but with requires_grad=False
-        t = from_data(self.shape, self.data, requires_grad=False)
-        return t
+    def detach(self) -> Tensor:
+        from axon.functions import from_c_storage
+        self.realize()
+        if not self.c_tensor_ptr.contents.data:
+            return Tensor(self.shape, device=self.device, requires_grad=False)
+        
+        detached_tensor = from_c_storage(self.shape, self.c_tensor_ptr.contents.data, device=self.device, requires_grad=False)
+        return detached_tensor
 
     def backward(self):
         if not self.requires_grad:
@@ -183,6 +166,9 @@ class Tensor:
     
     def __del__(self):
         self._lazy_buffer = None
+        if hasattr(self, 'is_grad_view') and self.is_grad_view:
+            return
+
         if self.c_tensor_ptr:
             c_tfree(self.c_tensor_ptr)
             self.c_tensor_ptr = None

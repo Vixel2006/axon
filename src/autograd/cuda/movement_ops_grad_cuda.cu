@@ -86,7 +86,7 @@ void concat_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     LOG_INFO("OP: concat_grad_op_cuda: Computing grad for concat of %d tensors around axis %d",
              n_prev, axis);
 
-    if (out->grad == NULL || out->grad->data == NULL)
+    if (out->grad == NULL || out->grad->data->data == NULL)
     {
         LOG_WARN("Output tensor has no gradient data, skipping backward pass for concat.");
         return;
@@ -113,7 +113,7 @@ void concat_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
         if (current_prev->requires_grad)
         {
-            if (current_prev->grad == NULL || current_prev->grad->data == NULL)
+            if (current_prev->grad == NULL || current_prev->grad->data->data == NULL)
             {
                 LOG_WARN(
                     "concat_grad_op_cuda: prev tensor %d has no gradient data buffer, skipping.",
@@ -130,8 +130,8 @@ void concat_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
             if (is_contiguous(current_prev))
             {
                 concat_grad_kernel_contiguous<<<num_blocks, num_threads_per_block>>>(
-                    out->grad->data, current_prev->grad->data, outer_size, prev_concat_axis_size,
-                    out_concat_axis_size, inner_size, offset_in_axis);
+                    out->grad->data->data, current_prev->grad->data->data, outer_size,
+                    prev_concat_axis_size, out_concat_axis_size, inner_size, offset_in_axis);
 
                 cudaError_t err = cudaGetLastError();
                 CHECK_CUDA(err);
@@ -168,9 +168,9 @@ void concat_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
                            cudaMemcpyHostToDevice);
 
                 concat_grad_kernel_noncontiguous<<<num_blocks, num_threads_per_block>>>(
-                    out->grad->data, current_prev->grad->data, d_prev_strides, current_prev->ndim,
-                    d_prev_shape, axis, outer_size, prev_concat_axis_size, out_concat_axis_size,
-                    inner_size, offset_in_axis);
+                    out->grad->data->data, current_prev->grad->data->data, d_prev_strides,
+                    current_prev->ndim, d_prev_shape, axis, outer_size, prev_concat_axis_size,
+                    out_concat_axis_size, inner_size, offset_in_axis);
 
                 err = cudaGetLastError();
                 if (err != cudaSuccess)

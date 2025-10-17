@@ -38,7 +38,7 @@ void relu_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     if (prev[0]->requires_grad)
     {
         relu_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-            out->grad->data, prev[0]->data->data, prev[0]->grad->data, N);
+            out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data, N);
         CHECK_CUDA();
     }
     LOG_INFO("relu_grad_op_cuda: CUDA implementation finished successfully.");
@@ -66,8 +66,8 @@ void log_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (prev[0]->requires_grad)
     {
-        log_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data, prev[0]->data->data,
-                                                               prev[0]->grad->data, N);
+        log_grad_kernel<<<num_blocks, num_threads_per_block>>>(
+            out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data, N);
         CHECK_CUDA();
     }
     LOG_INFO("log_grad_op_cuda: CUDA implementation finished successfully.");
@@ -94,8 +94,8 @@ void exp_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (prev[0]->requires_grad)
     {
-        exp_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data, out->data->data,
-                                                               prev[0]->grad->data, N);
+        exp_grad_kernel<<<num_blocks, num_threads_per_block>>>(
+            out->grad->data->data, out->data->data, prev[0]->grad->data->data, N);
         CHECK_CUDA();
     }
     LOG_INFO("exp_grad_op_cuda: CUDA implementation finished successfully.");
@@ -124,8 +124,8 @@ void abs_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (prev[0]->requires_grad)
     {
-        abs_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data, prev[0]->data->data,
-                                                               prev[0]->grad->data, N);
+        abs_grad_kernel<<<num_blocks, num_threads_per_block>>>(
+            out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data, N);
         CHECK_CUDA();
     }
     LOG_INFO("abs_grad_op_cuda: CUDA implementation finished successfully.");
@@ -151,8 +151,8 @@ void neg_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (prev[0]->requires_grad)
     {
-        neg_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data, prev[0]->grad->data,
-                                                               N);
+        neg_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
+                                                               prev[0]->grad->data->data, N);
         CHECK_CUDA();
     }
     LOG_INFO("neg_grad_op_cuda: CUDA implementation finished successfully.");
@@ -187,7 +187,8 @@ void clip_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     if (prev[0]->requires_grad)
     {
         clip_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-            out->grad->data, prev[0]->data->data, prev[0]->grad->data, min_val, max_val, N);
+            out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data, min_val, max_val,
+            N);
         CHECK_CUDA();
     }
     LOG_INFO("clip_grad_op_cuda: CUDA implementation finished successfully.");

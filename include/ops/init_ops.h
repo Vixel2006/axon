@@ -16,7 +16,7 @@ extern "C"
     AXON_EXPORT void randn(Tensor* t);
     AXON_EXPORT void uniform(Tensor* t, float low, float high);
     AXON_EXPORT void from_data(Tensor* t, float* data);
-    AXON_EXPORT void borrow(Tensor* t, Storage* data, Storage* grad);
+    AXON_EXPORT void borrow(Tensor* t, Storage* data, Tensor* grad);
 #ifdef __cplusplus
 }
 #endif

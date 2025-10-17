@@ -230,8 +230,8 @@ void add_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     {
         if (prev[0]->requires_grad)
         {
-            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data,
-                                                                   prev[0]->grad->data, N);
+            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
+                                                                   prev[0]->grad->data->data, N);
             CHECK_CUDA();
         }
     }
@@ -239,15 +239,15 @@ void add_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     {
         if (prev[0]->requires_grad)
         {
-            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data,
-                                                                   prev[0]->grad->data, N);
+            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
+                                                                   prev[0]->grad->data->data, N);
             CHECK_CUDA();
         }
 
         if (prev[1]->requires_grad)
         {
-            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data,
-                                                                   prev[1]->grad->data, N);
+            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
+                                                                   prev[1]->grad->data->data, N);
             CHECK_CUDA();
         }
     }
@@ -266,8 +266,8 @@ void sub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     {
         if (prev[0]->requires_grad)
         {
-            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data,
-                                                                   prev[0]->grad->data, N);
+            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
+                                                                   prev[0]->grad->data->data, N);
             CHECK_CUDA();
         }
     }
@@ -275,15 +275,15 @@ void sub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     {
         if (prev[0]->requires_grad)
         {
-            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data,
-                                                                   prev[0]->grad->data, N);
+            add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
+                                                                   prev[0]->grad->data->data, N);
             CHECK_CUDA();
         }
 
         if (prev[1]->requires_grad)
         {
-            sub_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data,
-                                                                   prev[1]->grad->data, N);
+            sub_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
+                                                                   prev[1]->grad->data->data, N);
             CHECK_CUDA();
         }
     }
@@ -301,8 +301,8 @@ void rsub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (prev[0]->requires_grad)
     {
-        sub_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data, prev[0]->grad->data,
-                                                               N);
+        sub_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
+                                                               prev[0]->grad->data->data, N);
         CHECK_CUDA();
     }
 
@@ -322,7 +322,7 @@ void mul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         if (prev[0]->requires_grad)
         {
             scalar_mul_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, prev[0]->grad->data, *scalar, N);
+                out->grad->data->data, prev[0]->grad->data->data, *scalar, N);
             CHECK_CUDA();
         }
     }
@@ -331,14 +331,14 @@ void mul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         if (prev[0]->requires_grad)
         {
             mul_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, prev[0]->grad->data, prev[1]->data->data, N);
+                out->grad->data->data, prev[0]->grad->data->data, prev[1]->data->data, N);
             CHECK_CUDA();
         }
 
         if (prev[1]->requires_grad)
         {
             mul_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, prev[1]->grad->data, prev[0]->data->data, N);
+                out->grad->data->data, prev[1]->grad->data->data, prev[0]->data->data, N);
             CHECK_CUDA();
         }
     }
@@ -358,7 +358,8 @@ void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         if (prev[0]->requires_grad)
         {
             scalar_pow_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, prev[0]->data->data, prev[0]->grad->data, scalar_power, N);
+                out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data, scalar_power,
+                N);
             CHECK_CUDA();
         }
     }
@@ -371,15 +372,16 @@ void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
             // 1'. Using prev[1]->data->data for both power_data and power_grad to match the
             // signature.
             base_pow_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, prev[0]->data->data, prev[0]->grad->data, prev[1]->data->data,
-                prev[1]->data->data, N);
+                out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data,
+                prev[1]->data->data, prev[1]->data->data, N);
             CHECK_CUDA();
         }
 
         if (prev[1]->requires_grad) // gradient for power
         {
             exponent_pow_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, out->data->data, prev[0]->data->data, prev[1]->grad->data, N);
+                out->grad->data->data, out->data->data, prev[0]->data->data,
+                prev[1]->grad->data->data, N);
             CHECK_CUDA();
         }
     }
@@ -399,7 +401,7 @@ void div_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         if (prev[0]->requires_grad)
         {
             scalar_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, prev[0]->grad->data, scalar_denominator, N);
+                out->grad->data->data, prev[0]->grad->data->data, scalar_denominator, N);
             CHECK_CUDA();
         }
     }
@@ -408,14 +410,15 @@ void div_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         if (prev[0]->requires_grad)
         {
             numerator_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, prev[0]->grad->data, prev[1]->data->data, N);
+                out->grad->data->data, prev[0]->grad->data->data, prev[1]->data->data, N);
             CHECK_CUDA();
         }
 
         if (prev[1]->requires_grad)
         {
             denominator_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, out->data->data, prev[1]->grad->data, prev[1]->data->data, N);
+                out->grad->data->data, out->data->data, prev[1]->grad->data->data,
+                prev[1]->data->data, N);
             CHECK_CUDA();
         }
     }
@@ -434,7 +437,7 @@ void rdiv_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         if (prev[0]->requires_grad)
         {
             scalar_rdiv_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, out->data->data, prev[0]->grad->data, scalar_numerator,
+                out->grad->data->data, out->data->data, prev[0]->grad->data->data, scalar_numerator,
                 prev[0]->data->data, N);
             CHECK_CUDA();
         }
@@ -444,14 +447,15 @@ void rdiv_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         if (prev[0]->requires_grad)
         {
             denominator_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, out->data->data, prev[0]->grad->data, prev[0]->data->data, N);
+                out->grad->data->data, out->data->data, prev[0]->grad->data->data,
+                prev[0]->data->data, N);
             CHECK_CUDA();
         }
 
         if (prev[1]->requires_grad)
         {
             numerator_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
-                out->grad->data, prev[1]->grad->data, prev[0]->data->data, N);
+                out->grad->data->data, prev[1]->grad->data->data, prev[0]->data->data, N);
             CHECK_CUDA();
         }
     }
@@ -499,7 +503,7 @@ void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
                          (N + block_matmul.y - 1) / block_matmul.y, B_dim);
 
         matmul_grad_kernel<<<grid_matmul, block_matmul>>>(
-            out->grad->data, B->data->data, A->grad->data, B_dim, N, P, K, false, true);
+            out->grad->data->data, B->data->data, A->grad->data->data, B_dim, N, P, K, false, true);
         CHECK_CUDA();
     }
 
@@ -514,7 +518,7 @@ void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
                          (N + block_matmul.y - 1) / block_matmul.y, B_dim);
 
         matmul_grad_kernel<<<grid_matmul, block_matmul>>>(
-            A->data->data, out->grad->data, B->grad->data, B_dim, N, P, K, true, false);
+            A->data->data, out->grad->data->data, B->grad->data->data, B_dim, N, P, K, true, false);
         CHECK_CUDA();
     }
 

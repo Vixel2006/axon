@@ -72,11 +72,19 @@ class LazyBuffer:
 
         execution_order = self.topo_sort()[::-1]
 
+        # Initialize gradients for all tensors that require them
+        for buffer in execution_order:
+            for tensor in buffer.prev:
+                if tensor.requires_grad and not tensor.c_tensor_ptr.contents.grad:
+                    c_gmalloc(tensor.c_tensor_ptr, ctypes.c_float(0.0)) # Initialize with 0.0
+
         for i, buffer in enumerate(execution_order):
             if not buffer.out.requires_grad:
                 continue
 
             if i == 0:
+                # For the final output tensor, initialize its gradient to 1.0
+                # This is the starting point of the backpropagation
                 c_gmalloc(buffer.out.c_tensor_ptr, ctypes.c_float(1.0))
             
             out_grad_storage_ptr = buffer.out.c_tensor_ptr

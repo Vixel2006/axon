@@ -31,11 +31,6 @@ if tensor_lib:
     ]
     tensor_lib.gmalloc.restype = None
 
-    tensor_lib.gfree.argtypes = [
-        ctypes.POINTER(CTensor)
-    ]
-    tensor_lib.gfree.restype = None
-
     tensor_lib.tmalloc.argtypes = [
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,
@@ -886,14 +881,14 @@ if tensor_lib:
     tensor_lib.concat_op_cuda.restype = None
 
     # Optimizers
-    tensor_lib.sgd.argtypes = [
+    tensor_lib.sgd_cpu.argtypes = [
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
         ctypes.c_float,
     ]
-    tensor_lib.sgd.restype = None
+    tensor_lib.sgd_cpu.restype = None
 
-    tensor_lib.adam.argtypes = [
+    tensor_lib.adam_cpu.argtypes = [
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.POINTER(ctypes.POINTER(CTensor)),
@@ -904,10 +899,11 @@ if tensor_lib:
         ctypes.c_float,
         ctypes.c_float,
     ]
-    tensor_lib.adam.restype = None
+    tensor_lib.adam_cpu.restype = None
 
-    tensor_lib.zero_grad.argtypes = [
+    tensor_lib.zero_grad_cpu.argtypes = [
         ctypes.POINTER(ctypes.POINTER(CTensor)),
         ctypes.c_int,
     ]
-    tensor_lib.zero_grad.restype = None
+    tensor_lib.zero_grad_cpu.restype = None
+

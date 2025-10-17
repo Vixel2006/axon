@@ -1,5 +1,6 @@
 import numpy as np
 
+from axon.axon_bindings.ctypes_definitions import CStorage
 from axon.core.tensor import Tensor
 from axon.ops.uop import *
 from axon.ops.bop import *
@@ -36,14 +37,24 @@ def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] 
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
 
     if isinstance(data, np.ndarray):
-        out._data_np = data.astype(np.float32)
+        out._numpy_data_ref = data.astype(np.float32)
     elif isinstance(data, (list, tuple)):
-        out._data_np = np.array(data, dtype=np.float32)
+        out._numpy_data_ref = np.array(data, dtype=np.float32)
     else:
         raise TypeError(f"Unsupported data type for from_data: {type(data)}. Expected list, tuple, or numpy.ndarray.")
 
-    data_ptr = out._data_np.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+    data_ptr = out._numpy_data_ref.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
     c_from_data(out.c_tensor_ptr, data_ptr)
+    return out
+
+
+def from_c_storage(shape: tuple[int], c_storage_ptr: ctypes.POINTER(CStorage), device: str = "cpu", requires_grad: bool = False) -> Tensor:
+    out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
+    # Assign the provided CStorage pointer directly to the Tensor's data
+    out.c_tensor_ptr.contents.data = c_storage_ptr
+    # Increment the reference counter for the CStorage
+    if c_storage_ptr:
+        c_storage_ptr.contents.counter += 1
     return out
 
 
@@ -96,22 +107,6 @@ def log_softmax(a: Tensor, dim: int = -1) -> Tensor:
     log_sum_exp = log(sum(exp(shifted), dim=dim, keepdim=True))
     return shifted - log_sum_exp
 
-def one_hot(labels: Tensor, num_classes: int) -> Tensor:
-    if labels.ndim != 1:
-        raise ValueError("Labels must be a 1D tensor of class indices.")
-    
-    labels_tensor = labels # Keep a reference to the labels Tensor object
-    # Validate label values
-    labels_data_np = labels_tensor.realize().data # Keep a reference to labels.data to prevent premature garbage collection
-    if np.any(labels_data_np < 0) or np.any(labels_data_np >= num_classes):
-        raise ValueError(f"Label values must be between 0 and {num_classes - 1}, but got values outside this range.")
-
-    one_hot_data = np.zeros((labels_tensor.shape[0], num_classes), dtype=np.float32)
-    one_hot_data[np.arange(labels_tensor.shape[0]), labels_data_np.astype(np.int32)] = 1.0
-    result = from_data((labels_tensor.shape[0], num_classes), one_hot_data)
-    return result
-
-
 # ========= Reduction Operations ==========
 def sum(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Sum.create_node(a, dim=dim, keepdim=keepdim)
 def mean(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Mean.create_node(a, dim=dim, keepdim=keepdim)
@@ -119,24 +114,19 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: retu
 
 if __name__ == "__main__":
     a = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cpu")
-    b = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cpu")
+    #b = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cpu")
 
-    c = stack([a, b], axis=1)
+    c = a + 2
 
     c.backward()
-    print("-----------------------------------")
-    print(b.grad)
-    print("-----------------------------------")
+
+    print(a)
     print(a.grad)
+    #c = a ** 2
 
-    x = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cuda")
-    y = from_data((2,2,2), [[[1,2], [3,5]], [[2,6], [3,4]]], device="cuda")
+    #c.backward()
 
-    z = stack([x, y], axis=1)
+    #print(c)
+    #print(a.grad)
+    #print(b.grad)
 
-    z.backward()
-
-    print(y.grad)
-    print("-----------------------------------")
-    print(x.grad)
-    print("-----------------------------------")

@@ -39,7 +39,7 @@ class TestMetrics:
             pred_data
         )  # Because of mean reduction
 
-        assert np.allclose(pred.grad, expected_grad_pred)
+        assert np.allclose(pred.grad.data, expected_grad_pred)
 
     def test_mse_basic(self):
         pred_data = np.array([0.1, 0.9, 0.2, 0.8], dtype=np.float32)
@@ -67,7 +67,7 @@ class TestMetrics:
         expected_grad_pred = 2 * (pred_data - truth_data)
         expected_grad_pred = expected_grad_pred / len(pred_data)
 
-        assert np.allclose(pred.grad, expected_grad_pred)
+        assert np.allclose(pred.grad.data, expected_grad_pred)
 
     def test_nll_loss_basic(self):
         predictions_data = np.array(
@@ -99,4 +99,4 @@ class TestMetrics:
         expected_grad_predictions = -targets_data
         expected_grad_predictions = expected_grad_predictions / 3
 
-        assert np.allclose(predictions.grad, expected_grad_predictions)
+        assert np.allclose(predictions.grad.data, expected_grad_predictions)
