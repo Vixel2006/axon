@@ -50,9 +50,6 @@ if tensor_lib:
     def c_gmalloc(grad_ptr, grad):
         return tensor_lib.gmalloc(grad_ptr, grad)
 
-    def c_gfree(tensor_ptr):
-        return tensor_lib.gfree(tensor_ptr)
-
     def c_tmalloc(shape, ndim, device, requires_grad):
         c_shape = (ctypes.c_int * ndim)(*shape)
         return tensor_lib.tmalloc(c_shape, ndim, device, requires_grad)
@@ -454,18 +451,18 @@ if tensor_lib:
     # Optimizers
     def c_sgd(params, num_params, lr):
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
-        tensor_lib.sgd(in_param_ptrs, num_params, lr)
+        tensor_lib.sgd_cpu(in_param_ptrs, num_params, lr)
 
     def c_adam(params, m_estimates, v_estimates, num_params, time_step, lr, beta1, beta2, epsilon):
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
         m_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*m_estimates)
         v_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*v_estimates)
-        tensor_lib.adam(in_param_ptrs, m_estimates_ptrs, v_estimates_ptrs, num_params, time_step, lr, beta1, beta2, epsilon)
+        tensor_lib.adam_cpu(in_param_ptrs, m_estimates_ptrs, v_estimates_ptrs, num_params, time_step, lr, beta1, beta2, epsilon)
 
 
     def c_zero_grad(params, num_params):
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
-        tensor_lib.zero_grad(in_param_ptrs, num_params)
+        tensor_lib.zero_grad_cpu(in_param_ptrs, num_params)
 
 
     # Register operations
@@ -534,4 +531,3 @@ if tensor_lib:
     _register_op("expand", c_expand, None)
     _register_op("broadcast", c_broadcast, None)
     _register_op("concat", c_concat_cpu, c_concat_cuda)
-

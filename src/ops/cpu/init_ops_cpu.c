@@ -39,7 +39,7 @@ void zeros(Tensor* t)
         return;
     }
     LOG_INFO("OP: zeros: Initialized tensor t: data=%p, grad=%p", (void*) t->data->data,
-             (void*) t->grad->data);
+             (void*) t->grad->data->data);
 }
 
 void ones(Tensor* t)
@@ -137,13 +137,39 @@ void from_data(Tensor* t, float* data)
     }
 }
 
-void borrow(Tensor* t, Storage* data, Storage* grad)
+void borrow(Tensor* t, Storage* data, Tensor* grad)
 {
     t->data = data;
-    data->counter += 1;
-    t->grad = grad;
+    if (data)
+    {
+        data->counter += 1;
+    }
+
     if (grad)
     {
-        grad->counter += 1;
+        if (!t->grad)
+        {
+            t->grad = tmalloc(t->shape, t->ndim, t->device, false);
+            if (!t->grad)
+            {
+                LOG_ERROR("Failed to allocate grad tensor in borrow");
+                return;
+            }
+        }
+
+        for (int i = 0; i < t->ndim; i++)
+        {
+            t->grad->strides[i] = t->strides[i];
+        }
+
+        if (t->grad->data)
+        {
+            sfree(t->grad->data, t->device);
+        }
+        t->grad->data = grad->data;
+        if (grad->data)
+        {
+            grad->data->counter++;
+        }
     }
 }

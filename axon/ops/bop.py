@@ -499,7 +499,7 @@ class Dot(BOp):
         if a_tensor.ndim == 1 and b_tensor.ndim == 1:
             if a_tensor.shape[0] != b_tensor.shape[0]:
                 raise ValueError(f"Dot product of 1D tensors requires matching dimensions: {a_tensor.shape[0]} vs {b_tensor.shape[0]}")
-            return ()
+            return (1,)
 
         if a_tensor.shape[-1] != b_tensor.shape[-1]:
             raise ValueError(f"Last dimensions must match for dot product contraction: {a_tensor.shape[-1]} vs {b_tensor.shape[-1]}")

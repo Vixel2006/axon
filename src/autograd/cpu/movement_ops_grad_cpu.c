@@ -14,7 +14,7 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
     LOG_INFO("Starting concat_grad_op_cpu: out.numel=%d, n_prev=%d, axis=%d",
              numel(out->shape, out->ndim), n_prev, axis);
 
-    if (out->grad == NULL || out->grad->data == NULL)
+    if (out->grad == NULL || out->grad->data->data == NULL || out->grad->data->data == NULL)
     {
         LOG_WARN("Output tensor has no gradient data, skipping backward pass for concat.");
         return;
@@ -37,11 +37,11 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
         if (current_prev->requires_grad)
         {
-            if (current_prev->grad == NULL || current_prev->grad->data == NULL)
+            if (current_prev->grad == NULL || current_prev->grad->data->data == NULL ||
+                current_prev->grad->data->data == NULL)
             {
                 LOG_WARN(
-                    "concat_grad_op_cpu: prev tensor %d has no gradient data buffer, skipping.",
-                    i);
+                    "concat_grad_op_cpu: prev tensor %d has no gradient data buffer, skipping.", i);
                 offset_in_axis += current_prev->shape[axis];
                 continue;
             }
@@ -58,7 +58,7 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                     int remainder = j % (prev_concat_axis_size * inner_size);
                     int out_idx = outer_i * (out_concat_axis_size * inner_size) +
                                   (offset_in_axis * inner_size) + remainder;
-                    current_prev->grad->data[j] += out->grad->data[out_idx];
+                    current_prev->grad->data->data[j] += out->grad->data->data[out_idx];
                 }
             }
             else
@@ -92,7 +92,8 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                     int out_idx = outer_i * (out_concat_axis_size * inner_size) +
                                   (offset_in_axis * inner_size) + remainder;
 
-                    current_prev->grad->data[prev_idx] += out->grad->data[out_idx];
+                    current_prev->grad->data->data[prev_idx] +=
+                        out->grad->data->data[out_idx];
                 }
             }
         }

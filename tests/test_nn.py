@@ -109,9 +109,9 @@ class TestNN:
         )
         expected_input_grad = np.ones((1, 1), dtype=np.float32) @ linear.W.data
 
-        assert np.allclose(linear.W.grad, expected_W_grad)
-        assert np.allclose(linear.B.grad, expected_B_grad)
-        assert np.allclose(input_tensor.grad, expected_input_grad)
+        assert np.allclose(linear.W.grad.data, expected_W_grad)
+        assert np.allclose(linear.B.grad.data, expected_B_grad)
+        assert np.allclose(input_tensor.grad.data, expected_input_grad)
 
     def test_linear_reset_parameters(self):
         linear = Linear(5, 3)

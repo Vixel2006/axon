@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from axon.core.tensor import Tensor
-from axon.axon_bindings.c_wrapper_functions import c_gfree
+from axon.axon_bindings.c_wrapper_functions import c_tfree
 from typing import Any, Iterable
 
 class Module(ABC):
@@ -45,7 +45,7 @@ class Module(ABC):
     def freeze(self):
         for param in self.params:
             if param.c_tensor_ptr.contents.grad:
-                c_gfree(param.c_tensor_ptr)
+                c_tfree(param.grad.c_tensor_ptr)
                 param.c_tensor_ptr.contents.grad = None
             param.requires_grad = False
 

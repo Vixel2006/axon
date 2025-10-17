@@ -396,7 +396,7 @@ class TestFunctions:
         b = from_data(b_np.shape, b_np)
 
         c = dot(a, b)
-        assert c.shape == ()  # Shape should be () for scalar output
+        assert c.shape == (1,)  # Shape should be (1,) for scalar output
         # expected_c = np.dot(a_np, b_np)
         # assert np.allclose(c.realize().data, expected_c)
 

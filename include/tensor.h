@@ -37,22 +37,20 @@ extern "C"
     AXON_EXPORT Storage* smalloc(float* data, int size, Device device);
     AXON_EXPORT void sfree(Storage* s, Device device);
 
-    typedef struct Tensor
+    typedef struct sTensor
     {
         Storage* data;
-        Storage* grad;
+        struct sTensor* grad;
         int* shape;
         int* strides;
         Device device;
         int ndim;
         bool requires_grad;
     } Tensor;
-
     AXON_EXPORT Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad);
     AXON_EXPORT void tfree(Tensor* t);
 
     AXON_EXPORT void gmalloc(Tensor* t, float init);
-    AXON_EXPORT void gfree(Tensor* t);
 
     AXON_EXPORT int numel(const int* shape, int ndim);
     AXON_EXPORT int* compute_strides(const int* shape, int ndim);
