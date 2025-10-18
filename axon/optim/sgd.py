@@ -1,5 +1,5 @@
 from .optimizer import Optimizer
-from axon.axon_bindings.c_wrapper_functions import c_sgd, c_zero_grad
+from axon.axon_bindings.c_wrapper_functions import get_op_function
 from axon.core.tensor import Tensor
 from axon.metrics import bce
 
@@ -11,11 +11,11 @@ class SGD(Optimizer):
     
     def step(self):
         params_ptr = [param.c_tensor_ptr for param in self.params]
-        c_sgd(params_ptr, self.num_params, self.lr)
+        sgd = get_op_function("sgd", self.params[0].device)
+        sgd(params_ptr, self.num_params, self.lr)
 
     def zero_grad(self):
         params_ptr = [param.c_tensor_ptr for param in self.params]
-        c_zero_grad(params_ptr, self.num_params)
-
-
+        zero_grad = get_op_function("zero_grad", self.params[0].device)
+        zero_grad(params_ptr, self.num_params)
 

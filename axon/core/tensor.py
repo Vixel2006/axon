@@ -143,6 +143,7 @@ class Tensor:
     def expand(self, shape: tuple[int, ...]) -> Tensor: return Expand.create_node(self, shape)
     def broadcast(self, shape: tuple[int, ...]) -> Tensor: return Broadcast.create_node(self, shape)
     def transpose(self, n: int = -2, m: int = -1) -> Tensor: return Transpose.create_node(self, n, m)
+    def flatten(self) -> Tensor: return View.create_node(self, (self.numel(),))
     
     def exp(self) -> Tensor: return Exp.create_node(self)
     def log(self) -> Tensor: return Log.create_node(self)
