@@ -449,20 +449,33 @@ if tensor_lib:
         tensor_lib.concat_op_cuda(in_tensor_ptrs, out_tensor_ptr, num_tensors, axis)
     
     # Optimizers
-    def c_sgd(params, num_params, lr):
+    def c_sgd_cpu(params, num_params, lr):
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
         tensor_lib.sgd_cpu(in_param_ptrs, num_params, lr)
+    
+    def c_sgd_cuda(params, num_params, lr):
+        in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
+        tensor_lib.sgd_cuda(in_param_ptrs, num_params, lr)
 
-    def c_adam(params, m_estimates, v_estimates, num_params, time_step, lr, beta1, beta2, epsilon):
+    def c_adam_cpu(params, m_estimates, v_estimates, num_params, time_step, lr, beta1, beta2, epsilon):
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
         m_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*m_estimates)
         v_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*v_estimates)
         tensor_lib.adam_cpu(in_param_ptrs, m_estimates_ptrs, v_estimates_ptrs, num_params, time_step, lr, beta1, beta2, epsilon)
 
+    def c_adam_cuda(params, m_estimates, v_estimates, num_params, time_step, lr, beta1, beta2, epsilon):
+        in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
+        m_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*m_estimates)
+        v_estimates_ptrs = (ctypes.POINTER(CTensor) * num_params)(*v_estimates)
+        tensor_lib.adam_cuda(in_param_ptrs, m_estimates_ptrs, v_estimates_ptrs, num_params, time_step, lr, beta1, beta2, epsilon)
 
-    def c_zero_grad(params, num_params):
+    def c_zero_grad_cpu(params, num_params):
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
         tensor_lib.zero_grad_cpu(in_param_ptrs, num_params)
+    
+    def c_zero_grad_cuda(params, num_params):
+        in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
+        tensor_lib.zero_grad_cuda(in_param_ptrs, num_params)
 
 
     # Register operations
@@ -531,3 +544,7 @@ if tensor_lib:
     _register_op("expand", c_expand, None)
     _register_op("broadcast", c_broadcast, None)
     _register_op("concat", c_concat_cpu, c_concat_cuda)
+
+    _register_op("sgd", c_sgd_cpu, c_sgd_cuda)
+    _register_op("zero_grad", c_zero_grad_cpu, c_zero_grad_cuda)
+    _register_op("adam", c_adam_cpu, c_adam_cuda)

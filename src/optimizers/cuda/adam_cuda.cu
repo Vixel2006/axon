@@ -1,9 +1,104 @@
 #include "logger.h"
 #include "optimizers/optimizers.h"
+#include <cuda_runtime.h>
 
-// TODO: Implement CUDA kernels for adam
+#define CHECK_CUDA(err)                                                                            \
+    do                                                                                             \
+    {                                                                                              \
+        if (err != cudaSuccess)                                                                    \
+        {                                                                                          \
+            LOG_ERROR("cuda-runtime error at %s %d: %s", __FILE__, __LINE__,                       \
+                      cudaGetErrorString(err));                                                    \
+        }                                                                                          \
+    } while (0)
+
+__device__ inline float adam_update(float param_grad, float m_estimate, float v_estimate,
+                                    float beta1, float beta2, float beta1_pow_t, float beta2_pow_t,
+                                    float lr, float epsilon)
+{
+    m_estimate = beta1 * m_estimate + (1.0f - beta1) * param_grad;
+    v_estimate = beta2 * v_estimate + (1.0f - beta2) * powf(param_grad, 2);
+    float m_hat = m_estimate / (1.0f - beta1_pow_t);
+    float v_hat = v_estimate / (1.0f - beta2_pow_t);
+    return lr * m_hat / (rsqrtf(v_hat) + epsilon);
+}
+
+__global__ void adam_kernel_contig(float* param_data, float* param_grad, float* m_estimates,
+                                   float* v_estimates, float lr, float beta1, float beta2,
+                                   float beta1_pow_t, float beta2_pow_t, float epsilon, int n)
+{
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    for (int i = idx; i < n; i += stride)
+    {
+        param_data[i] -= adam_update(param_grad[i], m_estimates[i], v_estimates[i], beta1, beta2,
+                                     beta1_pow_t, beta2_pow_t, lr, epsilon);
+    }
+}
+
+__global__ void adam_kernel_noncontig(float* param_data, float* param_grad, float* m_estimates,
+                                      float* v_estimates, float lr, float beta1, float beta2,
+                                      float beta1_pow_t, float beta2_pow_t, float epsilon,
+                                      const int* shape, const int* strides, int ndim, int n)
+{
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    for (int i = idx; i < n; i += stride)
+    {
+        int current_k = i;
+        int data_idx = 0;
+        for (int d = ndim - 1; d >= 0; --d)
+        {
+            int dim_idx = current_k % shape[d];
+            data_idx += dim_idx * strides[d];
+            current_k /= shape[d];
+        }
+
+        param_data[data_idx] -=
+            adam_update(param_grad[data_idx], m_estimates[data_idx], v_estimates[data_idx], beta1,
+                        beta2, beta1_pow_t, beta2_pow_t, lr, epsilon);
+    }
+}
+
 void adam_cuda(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int num_params,
                int time_step, float learning_rate, float beta1, float beta2, float epsilon)
 {
-    LOG_WARN("adam_cuda: CUDA implementation not available yet.");
+    LOG_INFO("adam_cuda: Running Adam optimizer (time_step=%d, lr=%.4f).", time_step,
+             learning_rate);
+
+    for (int i = 0; i < num_params; ++i)
+    {
+        int N = numel(params[i]->shape, params[i]->ndim);
+
+        float* current_m_estimates = m_estimates[i]->data->data;
+        float* current_v_estimates = v_estimates[i]->data->data;
+        float beta1_pow_t = powf(beta1, time_step);
+        float beta2_pow_t = powf(beta2, time_step);
+
+        int num_threads_per_block = 256;
+        int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
+
+        if (is_contiguous(params[i]))
+        {
+            adam_kernel_contig<<<num_blocks, num_threads_per_block>>>(
+                params[i]->data->data, params[i]->grad->data->data, current_m_estimates,
+                current_v_estimates, learning_rate, beta1, beta2, beta1_pow_t, beta2_pow_t, epsilon,
+                N);
+
+            CHECK_CUDA(cudaGetLastError());
+        }
+        else
+        {
+            adam_kernel_noncontig<<<num_blocks, num_threads_per_block>>>(
+                params[i]->data->data, params[i]->grad->data->data, current_m_estimates,
+                current_v_estimates, learning_rate, beta1, beta2, beta1_pow_t, beta2_pow_t, epsilon,
+                params[i]->shape, params[i]->strides, params[i]->ndim, N);
+
+            CHECK_CUDA(cudaGetLastError());
+        }
+    }
+
+    LOG_INFO("adam_cuda: Adam optimization on cuda complete.");
 }

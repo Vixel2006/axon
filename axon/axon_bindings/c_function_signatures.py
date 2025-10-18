@@ -907,3 +907,29 @@ if tensor_lib:
     ]
     tensor_lib.zero_grad_cpu.restype = None
 
+    tensor_lib.sgd_cuda.argtypes = [
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_float,
+    ]
+    tensor_lib.sgd_cuda.restype = None
+
+    tensor_lib.adam_cuda.argtypes = [
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_float,
+        ctypes.c_float,
+        ctypes.c_float,
+        ctypes.c_float,
+    ]
+    tensor_lib.adam_cuda.restype = None
+
+    tensor_lib.zero_grad_cuda.argtypes = [
+        ctypes.POINTER(ctypes.POINTER(CTensor)),
+        ctypes.c_int,
+    ]
+    tensor_lib.zero_grad_cuda.restype = None
+

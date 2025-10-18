@@ -48,3 +48,4 @@ nawah*.so  # compiled module like `Nawah.cpython-312-x86_64-linux-gnu.so`
 # --- Misc ---
 .DS_Store
 Thumbs.db
+.cache/

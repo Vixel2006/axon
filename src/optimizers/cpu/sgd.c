@@ -21,11 +21,6 @@ void sgd_cpu(Tensor** params, int num_params, float lr)
         }
 
         int num_elements = numel(params[i]->shape, params[i]->ndim);
-        if (num_elements == 0)
-        {
-            LOG_WARN("sgd: Skipping parameter %d due to zero elements.", i);
-            continue;
-        }
 
         // --- Contiguous Path ---
         if (is_contiguous(params[i]))
@@ -50,7 +45,7 @@ void sgd_cpu(Tensor** params, int num_params, float lr)
             for (; j < num_elements; ++j)
             {
                 data_ptr[j] -= lr * grad_ptr[j];
-                grad_ptr[j] = 0.0f; // Zero gradient
+                grad_ptr[j] = 0.0f;
             }
         }
         // --- Non-Contiguous Path ---

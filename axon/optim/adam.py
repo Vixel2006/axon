@@ -1,7 +1,7 @@
 from .optimizer import Optimizer
 from axon.core.tensor import Tensor
 from axon.functions import zeros
-from axon.axon_bindings.c_wrapper_functions import c_adam, c_zero_grad
+from axon.axon_bindings.c_wrapper_functions import get_op_function
 
 class Adam(Optimizer):
     def __init__(self, params: list[Tensor], lr: float, betas: tuple[float, float] = (0.9, 0.999), epsilon = 1e-8):
@@ -17,9 +17,12 @@ class Adam(Optimizer):
         self.time_step = 1
 
     def step(self):
-        c_adam(self.params, self.mt, self.vt, self.num_params, self.time_step, self.lr, self.betas[0], self.betas[1], self.epsilon)
+        adam = get_op_function("adam", self.params[0].contents.device)
+        adam(self.params, self.mt, self.vt, self.num_params, self.time_step, self.lr, self.betas[0], self.betas[1], self.epsilon)
         self.time_step += 1
 
     def zero_grad(self):
-        c_zero_grad(self.params, self.num_params)
+        zero_grad = get_op_function("zero_grad", self.params[0].contents.device)
+        zero_grad(self.params, self.num_params)
+
 

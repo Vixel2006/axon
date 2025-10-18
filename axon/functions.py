@@ -17,7 +17,7 @@ def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad
     c_zeros(out.c_tensor_ptr)
     return out
 
-def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True,) -> Tensor:
+def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor:
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
     c_ones(out.c_tensor_ptr)
     return out
@@ -114,19 +114,9 @@ def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: retu
 
 if __name__ == "__main__":
     a = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cpu")
+    
+    a_grad_flattened = a.grad.flatten()
+
+    a_grad_flattened.realize()
+    print(a_grad_flattened)
     #b = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cpu")
-
-    c = a + 2
-
-    c.backward()
-
-    print(a)
-    print(a.grad)
-    #c = a ** 2
-
-    #c.backward()
-
-    #print(c)
-    #print(a.grad)
-    #print(b.grad)
-
