@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Tuple, Optional
 # Import actual classes and functions from your axon library
 from axon.core.tensor import Tensor
 from axon.core.buffer import LazyBuffer
+from axon.core.device import Device
 from axon.ops.op import LazyOp
 
 # Import specific operations that Tensor uses internally (e.g., for .T)
@@ -27,27 +28,39 @@ from axon.functions import from_data
 
 
 class TestTensorCore:
+    def setup_method(self):
+        self.device = Device("cpu")
 
     def test_tensor_init(self):
-        t = Tensor((2, 3))
+        device = Device("cpu")
+        t = Tensor((2, 3), device=device)
         assert t.shape == (2, 3)
         assert t.ndim == 2
-        assert t.device == "cpu"
+        assert t.device.type == "cpu"
         assert t.requires_grad is True
         assert t.c_tensor_ptr is not None
         assert t.c_tensor_ptr.contents.grad is not None
 
     def test_tensor_init_no_grad(self):
-        t = Tensor((2, 2), requires_grad=False)
+        device = Device("cpu")
+        t = Tensor((2, 2), device=device, requires_grad=False)
         assert t.requires_grad is False
         assert t.grad is None
 
     def test_tensor_init_cuda(self):
         # This test assumes a CUDA device is available and the C bindings handle it.
         # If not, it might fail or behave like CPU.
-        t = Tensor((1, 1), device="cuda")
-        assert t.device == "cuda"
-        assert t.c_tensor_ptr.contents.device == 1
+        device = Device("cuda")
+        t = Tensor((1, 1), device=device)
+        assert t.device.type == "cuda"
+        assert t.device.type_id == 1
+
+    def test_tensor_init_default_device(self):
+        # Create a tensor without specifying a device
+        t = Tensor((2, 2))
+        # Assert that the device is the default CPU device
+        assert t.device.type == "cpu"
+        assert t.device.index == 0
 
     def test_tensor_data_property(self):
         t = from_data((2, 2), np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32))
@@ -57,26 +70,26 @@ class TestTensorCore:
         assert t.data.dtype == np.float32
 
     def test_tensor_shape_property(self):
-        t = Tensor((1, 2, 3))
+        t = Tensor((1, 2, 3), device=self.device)
         assert t.shape == (1, 2, 3)
 
     def test_tensor_strides_property(self):
-        t_2x3 = Tensor((2, 3))
+        t_2x3 = Tensor((2, 3), device=self.device)
         # Strides for (2,3) should be (3,1)
         assert t_2x3.strides == (3, 1)
 
-        t_1x2x3 = Tensor((1, 2, 3))
+        t_1x2x3 = Tensor((1, 2, 3), device=self.device)
         # Strides for (1,2,3) should be (6,3,1)
         assert t_1x2x3.strides == (6, 3, 1)
 
-        t_4 = Tensor((4,))
+        t_4 = Tensor((4,), device=self.device)
         # Strides for (4,) should be (1,)
         assert t_4.strides == (1,)
 
     def test_tensor_ndim_property(self):
-        t_1d = Tensor((5,))
+        t_1d = Tensor((5,), device=self.device)
         assert t_1d.ndim == 1
-        t_3d = Tensor((2, 3, 4))
+        t_3d = Tensor((2, 3, 4), device=self.device)
         assert t_3d.ndim == 3
 
     def test_tensor_T_property(self):
@@ -92,15 +105,15 @@ class TestTensorCore:
         assert np.array_equal(t_T.realize().data, expected_transposed_data)
 
     def test_tensor_numel(self):
-        t = Tensor((2, 3, 4))
+        t = Tensor((2, 3, 4), device=self.device)
         assert t.numel() == 2 * 3 * 4
-        t2 = Tensor((5,))
+        t2 = Tensor((5,), device=self.device)
         assert t2.numel() == 5
         # t3 = Tensor(()) # Scalar tensor
         # assert t3.numel() == 1
 
     def test_tensor_del(self):
-        t = Tensor((2, 2))
+        t = Tensor((2, 2), device=self.device)
         # Store initial pointer value
         c_ptr_ref = t.c_tensor_ptr
 
@@ -518,11 +531,13 @@ class TestTensorCore:
 
 
 class TestLazyBufferCore:
+    def setup_method(self):
+        self.device = Device("cpu")
 
     def test_lazy_buffer_init(self):
-        out_tensor = Tensor((2, 2))
+        out_tensor = Tensor((2, 2), device=self.device)
         mock_op = Add()  # Use a real op
-        prev_tensors = [Tensor((2, 2))]
+        prev_tensors = [Tensor((2, 2), device=self.device)]
         forward_kwargs = {"scalar_val": 5.0}
         backward_ctx = ctypes.cast(ctypes.pointer(ctypes.c_float(5.0)), ctypes.c_void_p)
 
@@ -543,8 +558,8 @@ class TestLazyBufferCore:
         assert lb._topo_sorted is None
 
     def test_lazy_buffer_topo_sort_simple(self):
-        a = Tensor((2, 2), requires_grad=True)
-        b = Tensor((2, 2), requires_grad=True)
+        a = Tensor((2, 2), device=self.device, requires_grad=True)
+        b = Tensor((2, 2), device=self.device, requires_grad=True)
         c = a + b  # c = Add.create_node(a, b)
         d = c.relu()  # d = ReLU.create_node(c)
 
@@ -560,8 +575,8 @@ class TestLazyBufferCore:
         )
 
     def test_lazy_buffer_topo_sort_complex(self):
-        a = Tensor((2, 2), requires_grad=True)
-        b = Tensor((2, 2), requires_grad=True)
+        a = Tensor((2, 2), device=self.device, requires_grad=True)
+        b = Tensor((2, 2), device=self.device, requires_grad=True)
         c = a * b
         d = c + a  # 'd' depends on 'c' and 'a'. 'c' depends on 'a' and 'b'.
         e = d.exp()
@@ -586,8 +601,8 @@ class TestLazyBufferCore:
         # through a bug, a circular dependency could exist.
 
         # To simulate a circular dependency for this test:
-        t1 = Tensor((1,), requires_grad=True)
-        t2 = Tensor((1,), requires_grad=True)
+        t1 = Tensor((1,), device=self.device, requires_grad=True)
+        t2 = Tensor((1,), device=self.device, requires_grad=True)
 
         # Manually create LazyBuffers and enforce a cycle for testing topo_sort's detection
         op1 = Add()

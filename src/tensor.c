@@ -82,8 +82,28 @@ int* compute_strides(const int* shape, int ndim)
     return strides;
 }
 
-Storage* smalloc(float* data, int size, Device device)
+Device* dmalloc(DeviceType type, int index)
 {
+    Device* device = malloc(sizeof(Device));
+    device->type = type;
+    device->index;
+}
+
+void dfree(Device* device)
+{
+    if (!device) return;
+
+    free(device);
+}
+
+Storage* smalloc(float* data, int size, Device* device)
+{
+    if (!device)
+    {
+        LOG_ERROR("smalloc requires a non-NULL device.");
+        return NULL;
+    }
+
     Storage* s = malloc(sizeof(Storage));
 
     if (!s)
@@ -94,7 +114,7 @@ Storage* smalloc(float* data, int size, Device device)
 
     s->size = size;
 
-    if (device == CPU)
+    if (device->type == CPU)
     {
         s->data = malloc(sizeof(float) * size);
 
@@ -133,7 +153,7 @@ Storage* smalloc(float* data, int size, Device device)
         }
         else
         {
-            cudaMemset(s->data, 0, size * sizeof(float)); // Initialize to zeros if no data provided
+            cudaMemset(s->data, 0, size * sizeof(float));
         }
     }
 
@@ -143,7 +163,7 @@ Storage* smalloc(float* data, int size, Device device)
     return s;
 }
 
-void sfree(Storage* s, Device device)
+void sfree(Storage* s, Device* device)
 {
     if (!s) return;
     s->counter--;
@@ -152,15 +172,22 @@ void sfree(Storage* s, Device device)
     {
         if (s->data)
         {
-            LOG_INFO("Storage data freed at %p", s->data);
-            if (device == CPU)
+            if (!device)
             {
-                SAFE_FREE(&s->data, free);
+                LOG_ERROR("Cannot free Storage data with NULL device.");
             }
             else
             {
-                cudaFree(s->data);
-                s->data = NULL;
+                LOG_INFO("Storage data freed at %p", s->data);
+                if (device->type == CPU)
+                {
+                    SAFE_FREE(&s->data, free);
+                }
+                else
+                {
+                    cudaFree(s->data);
+                    s->data = NULL;
+                }
             }
         }
         SAFE_FREE(&s, free);
@@ -169,6 +196,11 @@ void sfree(Storage* s, Device device)
 
 void gmalloc(Tensor* t, float init)
 {
+    if (!t->device)
+    {
+        LOG_ERROR("gmalloc cannot proceed on a tensor with a NULL device.");
+        return;
+    }
     int size = numel(t->shape, t->ndim);
 
     if (!t->grad)
@@ -192,7 +224,7 @@ void gmalloc(Tensor* t, float init)
                  t->grad->data->data, size);
     }
 
-    if (t->device == CPU)
+    if (t->device->type == CPU)
     {
         for (int i = 0; i < size; ++i)
         {
@@ -222,7 +254,7 @@ void gmalloc(Tensor* t, float init)
     }
 }
 
-Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad)
+Tensor* tmalloc(int* shape, int ndim, Device* device, bool requires_grad)
 {
     Tensor* t = malloc(sizeof(Tensor));
     if (!t)
@@ -244,10 +276,9 @@ Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad)
     {
         LOG_ERROR("Shape cannot be NULL for ndim > 0 in tmalloc");
         SAFE_FREE(&t->shape, free);
-        SAFE_FREE(&t, tfree);
+        SAFE_FREE(&t, free);
         return NULL;
     }
-
     for (int i = 0; i < t->ndim; ++i)
         t->shape[i] = shape[i];
 
@@ -258,8 +289,8 @@ Tensor* tmalloc(int* shape, int ndim, Device device, bool requires_grad)
     t->data = NULL;
     t->grad = NULL;
 
-    LOG_INFO("Tensor allocated at %p (ndim=%d, device=%d, requires_grad=%d)", t, t->ndim, t->device,
-             t->requires_grad);
+    LOG_INFO("Tensor allocated at %p (ndim=%d, device=%p, requires_grad=%d)", t, t->ndim,
+             (void*) t->device, t->requires_grad);
     return t;
 }
 
@@ -296,11 +327,11 @@ void tfree(Tensor* t)
     SAFE_FREE(&t, free);
 }
 
-void copy_storage_to_host(Storage* s, Device device, int size, float* host_buffer)
+void copy_storage_to_host(Storage* s, Device* device, int size, float* host_buffer)
 {
     if (!s || !host_buffer) return;
 
-    if (device == CPU)
+    if (device->type == CPU)
     {
         memcpy(host_buffer, s->data, size * sizeof(float));
     }

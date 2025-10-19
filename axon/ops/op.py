@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, List, Tuple, Dict, Optional
+from axon.core.device import Device
 
 class LazyOp(ABC):
     @abstractmethod
@@ -45,21 +46,24 @@ class LazyOp(ABC):
         output_requires_grad = kwargs.pop('requires_grad', requires_grad_flag)
         
         output_device = "cpu"
+        output_device_idx = 0
         for arg in args:
             if isinstance(arg, Tensor):
-                if arg.device == "cuda":
+                if arg.device.type == "cuda":
                     output_device = "cuda"
+                    output_device_idx = arg.device.index
                     break
             elif isinstance(arg, (list, tuple)):
                 for item in arg:
                     if isinstance(item, Tensor):
-                        if item.device == "cuda":
+                        if item.device.type == "cuda":
                             output_device = "cuda"
+                            output_device_idx = item.device.index
                             break
                 if output_device == "cuda":
                     break
 
-        out = Tensor(shape=out_shape, device=output_device, requires_grad=output_requires_grad)
+        out = Tensor(shape=out_shape, device=Device(output_device, output_device_idx), requires_grad=output_requires_grad)
 
         forward_kwargs, backward_ctx = cls.create_ctx_struct(*args, **kwargs)
 

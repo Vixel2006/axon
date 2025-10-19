@@ -25,13 +25,14 @@ void zeros(Tensor* t)
         data[i] = 0.0f;
     }
 
-    // t->data = malloc(sizeof(Storage));
-
     t->data = smalloc(data, size, t->device);
 
     SAFE_FREE(&data, free);
 
-    gmalloc(t, 0.0f);
+    if (t->requires_grad)
+    {
+        gmalloc(t, 0.0f);
+    }
 
     if (!t->data)
     {
@@ -39,7 +40,7 @@ void zeros(Tensor* t)
         return;
     }
     LOG_INFO("OP: zeros: Initialized tensor t: data=%p, grad=%p", (void*) t->data->data,
-             (void*) t->grad->data->data);
+             (t->grad && t->grad->data) ? (void*) t->grad->data->data : NULL);
 }
 
 void ones(Tensor* t)
@@ -56,7 +57,10 @@ void ones(Tensor* t)
     t->data = smalloc(data, size, t->device);
     SAFE_FREE(&data, free);
 
-    gmalloc(t, 0.0f);
+    if (t->requires_grad)
+    {
+        gmalloc(t, 0.0f);
+    }
 
     if (!t->data)
     {
@@ -80,7 +84,10 @@ void randn(Tensor* t)
     t->data = smalloc(data, size, t->device);
     SAFE_FREE(&data, free);
 
-    gmalloc(t, 0.0f);
+    if (t->requires_grad)
+    {
+        gmalloc(t, 0.0f);
+    }
 
     if (!t->data)
     {
@@ -104,7 +111,10 @@ void uniform(Tensor* t, float low, float high)
     t->data = smalloc(data, size, t->device);
     SAFE_FREE(&data, free);
 
-    gmalloc(t, 0.0f);
+    if (t->requires_grad)
+    {
+        gmalloc(t, 0.0f);
+    }
 
     if (!t->data)
     {

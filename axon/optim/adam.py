@@ -7,8 +7,8 @@ class Adam(Optimizer):
     def __init__(self, params: list[Tensor], lr: float, betas: tuple[float, float] = (0.9, 0.999), epsilon = 1e-8):
         self.params = [param.c_tensor_ptr for param in params]
         self.num_params = len(self.params)
-        self._mt_tensors = [zeros(param.shape) for param in params]
-        self._vt_tensors = [zeros(param.shape) for param in params]
+        self._mt_tensors = [zeros(param.shape, device=params[0].device) for param in params]
+        self._vt_tensors = [zeros(param.shape, device=params[0].device) for param in params]
         self.mt = [t.c_tensor_ptr for t in self._mt_tensors]
         self.vt = [t.c_tensor_ptr for t in self._vt_tensors]
         self.lr = lr
@@ -17,12 +17,14 @@ class Adam(Optimizer):
         self.time_step = 1
 
     def step(self):
-        adam = get_op_function("adam", self.params[0].contents.device)
+        adam = get_op_function("adam", self._mt_tensors[0].device)
         adam(self.params, self.mt, self.vt, self.num_params, self.time_step, self.lr, self.betas[0], self.betas[1], self.epsilon)
         self.time_step += 1
 
     def zero_grad(self):
-        zero_grad = get_op_function("zero_grad", self.params[0].contents.device)
+        if self.num_params == 0:
+            return
+        zero_grad = get_op_function("zero_grad", self._mt_tensors[0].device)
         zero_grad(self.params, self.num_params)
 
 
