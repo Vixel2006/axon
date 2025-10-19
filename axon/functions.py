@@ -2,6 +2,7 @@ import numpy as np
 
 from axon.axon_bindings.ctypes_definitions import CStorage
 from axon.core.tensor import Tensor
+from axon.core.device import Device
 from axon.ops.uop import *
 from axon.ops.bop import *
 from axon.ops.mop import *
@@ -12,28 +13,38 @@ from axon.axon_bindings.c_wrapper_functions import c_zeros, c_ones, c_randn, c_u
 import ctypes
 
 # =========== Initialization Operations ============
-def zeros(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor:
+def zeros(shape: tuple[int, ...] | list[int], device: str | Device = "cpu", requires_grad: bool = True) -> Tensor:
+    if isinstance(device, str):
+        device = Device.parse(device)
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
     c_zeros(out.c_tensor_ptr)
     return out
 
-def ones(shape: tuple[int, ...] | list[int], device: str = "cpu", requires_grad: bool = True) -> Tensor:
+def ones(shape: tuple[int, ...] | list[int], device: str | Device = "cpu", requires_grad: bool = True) -> Tensor:
+    if isinstance(device, str):
+        device = Device.parse(device)
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
     c_ones(out.c_tensor_ptr)
     return out
 
-def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str = "cpu", requires_grad: bool = True) -> Tensor:
+def randn(shape: tuple[int, ...] | list[int], seed: int = 42, device: str | Device = "cpu", requires_grad: bool = True) -> Tensor:
+    if isinstance(device, str):
+        device = Device.parse(device)
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
     # NOTE: We need to add the seed to the randn function
     c_randn(out.c_tensor_ptr)
     return out
 
-def uniform(shape: tuple[int, ...] | list[int], low: float = 0.0, high: float = 1.0, device: str = "cpu", requires_grad: bool = True) -> Tensor:
+def uniform(shape: tuple[int, ...] | list[int], low: float = 0.0, high: float = 1.0, device: str | Device = "cpu", requires_grad: bool = True) -> Tensor:
+    if isinstance(device, str):
+        device = Device.parse(device)
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
     c_uniform(out.c_tensor_ptr, low, high)
     return out
 
-def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] | np.ndarray, device: str = "cpu", requires_grad: bool = True) -> Tensor:
+def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] | np.ndarray, device: str | Device = "cpu", requires_grad: bool = True) -> Tensor:
+    if isinstance(device, str):
+        device = Device.parse(device)
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
 
     if isinstance(data, np.ndarray):
@@ -48,7 +59,9 @@ def from_data(shape: tuple[int, ...] | list[int], data: list[int] | list[float] 
     return out
 
 
-def from_c_storage(shape: tuple[int], c_storage_ptr: ctypes.POINTER(CStorage), device: str = "cpu", requires_grad: bool = False) -> Tensor:
+def from_c_storage(shape: tuple[int], c_storage_ptr: ctypes.POINTER(CStorage), device: str | Device = "cpu", requires_grad: bool = False) -> Tensor:
+    if isinstance(device, str):
+        device = Device.parse(device)
     out = Tensor(shape=shape, device=device, requires_grad=requires_grad)
     # Assign the provided CStorage pointer directly to the Tensor's data
     out.c_tensor_ptr.contents.data = c_storage_ptr
@@ -81,7 +94,7 @@ def add(a: Tensor | float, b: Tensor | float) -> Tensor: return Add.create_node(
 def mul(a: Tensor | float, b: Tensor | float) -> Tensor: return Mul.create_node(a, b)
 def pow(a: Tensor, b: Tensor | float) -> Tensor: return Pow.create_node(a, b)
 def matmul(a: Tensor, b: Tensor) -> Tensor: return MatMul.create_node(a, b)
-def dot(a: Tensor, b: Tensor) -> Tensor: return MatMul.create_node(a, b)
+def dot(a: Tensor, b: Tensor) -> Tensor: return Dot.create_node(a, b)
 
 def conv2d(a: Tensor, b: Tensor, kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int) -> Tensor: return Conv2D.create_node(a, b, kernel_size=kernel_size, stride=stride, padding=padding)
 

@@ -1,8 +1,10 @@
 import ctypes
 
-CDevice = ctypes.c_int
-CPU = 0
-CUDA = 1
+class CDevice(ctypes.Structure):
+    _fields_ = [
+        ("type", ctypes.c_int),
+        ("index", ctypes.c_int),
+    ]
 
 class CStorage(ctypes.Structure):
     _fields_ = [
@@ -19,7 +21,7 @@ CTensor._fields_ = [
     ("grad", ctypes.POINTER(CTensor)),
     ("shape", ctypes.POINTER(ctypes.c_int)),
     ("strides", ctypes.POINTER(ctypes.c_int)),
-    ("device", CDevice),
+    ("device", ctypes.POINTER(CDevice)),
     ("ndim", ctypes.c_int),
     ("requires_grad", ctypes.c_bool),
 ]

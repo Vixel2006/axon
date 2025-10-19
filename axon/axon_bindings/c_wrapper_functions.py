@@ -5,7 +5,6 @@ from .c_library_loader import tensor_lib
 from .c_function_signatures import *
 from .ctypes_definitions import CTensor, CStorage, CDevice
 
-
 # TODO: add type annotations for ease of development
 
 _ops_map = {}
@@ -14,17 +13,30 @@ def _register_op(op_name, cpu_func, cuda_func=None):
     _ops_map[op_name] = {"cpu": cpu_func, "cuda": cuda_func}
 
 def get_op_function(op_name, device):
+    from axon.core.device import Device
     if op_name not in _ops_map:
         raise ValueError(f"Operation '{op_name}' not registered.")
     
-    if isinstance(device, str):
-        device_str = device
+    device_type_id = -1
+    if isinstance(device, Device):
+        device_type_id = device.type_id
+    elif isinstance(device, ctypes.POINTER(CDevice)):
+        device_type_id = device.contents.type
+    elif isinstance(device, CDevice):
+        device_type_id = device.type
     else:
-        device_str = "cpu" if device == 0 else "cuda"
+        raise TypeError(f"Unknown device type: {type(device)}")
+    
+    if device_type_id == 0:
+        device_str = "cpu"
+    elif device_type_id == 1:
+        device_str = "cuda"
+    else:
+        raise ValueError(f"Unknown device type id: {device_type_id}")
         
     func = _ops_map[op_name].get(device_str)
     if func is None:
-        raise ValueError(f"Operation '{op_name}' not available for device '{device}'.")
+        raise ValueError(f"Operation '{op_name}' not available for device '{device_str}'.")
     return func
 
 
@@ -41,24 +53,33 @@ if tensor_lib:
         c_shape = (ctypes.c_int * ndim)(*shape)
         return tensor_lib.compute_strides(c_shape, ndim)
 
-    def c_smalloc(data, size, device):
-        return tensor_lib.smalloc(data, size, device)
+    def c_dmalloc(device_type, device_index):
+        return tensor_lib.dmalloc(device_type, device_index)
 
-    def c_sfree(storage, device):
-        return tensor_lib.sfree(storage, device)
+    def c_dfree(device):
+        return tensor_lib.dfree(device)
+
+    def c_smalloc(data, size, device: "Device"):
+        c_device = CDevice(type=device.type_id, index=device.index)
+        return tensor_lib.smalloc(data, size, ctypes.byref(c_device))
+
+    def c_sfree(storage, device: "Device"):
+        c_device = CDevice(type=device.type_id, index=device.index)
+        return tensor_lib.sfree(storage, ctypes.byref(c_device))
 
     def c_gmalloc(grad_ptr, grad):
         return tensor_lib.gmalloc(grad_ptr, grad)
 
     def c_tmalloc(shape, ndim, device, requires_grad):
         c_shape = (ctypes.c_int * ndim)(*shape)
-        return tensor_lib.tmalloc(c_shape, ndim, device, requires_grad)
+        return tensor_lib.tmalloc(c_shape, ndim, device.c_device_ptr, requires_grad)
 
     def c_tfree(tensor_ptr):
         tensor_lib.tfree(tensor_ptr)
 
-    def c_copy_storage_to_host(storage_ptr, device, size, host_buffer):
-        tensor_lib.copy_storage_to_host(storage_ptr, device, size, host_buffer)
+    def c_copy_storage_to_host(storage_ptr, device: "Device", size, host_buffer):
+        c_device = CDevice(type=device.type_id, index=device.index)
+        tensor_lib.copy_storage_to_host(storage_ptr, ctypes.byref(c_device), size, host_buffer)
 
     def c_zeros(tensor_ptr):
         return tensor_lib.zeros(tensor_ptr)

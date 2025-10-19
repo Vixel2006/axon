@@ -1,6 +1,7 @@
 #include "logger.h"
 #include "ops/binary_ops.h"
 #include "ops/init_ops.h"
+#include "utils/indexing.cuh"
 #include <cuda_runtime.h>
 
 #define TILE_DIM 16

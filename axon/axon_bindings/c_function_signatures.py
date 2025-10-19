@@ -12,18 +12,27 @@ if tensor_lib:
     tensor_lib.compute_strides.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.c_int]
     tensor_lib.compute_strides.restype = ctypes.POINTER(ctypes.c_int)
 
+    tensor_lib.dmalloc.argtypes = [
+        ctypes.c_int,
+        ctypes.c_int
+    ]
+    tensor_lib.dmalloc.restype = ctypes.POINTER(CDevice)
+
+    tensor_lib.dfree.argtypes = [
+        ctypes.POINTER(CDevice)
+    ]
+    tensor_lib.dfree.restype = None
+
     tensor_lib.smalloc.argtypes = [
         ctypes.POINTER(ctypes.c_float),
         ctypes.c_int,
-        CDevice
+        ctypes.POINTER(CDevice),
     ]
-    tensor_lib.smalloc.restype = ctypes.POINTER(CStorage)
 
     tensor_lib.sfree.argtypes = [
         ctypes.POINTER(CStorage),
-        CDevice
+        ctypes.POINTER(CDevice),
     ]
-    tensor_lib.sfree.restype = None
  
     tensor_lib.gmalloc.argtypes = [
         ctypes.POINTER(CTensor),
@@ -34,7 +43,7 @@ if tensor_lib:
     tensor_lib.tmalloc.argtypes = [
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,
-        CDevice,
+        ctypes.POINTER(CDevice),
         ctypes.c_bool,
     ]
     tensor_lib.tmalloc.restype = ctypes.POINTER(CTensor)
@@ -44,7 +53,7 @@ if tensor_lib:
 
     tensor_lib.copy_storage_to_host.argtypes = [
         ctypes.POINTER(CStorage),
-        CDevice,
+        ctypes.POINTER(CDevice),
         ctypes.c_int,
         ctypes.POINTER(ctypes.c_float),
     ]
