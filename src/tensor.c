@@ -85,8 +85,14 @@ int* compute_strides(const int* shape, int ndim)
 Device* dmalloc(DeviceType type, int index)
 {
     Device* device = malloc(sizeof(Device));
+    if (!device)
+    {
+        LOG_ERROR("Failed to allocate Device");
+        return NULL;
+    }
     device->type = type;
-    device->index;
+    device->index = index;
+    return device;
 }
 
 void dfree(Device* device)
@@ -138,7 +144,19 @@ Storage* smalloc(float* data, int size, Device* device)
     }
     else
     {
-        cudaError_t err = cudaMalloc((void**) &s->data, size * sizeof(float));
+        // NOTE: Here we set the device we need to save the tensor on. this way we don't want to set
+        // the device for each kernel is cuda will just map kernels to the devices that have its
+        // data in it.
+        cudaError_t err = cudaSetDevice(device->index);
+
+        if (err != cudaSuccess)
+        {
+            LOG_ERROR("Failed to find cuda device.");
+            free(s);
+            return NULL;
+        }
+
+        err = cudaMalloc((void**) &s->data, size * sizeof(float));
 
         if (err != cudaSuccess)
         {
@@ -191,6 +209,166 @@ void sfree(Storage* s, Device* device)
             }
         }
         SAFE_FREE(&s, free);
+    }
+}
+
+void to(Tensor* t, Device* device)
+{
+    if (t->device->type == CPU && device->type == CUDA)
+    {
+        int size = t->data->size;
+        float* data_buffer = (float*) malloc(sizeof(float) * size);
+        if (!data_buffer)
+        {
+            LOG_ERROR("Failed to allocate data_buffer for device transfer.");
+            return;
+        }
+
+        memcpy(data_buffer, t->data->data, sizeof(float) * size);
+        sfree(t->data, t->device);
+
+        t->data = smalloc(data_buffer, size, device);
+        SAFE_FREE(&data_buffer, free);
+
+        if (t->requires_grad)
+        {
+            float* grad_buffer = (float*) malloc(sizeof(float) * size);
+            if (!grad_buffer)
+            {
+                LOG_ERROR("Failed to allocate grad_buffer for device transfer.");
+                return;
+            }
+            memcpy(grad_buffer, t->grad->data->data, sizeof(float) * size);
+            sfree(t->grad->data, t->device);
+
+            t->grad->data = smalloc(grad_buffer, size, device);
+            SAFE_FREE(&grad_buffer, free);
+        }
+        dfree(t->device);
+        t->device = dmalloc(device->type, device->index);
+    }
+    else if (t->device->type == CUDA && device->type == CPU)
+    {
+        int size = t->data->size;
+        float* data_buffer = (float*) malloc(sizeof(float) * size);
+        if (!data_buffer)
+        {
+            LOG_ERROR("Failed to allocate data_buffer for device transfer.");
+            return;
+        }
+
+        cudaMemcpy(data_buffer, t->data->data, sizeof(float) * size, cudaMemcpyDeviceToHost);
+        sfree(t->data, t->device);
+
+        t->data = smalloc(data_buffer, size, device);
+        SAFE_FREE(&data_buffer, free);
+
+        if (t->requires_grad)
+        {
+            float* grad_buffer = (float*) malloc(sizeof(float) * size);
+            if (!grad_buffer)
+            {
+                LOG_ERROR("Failed to allocate grad_buffer for device transfer.");
+                return;
+            }
+            cudaMemcpy(grad_buffer, t->grad->data->data, sizeof(float) * size,
+                       cudaMemcpyDeviceToHost);
+            sfree(t->grad->data, t->device);
+
+            t->grad->data = smalloc(grad_buffer, size, device);
+            SAFE_FREE(&grad_buffer, free);
+        }
+        dfree(t->device);
+        t->device = dmalloc(device->type, device->index);
+    }
+    else if (t->device->type == CUDA && device->type == CUDA)
+    {
+        if (t->device->index == device->index)
+        {
+            LOG_INFO("Attempted to transfer tensor to the same CUDA device. No action taken.");
+            return;
+        }
+
+        int size = t->data->size;
+
+        // NOTE: here we use the cudaMemcpyPeer that copies the data between the two devices
+        // directly and if there is any problem we fallback to the slow path that copy from device
+        // to host then from host to device
+        Storage* storage = smalloc(NULL, size, device);
+
+        cudaError_t err = cudaMemcpyPeer(storage->data, device->index, t->data->data,
+                                         t->device->index, sizeof(float) * size);
+
+        sfree(t->data, t->device);
+
+        t->data = storage;
+
+        if (t->requires_grad)
+        {
+            Storage* grad_storage = smalloc(NULL, size, device);
+            err = cudaMemcpyPeer(grad_storage->data, device->index, t->grad->data->data,
+                                 t->device->index, sizeof(float) * size);
+
+            sfree(t->data, t->device);
+
+            t->grad->data = grad_storage;
+        }
+
+        if (err != cudaSuccess)
+        {
+
+            float* data_buffer = (float*) malloc(sizeof(float) * size);
+            if (!data_buffer)
+            {
+                LOG_ERROR("Failed to allocate data_buffer for CUDA to CUDA transfer.");
+                return;
+            }
+
+            err = cudaMemcpy(data_buffer, t->data->data, sizeof(float) * size,
+                             cudaMemcpyDeviceToHost);
+            if (err != cudaSuccess)
+            {
+                LOG_ERROR("Failed to copy data from source CUDA device to host: %s",
+                          cudaGetErrorString(err));
+                SAFE_FREE(&data_buffer, free);
+                return;
+            }
+
+            sfree(t->data, t->device);
+
+            t->data = smalloc(data_buffer, size, device);
+            SAFE_FREE(&data_buffer, free);
+
+            if (t->requires_grad)
+            {
+                float* grad_buffer = (float*) malloc(sizeof(float) * size);
+                if (!grad_buffer)
+                {
+                    LOG_ERROR("Failed to allocate grad_buffer for CUDA to CUDA transfer.");
+                    return;
+                }
+                err = cudaMemcpy(grad_buffer, t->grad->data->data, sizeof(float) * size,
+                                 cudaMemcpyDeviceToHost);
+                if (err != cudaSuccess)
+                {
+                    LOG_ERROR("Failed to copy grad from source CUDA device to host: %s",
+                              cudaGetErrorString(err));
+                    SAFE_FREE(&grad_buffer, free);
+                    return;
+                }
+                sfree(t->grad->data, t->device);
+
+                t->grad->data = smalloc(grad_buffer, size, device);
+                SAFE_FREE(&grad_buffer, free);
+            }
+            dfree(t->device);
+        }
+        t->device = dmalloc(device->type, device->index);
+    }
+    else
+    {
+        LOG_WARN("Attempted to transfer tensor to the same device type or unsupported "
+                 "transfer. No action taken.");
     }
 }
 

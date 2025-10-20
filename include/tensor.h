@@ -61,6 +61,8 @@ extern "C"
 
     AXON_EXPORT void gmalloc(Tensor* t, float init);
 
+    AXON_EXPORT void to(Tensor* t, Device* device);
+
     AXON_EXPORT int numel(const int* shape, int ndim);
     AXON_EXPORT int* compute_strides(const int* shape, int ndim);
     AXON_EXPORT bool is_contiguous(Tensor* t);

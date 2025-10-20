@@ -4,6 +4,15 @@ from typing import Any, List, Tuple, Dict, Optional
 from axon.core.device import Device
 
 class LazyOp(ABC):
+    @staticmethod
+    def _check_same_device(*tensors: "Tensor"):
+        if not tensors:
+            return
+        first_device = tensors[0].device
+        for t in tensors:
+            if t.device != first_device:
+                raise ValueError(f"All input tensors must be on the same device. Got {first_device} and {t.device}")
+
     @abstractmethod
     def calc_out_shape(self, *args, **kwargs) -> tuple[int, ...]:
         pass

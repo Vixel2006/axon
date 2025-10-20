@@ -128,6 +128,11 @@ class Tensor:
 
     def numel(self) -> int: return c_wrapper_functions.c_numel(self.shape, self.ndim)
 
+    def to(self, device: Device) -> Tensor:
+        c_wrapper_functions.c_to(self.c_tensor_ptr, device)
+        self.device = device
+        return self
+
     def view(self, shape: tuple[int, ...]) -> Tensor: return mop.View.create_node(self, shape)
     def unsqueeze(self, dim: int = -1) -> Tensor: return mop.Unsqueeze.create_node(self, dim)
     def squeeze(self, dim: int = -1) -> Tensor: return mop.Squeeze.create_node(self, dim)
@@ -172,8 +177,10 @@ if __name__ == "__main__":
 
     device = Device("cuda")
 
-    cuda_device_info(device)
-    cuda_memory_info(device)
+    a = zeros((2,2))
+    b = ones((2,2), device)
 
+    c = a.to(device) + b
+    c.backward()
 
-    a = zeros((2,2), device=device)
+    print(c)
