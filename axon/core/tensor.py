@@ -168,8 +168,12 @@ class Tensor:
 
 if __name__ == "__main__":
     from axon.functions import zeros, ones
-    
+    from axon.utils import *
+
     device = Device("cuda")
 
+    cuda_device_info(device)
+    cuda_memory_info(device)
+
+
     a = zeros((2,2), device=device)
-    print(a.c_tensor_ptr.contents.device.contents.type)

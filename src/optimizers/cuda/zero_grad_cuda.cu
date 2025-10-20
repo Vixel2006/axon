@@ -23,8 +23,8 @@ __global__ void zero_grad_kernel_contig(float* param_grad, int n)
     }
 }
 
-__global__ void zero_grad_kernel_noncontig(float* param_grad, int n,
-                                       const int* shape, const int* strides, int ndim)
+__global__ void zero_grad_kernel_noncontig(float* param_grad, int n, const int* shape,
+                                           const int* strides, int ndim)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
@@ -61,7 +61,8 @@ void zero_grad_cuda(Tensor** params, int num_parameters)
         else
         {
             zero_grad_kernel_noncontig<<<num_blocks, num_threads_per_block>>>(
-                params[i]->grad->data->data, N, params[i]->shape, params[i]->strides, params[i]->ndim);
+                params[i]->grad->data->data, N, params[i]->shape, params[i]->strides,
+                params[i]->ndim);
             CHECK_CUDA(cudaGetLastError());
         }
     }

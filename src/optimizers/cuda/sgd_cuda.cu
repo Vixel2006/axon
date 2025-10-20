@@ -65,8 +65,8 @@ void sgd_cuda(Tensor** params, int num_params, float lr)
         else
         {
             sgd_kernel_noncontig<<<num_blocks, num_threads_per_block>>>(
-                params[i]->data->data, params[i]->grad->data->data, lr, N,
-                params[i]->shape, params[i]->strides, params[i]->ndim);
+                params[i]->data->data, params[i]->grad->data->data, lr, N, params[i]->shape,
+                params[i]->strides, params[i]->ndim);
             CHECK_CUDA(cudaGetLastError());
         }
     }

@@ -498,6 +498,26 @@ if tensor_lib:
         in_param_ptrs = (ctypes.POINTER(CTensor) * num_params)(*params)
         tensor_lib.zero_grad_cuda(in_param_ptrs, num_params)
 
+    # Device management
+    def c_count_devices():
+        return tensor_lib.count_devices()
+
+    def c_is_cuda_available():
+        return tensor_lib.is_cuda_available()
+
+    def c_print_device_props():
+        tensor_lib.print_device_props()
+
+    def c_print_cuda_device_info(index):
+        tensor_lib.print_cuda_device_info(index)
+
+    def c_get_cuda_memory_info(device_id):
+        c_str = tensor_lib.get_cuda_memory_info(device_id)
+        if c_str:
+            py_str = c_str.decode('utf-8')
+            tensor_lib.free_char_ptr(c_str)
+            return py_str
+        return None
 
     # Register operations
     _register_op("add_grad", c_add_grad_op_cpu, c_add_grad_op_cuda)

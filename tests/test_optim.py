@@ -14,7 +14,7 @@ class TestOptim:
         data = np.array([1.0, 2.0, 3.0], dtype=np.float32)
         grad = np.array([0.1, 0.2, 0.3], dtype=np.float32)
         tensor = from_data(data.shape, data, requires_grad=True)
-        
+
         grad_ptr = tensor.grad.c_tensor_ptr
         c_from_data(grad_ptr, grad.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
 
@@ -40,7 +40,7 @@ class TestOptim:
         data = np.array([1.0, 2.0, 3.0], dtype=np.float32)
         grad = np.array([0.1, 0.2, 0.3], dtype=np.float32)
         tensor = from_data(data.shape, data, requires_grad=True)
-        
+
         grad_ptr = tensor.grad.c_tensor_ptr
         c_from_data(grad_ptr, grad.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
 
