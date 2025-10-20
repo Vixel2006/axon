@@ -942,3 +942,19 @@ if tensor_lib:
     ]
     tensor_lib.zero_grad_cuda.restype = None
 
+    # Device management
+    tensor_lib.count_devices.argtypes = []
+    tensor_lib.count_devices.restype = ctypes.c_int
+
+    tensor_lib.is_cuda_available.argtypes = []
+    tensor_lib.is_cuda_available.restype = ctypes.c_bool
+
+    tensor_lib.print_device_props.argtypes = []
+    tensor_lib.print_device_props.restype = None
+
+    tensor_lib.print_cuda_device_info.argtypes = [ctypes.c_int]
+    tensor_lib.print_cuda_device_info.restype = None
+
+    tensor_lib.get_cuda_memory_info.argtypes = [ctypes.c_int]
+    tensor_lib.get_cuda_memory_info.restype = None
+

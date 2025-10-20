@@ -268,7 +268,7 @@ class TestTensorCore:
         d = a_orig + 1.0
         d.backward()
         assert np.all(a_orig.grad.data == 1.0)  # Should still work
-    
+
     def test_tensor_exp(self):
         a_np = np.array([[0.0, 1.0], [2.0, 3.0]], dtype=np.float32)
         a = from_data(a_np.shape, a_np)

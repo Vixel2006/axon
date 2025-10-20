@@ -1047,8 +1047,8 @@ void matmul_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                     for (int k = 0; k < M; ++k)
                     {
                         float out_grad_val =
-                            out->grad
-                                ->data->data[out_batch_offset + i * out_row_stride + k * out_col_stride];
+                            out->grad->data
+                                ->data[out_batch_offset + i * out_row_stride + k * out_col_stride];
                         float b_val =
                             b->data->data[b_batch_offset + j * b_row_stride + k * b_col_stride];
                         sum += out_grad_val * b_val;
@@ -1112,8 +1112,8 @@ void matmul_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                         float a_val =
                             a->data->data[a_batch_offset + k * a_row_stride + i * a_col_stride];
                         float out_grad_val =
-                            out->grad
-                                ->data->data[out_batch_offset + k * out_row_stride + j * out_col_stride];
+                            out->grad->data
+                                ->data[out_batch_offset + k * out_row_stride + j * out_col_stride];
                         sum += a_val * out_grad_val;
                     }
                     b->grad->data->data[b_batch_offset + i * b_row_stride + j * b_col_stride] +=
@@ -1180,8 +1180,8 @@ void conv2d_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                                         for (int cout = 0; cout < Cout; ++cout)
                                         {
                                             float out_grad_val =
-                                                out->grad
-                                                    ->data->data[n * Cout * Hout * Wout +
+                                                out->grad->data
+                                                    ->data[n * Cout * Hout * Wout +
                                                            cout * Hout * Wout + oh * Wout + ow];
 
                                             for (int cin = 0; cin < Cin; ++cin)
@@ -1233,8 +1233,8 @@ void conv2d_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                                         if (ih >= 0 && ih < Hin && iw >= 0 && iw < Win)
                                         {
                                             float out_grad_val =
-                                                out->grad
-                                                    ->data->data[n * Cout * Hout * Wout +
+                                                out->grad->data
+                                                    ->data[n * Cout * Hout * Wout +
                                                            cout * Hout * Wout + oh * Wout + ow];
 
                                             for (int cin = 0; cin < Cin; ++cin)

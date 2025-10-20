@@ -92,8 +92,7 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                     int out_idx = outer_i * (out_concat_axis_size * inner_size) +
                                   (offset_in_axis * inner_size) + remainder;
 
-                    current_prev->grad->data->data[prev_idx] +=
-                        out->grad->data->data[out_idx];
+                    current_prev->grad->data->data[prev_idx] += out->grad->data->data[out_idx];
                 }
             }
         }

@@ -10,7 +10,7 @@
 #endif
 
 void adam_cpu(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int num_params,
-          int time_step, float learning_rate, float beta1, float beta2, float epsilon)
+              int time_step, float learning_rate, float beta1, float beta2, float epsilon)
 {
     LOG_INFO("DEBUG: adam: Running Adam optimizer (time_step=%d, lr=%.4f)", time_step,
              learning_rate);
@@ -109,13 +109,15 @@ void adam_cpu(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int n
             {
                 int flat_idx = get_flat_index(params[i], current_indices);
 
-                current_m_estimates[flat_idx] = beta1 * current_m_estimates[flat_idx] +
-                                                (1.0f - beta1) * params[i]->grad->data->data[flat_idx];
+                current_m_estimates[flat_idx] =
+                    beta1 * current_m_estimates[flat_idx] +
+                    (1.0f - beta1) * params[i]->grad->data->data[flat_idx];
                 LOG_INFO("DEBUG: adam: Non-contiguous - Updated m_estimates[%d] for param %d",
                          flat_idx, i);
 
                 current_v_estimates[flat_idx] = beta2 * current_v_estimates[flat_idx] +
-                                                (1.0f - beta2) * params[i]->grad->data->data[flat_idx] *
+                                                (1.0f - beta2) *
+                                                    params[i]->grad->data->data[flat_idx] *
                                                     params[i]->grad->data->data[flat_idx];
                 LOG_INFO("DEBUG: adam: Non-contiguous - Updated v_estimates[%d] for param %d",
                          flat_idx, i);
