@@ -88,6 +88,7 @@ class Add(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
+            BOp._check_same_device(a_tensor, b_tensor)
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
             add_op_func = get_op_function("add", a_tensor.device)
@@ -115,6 +116,7 @@ class Sub(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
+            BOp._check_same_device(a_tensor, b_tensor)
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
             sub_op_func = get_op_function("sub", a_tensor.device)
@@ -172,6 +174,7 @@ class Mul(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
+            BOp._check_same_device(a_tensor, b_tensor)
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
             mul_op_func = get_op_function("mul", a_tensor.device)
@@ -199,6 +202,7 @@ class Div(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
+            BOp._check_same_device(a_tensor, b_tensor)
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
             div_op_func = get_op_function("div", a_tensor.device)
@@ -255,6 +259,7 @@ class Pow(BOp):
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: Optional["Tensor"] = None, scalar_val: Optional[float] = None):
         if b_tensor is not None:
+            BOp._check_same_device(a_tensor, b_tensor)
             a_broadcasted = a_tensor.broadcast(out.shape).realize()
             b_broadcasted = b_tensor.broadcast(out.shape).realize()
             pow_op_func = get_op_function("pow", a_tensor.device)
@@ -328,6 +333,7 @@ class MatMul(BOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: "Tensor"):
+        BOp._check_same_device(a_tensor, b_tensor)
         # Determine effective N, K, M for the C function based on possibly broadcasted shapes
         # and handle 1D tensors correctly.
         N_final: int
@@ -465,6 +471,7 @@ class Conv2D(BOp):
         out: "Tensor", a_tensor: "Tensor", b_tensor: "Tensor",
         kernel_size: tuple[int, ...], stride: tuple[int, int], padding: int
         ):
+        BOp._check_same_device(a_tensor, b_tensor)
         a_realized = a_tensor.realize()
         b_realized = b_tensor.realize()
         conv_op_func = get_op_function("conv", a_tensor.device)
@@ -530,6 +537,7 @@ class Dot(BOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: "Tensor"):
+        BOp._check_same_device(a_tensor, b_tensor)
         batch_shape = out.shape
         K = a_tensor.shape[-1]
         a_target_shape = batch_shape + (K,)

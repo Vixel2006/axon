@@ -54,7 +54,7 @@ if tensor_lib:
         return tensor_lib.compute_strides(c_shape, ndim)
 
     def c_dmalloc(device_type, device_index):
-        return tensor_lib.dmalloc(device_type, device_index)
+        return tensor_lib.dmalloc(ctypes.c_int(device_type), ctypes.c_int(device_index))
 
     def c_dfree(device):
         return tensor_lib.dfree(device)
@@ -98,6 +98,10 @@ if tensor_lib:
 
     def c_borrow(out_tensor_ptr, storage_ptr, grad_storage_ptr):
         return tensor_lib.borrow(out_tensor_ptr, storage_ptr, grad_storage_ptr)
+
+    def c_to(tensor_ptr, device: "Device"):
+        c_device = CDevice(type=device.type_id, index=device.index)
+        return tensor_lib.to(tensor_ptr, ctypes.byref(c_device))
 
     # Gradient operations wrappers
     def c_add_grad_op_cpu(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):

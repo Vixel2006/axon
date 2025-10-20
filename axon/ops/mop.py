@@ -91,7 +91,7 @@ class View(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", shape: tuple[int, ...]):
-        view_op_func = get_op_function("view", a_tensor.device)
+        view_op_func = get_op_function("view", cpu_device)
         view_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, shape, len(shape))
 
 
@@ -133,7 +133,7 @@ class Unsqueeze(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", dim: int):
-        unsqueeze_op_func = get_op_function("unsqueeze", a_tensor.device)
+        unsqueeze_op_func = get_op_function("unsqueeze", cpu_device)
         unsqueeze_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim)
 
     @staticmethod
@@ -191,7 +191,7 @@ class Squeeze(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", dim: Optional[int] = None):
-        squeeze_op_func = get_op_function("squeeze", a_tensor.device)
+        squeeze_op_func = get_op_function("squeeze", cpu_device)
         squeeze_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim if dim is not None else -1)
 
     @staticmethod
@@ -244,7 +244,7 @@ class Transpose(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", dim0: int, dim1: int):
-        transpose_op_func = get_op_function("transpose", a_tensor.device)
+        transpose_op_func = get_op_function("transpose", cpu_device)
         transpose_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, dim0, dim1)
 
     @staticmethod
@@ -297,7 +297,7 @@ class Expand(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", shape: tuple[int, ...]):
-        expand_op_func = get_op_function("expand", a_tensor.device)
+        expand_op_func = get_op_function("expand", cpu_device)
         expand_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, (ctypes.c_int * len(shape))(*shape))
 
     @staticmethod
@@ -348,7 +348,7 @@ class Broadcast(ViewOp):
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", shape: tuple[int, ...]):
-        broadcast_op_func = get_op_function("broadcast", a_tensor.device)
+        broadcast_op_func = get_op_function("broadcast", cpu_device)
         broadcast_op_func(a_tensor.c_tensor_ptr, out.c_tensor_ptr, shape, len(shape))
 
     @staticmethod
@@ -402,6 +402,7 @@ class Concat(LazyOp):
 
     @staticmethod
     def forward(out: "Tensor", *a_tensors: "Tensor", axis: int):
+        LazyOp._check_same_device(*a_tensors)
         inputs_c_ptrs = []
         for t in a_tensors:
             inputs_c_ptrs.append(t.c_tensor_ptr)
@@ -461,6 +462,7 @@ class Stack(LazyOp):
     @staticmethod
     def forward(out: "Tensor", *a_tensors: "Tensor", axis: int):
         from axon.core.tensor import Tensor
+        LazyOp._check_same_device(*a_tensors)
         temp_unsqueezed_ptrs: List[ctypes.POINTER(CTensor)] = []
 
         temp_unsqueezed_tensors: List[Tensor] = []

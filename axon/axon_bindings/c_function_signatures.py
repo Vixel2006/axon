@@ -40,6 +40,12 @@ if tensor_lib:
     ]
     tensor_lib.gmalloc.restype = None
 
+    tensor_lib.to.argtypes = [
+        ctypes.POINTER(CTensor),
+        ctypes.POINTER(CDevice),
+    ]
+    tensor_lib.to.restype = None
+
     tensor_lib.tmalloc.argtypes = [
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_int,
