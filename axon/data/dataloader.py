@@ -37,7 +37,7 @@ class DataLoader:
                 stacked_tensor_device = first_tensor.device
                 stacked_tensor_requires_grad = first_tensor.requires_grad
                 
-                stacked_tensors.append(from_data(stacked_tensor_shape, stacked_numpy_array, device=stacked_tensor_device, device_idx=0, requires_grad=stacked_tensor_requires_grad))
+                stacked_tensors.append(from_data(stacked_tensor_shape, stacked_numpy_array, device=stacked_tensor_device, requires_grad=stacked_tensor_requires_grad))
             
             yield tuple(stacked_tensors)
 

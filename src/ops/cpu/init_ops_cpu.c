@@ -3,51 +3,34 @@
 #include <stdio.h>
 #include <string.h>
 
-#define PREP(shape, ndim, data_ptr, size_var)                                                      \
-    do                                                                                             \
-    {                                                                                              \
-        size_var = numel(shape, ndim);                                                             \
-        data_ptr = malloc(sizeof(float) * size_var);                                               \
-        if (!data_ptr)                                                                             \
-        {                                                                                          \
-            fprintf(stderr, "malloc failed\n");                                                    \
-        }                                                                                          \
-    } while (0)
-
 void zeros(Tensor* t)
 {
-    int size;
-    float* data;
-    PREP(t->shape, t->ndim, data, size);
+    int size = numel(t->shape, t->ndim);
+    t->data = smalloc(NULL, size, t->device);
 
-    for (int i = 0; i < size; ++i)
+    if (!t->data)
     {
-        data[i] = 0.0f;
+        return;
     }
-
-    t->data = smalloc(data, size, t->device);
-
-    SAFE_FREE(&data, free);
 
     if (t->requires_grad)
     {
         gmalloc(t, 0.0f);
     }
 
-    if (!t->data)
-    {
-        SAFE_FREE(&t, tfree);
-        return;
-    }
     LOG_INFO("OP: zeros: Initialized tensor t: data=%p, grad=%p", (void*) t->data->data,
              (t->grad && t->grad->data) ? (void*) t->grad->data->data : NULL);
 }
 
 void ones(Tensor* t)
 {
-    int size;
-    float* data;
-    PREP(t->shape, t->ndim, data, size);
+    int size = numel(t->shape, t->ndim);
+    float* data = malloc(sizeof(float) * size);
+    if (!data)
+    {
+        fprintf(stderr, "malloc failed\n");
+        return;
+    }
 
     for (int i = 0; i < size; ++i)
     {
@@ -57,23 +40,26 @@ void ones(Tensor* t)
     t->data = smalloc(data, size, t->device);
     SAFE_FREE(&data, free);
 
+    if (!t->data)
+    {
+        return;
+    }
+
     if (t->requires_grad)
     {
         gmalloc(t, 0.0f);
-    }
-
-    if (!t->data)
-    {
-        SAFE_FREE(&t, tfree);
-        return;
     }
 }
 
 void randn(Tensor* t)
 {
-    int size;
-    float* data;
-    PREP(t->shape, t->ndim, data, size);
+    int size = numel(t->shape, t->ndim);
+    float* data = malloc(sizeof(float) * size);
+    if (!data)
+    {
+        fprintf(stderr, "malloc failed\n");
+        return;
+    }
     srand((unsigned int) time(NULL));
 
     for (int i = 0; i < size; ++i)
@@ -84,23 +70,26 @@ void randn(Tensor* t)
     t->data = smalloc(data, size, t->device);
     SAFE_FREE(&data, free);
 
+    if (!t->data)
+    {
+        return;
+    }
+
     if (t->requires_grad)
     {
         gmalloc(t, 0.0f);
-    }
-
-    if (!t->data)
-    {
-        SAFE_FREE(&t, tfree);
-        return;
     }
 }
 
 void uniform(Tensor* t, float low, float high)
 {
-    int size;
-    float* data;
-    PREP(t->shape, t->ndim, data, size);
+    int size = numel(t->shape, t->ndim);
+    float* data = malloc(sizeof(float) * size);
+    if (!data)
+    {
+        fprintf(stderr, "malloc failed\n");
+        return;
+    }
     srand((unsigned int) time(NULL));
 
     for (int i = 0; i < size; ++i)
@@ -111,15 +100,14 @@ void uniform(Tensor* t, float low, float high)
     t->data = smalloc(data, size, t->device);
     SAFE_FREE(&data, free);
 
+    if (!t->data)
+    {
+        return;
+    }
+
     if (t->requires_grad)
     {
         gmalloc(t, 0.0f);
-    }
-
-    if (!t->data)
-    {
-        SAFE_FREE(&t, tfree);
-        return;
     }
 }
 
@@ -135,15 +123,14 @@ void from_data(Tensor* t, float* data)
 
     t->data = smalloc(data, size, t->device);
 
+    if (!t->data)
+    {
+        return;
+    }
+
     if (t->requires_grad)
     {
         gmalloc(t, 0.0f);
-    }
-
-    if (!t->data)
-    {
-        SAFE_FREE(&t, tfree);
-        return;
     }
 }
 

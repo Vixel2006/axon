@@ -52,7 +52,7 @@ __global__ void log_grad_kernel(const float* out_grad, const float* prev_data, f
 
     for (int i = idx; i < n; i += stride)
     {
-        prev_grad[i] += out_grad[i] / prev_data[i];
+        prev_grad[i] += out_grad[i] / (prev_data[i] + 1e-7f);
     }
 }
 

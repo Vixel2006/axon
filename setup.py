@@ -5,6 +5,13 @@ import shutil
 from setuptools import setup, find_packages
 from setuptools.command.build_ext import build_ext
 
+def has_cuda():
+    try:
+        subprocess.check_output(["nvcc", "--version"])
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
 class CMakeBuild(build_ext):
     def run(self):
         build_directory = os.path.abspath(self.build_temp)
@@ -49,6 +56,12 @@ class CMakeBuild(build_ext):
             f"-DSLEEF_INCLUDE_DIR={sleef_include_dir}",
             f"-DSLEEF_LIBRARY={sleef_library_path}",
         ]
+
+        if has_cuda():
+            print("CUDA detected. Building with CUDA support.")
+            axon_cmake_args.append("-DAXON_BUILD_CUDA=ON")
+        else:
+            print("CUDA not detected. Building without CUDA support.")
 
         if sys.platform == "win32":
             axon_cmake_args.append("-GVisual Studio 17 2022")

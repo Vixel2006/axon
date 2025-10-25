@@ -4,7 +4,7 @@ project(axon C CUDA)
 
 find_package(CUDA REQUIRED)
 
-set(CMAKE_CUDA_ARCHITECTURES "75") # Or a more general approach like "all" or specific architectures
+set(CMAKE_CUDA_ARCHITECTURES "86") # Set to 8.6 for NVIDIA GeForce RTX 2050
 
 find_path(SLEEF_INCLUDE_DIR sleef.h
           PATHS ${CMAKE_CURRENT_SOURCE_DIR}/vendor/sleef/build/include
@@ -22,7 +22,7 @@ else()
 endif()
 
 add_library(axon SHARED
-  src/tensor.c src/ops/cpu/unary_ops_cpu.c src/ops/cpu/reduction_ops_cpu.c src/ops/cpu/init_ops_cpu.c
+  src/tensor.c src/tensor_cpu.c src/tensor_cuda.cu src/ops/cpu/unary_ops_cpu.c src/ops/cpu/reduction_ops_cpu.c src/ops/cpu/init_ops_cpu.c
   src/ops/cpu/binary_ops_cpu.c src/ops/cpu/binary_ops_scalar_cpu.c src/ops/cpu/movement_ops_cpu.c
   src/autograd/cpu/binary_ops_grad_cpu.c src/autograd/cpu/unary_ops_grad_cpu.c
   src/autograd/cpu/reduction_ops_grad_cpu.c src/utils.c src/autograd/autograd_utils.c 

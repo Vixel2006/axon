@@ -10,6 +10,8 @@ import axon.optim as optim
 from axon.utils.model_io import save_model, load_model
 from sklearn.datasets import fetch_openml
 
+device = axon.Device("cuda")
+
 # ========== Initializing the dataset for the training ===============
 class Mnist(Dataset):
     def __init__(self, train: bool = True):
@@ -19,8 +21,8 @@ class Mnist(Dataset):
         y = y.astype(int)
         
         # Split data into training and testing sets (e.g., 60,000 for training, 10,000 for testing)
-        x_train, x_test = X[:60000], X[60000:]
-        y_train, y_test = y[:60000], y[60000:]
+        x_train, x_test = X[:6000], X[6000:]
+        y_train, y_test = y[:6000], y[6000:]
 
         if train:
             self.images = x_train
@@ -36,6 +38,8 @@ class Mnist(Dataset):
 
     def __getitem__(self, idx: int | slice) -> tuple[axon.Tensor, axon.Tensor]:
         images_np, labels_np = self.images[idx].reshape(-1, 784), self.labels[idx]
+
+        images_np = images_np / 255.0
 
         # One-hot encode the labels
         batch_size = images_np.shape[0]
@@ -82,10 +86,10 @@ testset = Mnist(train=False)
 class FFNExperiment:
     name = "Feed Forward Network Model for MNIST"
     description = "Using a Feed forward network model with 2 layer and adam optimizer for classifying hand-written digits"
-    EPOCHS = 5
-    BATCH_SIZE = 64
+    EPOCHS = 1
+    BATCH_SIZE = 16
     LR = 0.01
-    model = nn.Pipeline(nn.Linear(784, 10), nn.LogSoftmax())
+    model = nn.Pipeline(nn.Linear(784, 10), nn.LogSoftmax()).to(device)
     optim = optim.Adam(model.params, lr=LR)
 
 # ======== Define the dataloader for the data =====================
@@ -115,7 +119,10 @@ def run_experiment():
 
     # Start the training loop
     for epoch in range(FFNExperiment.EPOCHS):
-        for (images, labels) in trainloader:
+        for i, (images, labels) in enumerate(trainloader):
+            images = images.to(device)
+            labels = labels.to(device)
+
             optim.zero_grad()
 
             pred = model(images)
@@ -172,5 +179,5 @@ def evaluate_experiment(experiment_id):
 
 if __name__ == "__main__":
     run_experiment()
-    evaluate_experiment("ua1893uae134")
+    #evaluate_experiment("ua1893uae134")
 

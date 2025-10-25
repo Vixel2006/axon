@@ -172,15 +172,19 @@ class Tensor:
 
 
 if __name__ == "__main__":
-    from axon.functions import zeros, ones
+    from axon.functions import zeros, ones, uniform
     from axon.utils import *
 
     device = Device("cuda")
 
-    a = zeros((2,2))
-    b = ones((2,2), device)
+    #cuda_device_info(device)
 
-    c = a.to(device) + b
-    c.backward()
+    a = ones((2,2)) # .to(device)
+    #b = uniform((2,2)).to(device)
 
-    print(c)
+    print(a)
+    print(a.grad)
+
+    #c = a @ b
+
+    #c.backward()

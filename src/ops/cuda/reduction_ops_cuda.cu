@@ -334,49 +334,28 @@ void sum_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
     int num_threads_per_block = 256;
     dim3 grid_dims(outer_dim, inner_dim);
 
-    float* h_out;
-    float* d_out;
-
     int output_numel = outer_dim * inner_dim;
-    cudaMallocHost((void**) &h_out, sizeof(float) * output_numel);
-    cudaMalloc((void**) &d_out, sizeof(float) * output_numel);
 
-    sum_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out, N, axis_dim, outer_dim, inner_dim);
-
-    cudaMemcpy(h_out, d_out, sizeof(float) * output_numel, cudaMemcpyDeviceToHost);
-
-    int out_ndim = keepdim ? a->ndim : a->ndim - 1;
-    int* out_shape = (int*) malloc(sizeof(int) * out_ndim);
-    if (!out_shape)
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
     {
-        LOG_ERROR("sum_op_cuda: Failed to allocate memory for out_shape");
-        SAFE_FREE(&h_out, cudaFreeHost);
-        SAFE_FREE(&d_out, cudaFree);
+        LOG_ERROR("Failed to allocate Storage for out tensor in sum_op_cuda");
+        return;
+    }
+    out->data->counter = 1;
+    out->data->size = output_numel;
+
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in sum_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
         return;
     }
 
-    int current_out_dim = 0;
-    for (int i = 0; i < a->ndim; ++i)
-    {
-        if (i == axis)
-        {
-            if (keepdim)
-            {
-                out_shape[current_out_dim++] = 1;
-            }
-        }
-        else
-        {
-            out_shape[current_out_dim++] = a->shape[i];
-        }
-    }
-
-    from_data(out, h_out);
-    SAFE_FREE(&out_shape, free);
-
-    SAFE_FREE(&d_out, cudaFree);
-    SAFE_FREE(&h_out, cudaFreeHost);
+    sum_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
+        a->data->data, out->data->data, N, axis_dim, outer_dim, inner_dim);
 
     CHECK_CUDA();
     LOG_INFO("Sum operation on cuda done.");
@@ -412,49 +391,28 @@ void mean_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
     int num_threads_per_block = 256;
     dim3 grid_dims(outer_dim, inner_dim);
 
-    float* h_out;
-    float* d_out;
-
     int output_numel = outer_dim * inner_dim;
-    cudaMallocHost((void**) &h_out, sizeof(float) * output_numel);
-    cudaMalloc((void**) &d_out, sizeof(float) * output_numel);
 
-    mean_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out, N, axis_dim, outer_dim, inner_dim);
-
-    cudaMemcpy(h_out, d_out, sizeof(float) * output_numel, cudaMemcpyDeviceToHost);
-
-    int out_ndim = keepdim ? a->ndim : a->ndim - 1;
-    int* out_shape = (int*) malloc(sizeof(int) * out_ndim);
-    if (!out_shape)
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
     {
-        LOG_ERROR("mean_op_cuda: Failed to allocate memory for out_shape");
-        SAFE_FREE(&h_out, cudaFreeHost);
-        SAFE_FREE(&d_out, cudaFree);
+        LOG_ERROR("Failed to allocate Storage for out tensor in mean_op_cuda");
+        return;
+    }
+    out->data->counter = 1;
+    out->data->size = output_numel;
+
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in mean_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
         return;
     }
 
-    int current_out_dim = 0;
-    for (int i = 0; i < a->ndim; ++i)
-    {
-        if (i == axis)
-        {
-            if (keepdim)
-            {
-                out_shape[current_out_dim++] = 1;
-            }
-        }
-        else
-        {
-            out_shape[current_out_dim++] = a->shape[i];
-        }
-    }
-
-    from_data(out, h_out);
-    SAFE_FREE(&out_shape, free);
-
-    SAFE_FREE(&d_out, cudaFree);
-    SAFE_FREE(&h_out, cudaFreeHost);
+    mean_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
+        a->data->data, out->data->data, N, axis_dim, outer_dim, inner_dim);
 
     CHECK_CUDA();
     LOG_INFO("mean operation on cuda done.");
@@ -490,49 +448,28 @@ void max_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
     int num_threads_per_block = 256;
     dim3 grid_dims(outer_dim, inner_dim);
 
-    float* h_out;
-    float* d_out;
-
     int output_numel = outer_dim * inner_dim;
-    cudaMallocHost((void**) &h_out, sizeof(float) * output_numel);
-    cudaMalloc((void**) &d_out, sizeof(float) * output_numel);
 
-    max_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out, N, axis_dim, inner_dim, outer_dim);
-
-    cudaMemcpy(h_out, d_out, sizeof(float) * output_numel, cudaMemcpyDeviceToHost);
-
-    int out_ndim = keepdim ? a->ndim : a->ndim - 1;
-    int* out_shape = (int*) malloc(sizeof(int) * out_ndim);
-    if (!out_shape)
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
     {
-        LOG_ERROR("max_op_cuda: Failed to allocate memory for out_shape");
-        SAFE_FREE(&h_out, cudaFreeHost);
-        SAFE_FREE(&d_out, cudaFree);
+        LOG_ERROR("Failed to allocate Storage for out tensor in max_op_cuda");
+        return;
+    }
+    out->data->counter = 1;
+    out->data->size = output_numel;
+
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in max_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
         return;
     }
 
-    int current_out_dim = 0;
-    for (int i = 0; i < a->ndim; ++i)
-    {
-        if (i == axis)
-        {
-            if (keepdim)
-            {
-                out_shape[current_out_dim++] = 1;
-            }
-        }
-        else
-        {
-            out_shape[current_out_dim++] = a->shape[i];
-        }
-    }
-
-    from_data(out, h_out);
-    SAFE_FREE(&out_shape, free);
-
-    SAFE_FREE(&d_out, cudaFree);
-    SAFE_FREE(&h_out, cudaFreeHost);
+    max_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
+        a->data->data, out->data->data, N, axis_dim, inner_dim, outer_dim);
 
     CHECK_CUDA();
     LOG_INFO("max operation on cuda done.");
@@ -564,18 +501,38 @@ void sum_full_op_cuda(Tensor* a, Tensor* out)
         total_sum += h_out_partial_sums[i];
     }
 
-    float* final_sum_ptr = (float*) malloc(sizeof(float));
-    if (!final_sum_ptr)
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
     {
-        LOG_ERROR("sum_full_op_cuda: Failed to allocate memory for final_sum_ptr");
+        LOG_ERROR("Failed to allocate Storage for out tensor in sum_full_op_cuda");
         SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
         SAFE_FREE(&d_out_partial_sums, cudaFree);
         return;
     }
-    final_sum_ptr[0] = total_sum;
+    out->data->counter = 1;
+    out->data->size = 1; // Scalar output
 
-    from_data(out, final_sum_ptr);
-    SAFE_FREE(&final_sum_ptr, free);
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in sum_full_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
+        SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
+        SAFE_FREE(&d_out_partial_sums, cudaFree);
+        return;
+    }
+    err = cudaMemcpy(out->data->data, &total_sum, sizeof(float), cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to copy final sum to CUDA device in sum_full_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data->data, cudaFree);
+        SAFE_FREE(&out->data, free);
+        SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
+        SAFE_FREE(&d_out_partial_sums, cudaFree);
+        return;
+    }
 
     SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
     SAFE_FREE(&d_out_partial_sums, cudaFree);
@@ -609,18 +566,39 @@ void mean_full_op_cuda(Tensor* a, Tensor* out)
         total_sum += h_out_partial_sums[i];
     }
 
-    float* final_sum_ptr = (float*) malloc(sizeof(float));
-    if (!final_sum_ptr)
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
     {
-        LOG_ERROR("mean_full_op_cuda: Failed to allocate memory for final_mean_ptr");
+        LOG_ERROR("Failed to allocate Storage for out tensor in mean_full_op_cuda");
         SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
         SAFE_FREE(&d_out_partial_sums, cudaFree);
         return;
     }
-    final_sum_ptr[0] = total_sum / N;
+    out->data->counter = 1;
+    out->data->size = 1; // Scalar output
 
-    from_data(out, final_sum_ptr);
-    SAFE_FREE(&final_sum_ptr, free);
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in mean_full_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
+        SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
+        SAFE_FREE(&d_out_partial_sums, cudaFree);
+        return;
+    }
+    float final_mean = total_sum / N;
+    err = cudaMemcpy(out->data->data, &final_mean, sizeof(float), cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to copy final mean to CUDA device in mean_full_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data->data, cudaFree);
+        SAFE_FREE(&out->data, free);
+        SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
+        SAFE_FREE(&d_out_partial_sums, cudaFree);
+        return;
+    }
 
     SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
     SAFE_FREE(&d_out_partial_sums, cudaFree);
@@ -654,18 +632,38 @@ void max_full_op_cuda(Tensor* a, Tensor* out)
         max = fmaxf(max, h_out_partial_maxs[i]);
     }
 
-    float* final_max_ptr = (float*) malloc(sizeof(float));
-    if (!final_max_ptr)
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
     {
-        LOG_ERROR("max_full_op_cuda: Failed to allocate memory for final_max_ptr");
+        LOG_ERROR("Failed to allocate Storage for out tensor in max_full_op_cuda");
         SAFE_FREE(&h_out_partial_maxs, cudaFreeHost);
         SAFE_FREE(&d_out_partial_maxs, cudaFree);
         return;
     }
-    final_max_ptr[0] = max;
+    out->data->counter = 1;
+    out->data->size = 1; // Scalar output
 
-    from_data(out, final_max_ptr);
-    SAFE_FREE(&final_max_ptr, free);
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in max_full_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
+        SAFE_FREE(&h_out_partial_maxs, cudaFreeHost);
+        SAFE_FREE(&d_out_partial_maxs, cudaFree);
+        return;
+    }
+    err = cudaMemcpy(out->data->data, &max, sizeof(float), cudaMemcpyHostToDevice);
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to copy final max to CUDA device in max_full_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data->data, cudaFree);
+        SAFE_FREE(&out->data, free);
+        SAFE_FREE(&h_out_partial_maxs, cudaFreeHost);
+        SAFE_FREE(&d_out_partial_maxs, cudaFree);
+        return;
+    }
 
     SAFE_FREE(&h_out_partial_maxs, cudaFreeHost);
     SAFE_FREE(&d_out_partial_maxs, cudaFree);

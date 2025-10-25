@@ -27,9 +27,9 @@ class Device:
         self.c_device_ptr = c_dmalloc(self.type_id, self.index)
 
     def __del__(self):
-        if hasattr(self, 'c_device_ptr') and self.c_device_ptr:
+        if self.c_device_ptr:
             c_dfree(self.c_device_ptr)
-            self.c_device_ptr = None
+        del self
 
     @property
     def type_id(self) -> int:

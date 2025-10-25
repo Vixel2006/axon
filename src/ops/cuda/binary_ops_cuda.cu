@@ -58,7 +58,7 @@ __global__ void div_kernel(const float* a, const float* b, float* out, const int
 
     for (int i = idx; i < n; i += stride)
     {
-        out[i] = a[i] / b[i];
+        out[i] = a[i] / (b[i] + 1e-7f);
     }
 }
 
@@ -69,7 +69,17 @@ __global__ void pow_kernel(const float* a, const float* b, float* out, const int
 
     for (int i = idx; i < n; i += stride)
     {
-        out[i] = powf(a[i], b[i]);
+        float base = a[i];
+        // Ensure base is non-negative for powf, especially with non-integer exponents
+        if (base < 0.0f)
+        {
+            base = 1e-7f; // Clamp to a small positive value
+        }
+        else
+        {
+            base += 1e-7f; // Add epsilon for stability if base is zero
+        }
+        out[i] = powf(base, b[i]);
     }
 }
 
@@ -122,19 +132,25 @@ void add_op_cuda(Tensor* a, Tensor* b, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    float* h_out;
-    float* d_out;
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
+    {
+        LOG_ERROR("Failed to allocate Storage for out tensor in add_op_cuda");
+        return;
+    }
+    out->data->counter = 1;
+    out->data->size = N;
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in add_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
+        return;
+    }
 
-    cudaMallocHost((void**) &h_out, sizeof(float) * N);
-    cudaMalloc((void**) &d_out, sizeof(float) * N);
-
-    add_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, d_out, N);
-
-    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
-    from_data(out, h_out);
-
-    SAFE_FREE(&d_out, cudaFree);
-    SAFE_FREE(&h_out, cudaFreeHost);
+    add_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
+                                                      N);
 
     CHECK_CUDA();
 
@@ -149,18 +165,25 @@ void sub_op_cuda(Tensor* a, Tensor* b, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    float* h_out;
-    float* d_out;
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
+    {
+        LOG_ERROR("Failed to allocate Storage for out tensor in sub_op_cuda");
+        return;
+    }
+    out->data->counter = 1;
+    out->data->size = N;
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in sub_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
+        return;
+    }
 
-    cudaMallocHost((void**) &h_out, sizeof(float) * N);
-    cudaMalloc((void**) &d_out, sizeof(float) * N);
-
-    sub_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, d_out, N);
-    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
-    from_data(out, h_out);
-
-    SAFE_FREE(&d_out, cudaFree);
-    SAFE_FREE(&h_out, cudaFreeHost);
+    sub_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
+                                                      N);
 
     CHECK_CUDA();
 
@@ -175,19 +198,25 @@ void mul_op_cuda(Tensor* a, Tensor* b, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    float* h_out;
-    float* d_out;
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
+    {
+        LOG_ERROR("Failed to allocate Storage for out tensor in mul_op_cuda");
+        return;
+    }
+    out->data->counter = 1;
+    out->data->size = N;
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in mul_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
+        return;
+    }
 
-    cudaMallocHost((void**) &h_out, sizeof(float) * N);
-    cudaMalloc((void**) &d_out, sizeof(float) * N);
-
-    mul_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, d_out, N);
-
-    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
-    from_data(out, h_out);
-
-    SAFE_FREE(&d_out, cudaFree);
-    SAFE_FREE(&h_out, cudaFreeHost);
+    mul_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
+                                                      N);
     CHECK_CUDA();
 
     LOG_INFO("Mul kernel done successfully");
@@ -201,19 +230,25 @@ void div_op_cuda(Tensor* a, Tensor* b, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    float* h_out;
-    float* d_out;
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
+    {
+        LOG_ERROR("Failed to allocate Storage for out tensor in div_op_cuda");
+        return;
+    }
+    out->data->counter = 1;
+    out->data->size = N;
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in div_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
+        return;
+    }
 
-    cudaMallocHost((void**) &h_out, sizeof(float) * N);
-    cudaMalloc((void**) &d_out, sizeof(float) * N);
-
-    div_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, d_out, N);
-
-    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
-    from_data(out, h_out);
-
-    SAFE_FREE(&d_out, cudaFree);
-    SAFE_FREE(&h_out, cudaFreeHost);
+    div_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
+                                                      N);
 
     CHECK_CUDA();
 
@@ -228,19 +263,25 @@ void pow_op_cuda(Tensor* a, Tensor* b, Tensor* out)
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
-    float* h_out;
-    float* d_out;
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
+    {
+        LOG_ERROR("Failed to allocate Storage for out tensor in pow_op_cuda");
+        return;
+    }
+    out->data->counter = 1;
+    out->data->size = N;
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in pow_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
+        return;
+    }
 
-    cudaMallocHost((void**) &h_out, sizeof(float) * N);
-    cudaMalloc((void**) &d_out, sizeof(float) * N);
-
-    pow_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, d_out, N);
-
-    cudaMemcpy(h_out, d_out, sizeof(float) * N, cudaMemcpyDeviceToHost);
-    from_data(out, h_out);
-
-    SAFE_FREE(&d_out, cudaFree);
-    SAFE_FREE(&h_out, cudaFreeHost);
+    pow_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
+                                                      N);
 
     CHECK_CUDA();
 
@@ -257,23 +298,27 @@ void matmul_op_cuda(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P)
         B += a->shape[i];
     }
 
-    float* h_out;
-    float* d_out;
-
-    cudaMallocHost((void**) &h_out, sizeof(float) * B * N * P);
-    cudaMalloc((void**) &d_out, sizeof(float) * B * N * P);
+    out->data = (Storage*) malloc(sizeof(Storage));
+    if (!out->data)
+    {
+        LOG_ERROR("Failed to allocate Storage for out tensor in matmul_op_cuda");
+        return;
+    }
+    out->data->counter = 1;
+    out->data->size = B * N * P;
+    cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
+    if (err != cudaSuccess)
+    {
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in matmul_op_cuda: %s",
+                  cudaGetErrorString(err));
+        SAFE_FREE(&out->data, free);
+        return;
+    }
 
     dim3 block(TILE_DIM, TILE_DIM);
     dim3 grid((P + TILE_DIM - 1) / TILE_DIM, (N + TILE_DIM - 1) / TILE_DIM, B);
 
-    matmul_kernel<<<grid, block>>>(a->data->data, b->data->data, d_out, N, P, K);
-
-    cudaMemcpy(h_out, d_out, sizeof(float) * N * B * P, cudaMemcpyDeviceToHost);
-
-    from_data(out, h_out);
-
-    SAFE_FREE(&d_out, cudaFree);
-    SAFE_FREE(&h_out, cudaFreeHost);
+    matmul_kernel<<<grid, block>>>(a->data->data, b->data->data, out->data->data, N, P, K);
 
     CHECK_CUDA();
 

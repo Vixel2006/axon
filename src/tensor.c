@@ -84,6 +84,7 @@ int* compute_strides(const int* shape, int ndim)
 
 Device* dmalloc(DeviceType type, int index)
 {
+    LOG_INFO("Initializing device %d, %d", type, index);
     Device* device = malloc(sizeof(Device));
     if (!device)
     {
@@ -92,6 +93,10 @@ Device* dmalloc(DeviceType type, int index)
     }
     device->type = type;
     device->index = index;
+    device->counter = 1;
+
+    LOG_INFO("Device initialized successfully.");
+
     return device;
 }
 
@@ -99,7 +104,12 @@ void dfree(Device* device)
 {
     if (!device) return;
 
-    free(device);
+    if (--device->counter <= 0)
+    {
+        LOG_INFO("Freeing Device struct at %p with type %d and index %d", device, device->type,
+                 device->index);
+        free(device);
+    }
 }
 
 Storage* smalloc(float* data, int size, Device* device)
@@ -110,265 +120,102 @@ Storage* smalloc(float* data, int size, Device* device)
         return NULL;
     }
 
-    Storage* s = malloc(sizeof(Storage));
-
-    if (!s)
-    {
-        LOG_ERROR("Failed to allocate Storage");
-        return NULL;
-    }
-
-    s->size = size;
-
     if (device->type == CPU)
     {
-        s->data = malloc(sizeof(float) * size);
-
-        if (!s->data)
-        {
-            LOG_ERROR("Failed to allocate Storage data on cpu.");
-            free(s);
-            return NULL;
-        }
-
-        if (data != NULL)
-        {
-            for (int i = 0; i < size; ++i)
-                s->data[i] = data[i];
-        }
-        else
-        {
-            for (int i = 0; i < size; ++i)
-                s->data[i] = 0.0f;
-        }
+        return smalloc_cpu(data, size, device);
+    }
+    else if (device->type == CUDA)
+    {
+        return smalloc_cuda(data, size, device);
     }
     else
     {
-        // NOTE: Here we set the device we need to save the tensor on. this way we don't want to set
-        // the device for each kernel is cuda will just map kernels to the devices that have its
-        // data in it.
-        cudaError_t err = cudaSetDevice(device->index);
-
-        if (err != cudaSuccess)
-        {
-            LOG_ERROR("Failed to find cuda device.");
-            free(s);
-            return NULL;
-        }
-
-        err = cudaMalloc((void**) &s->data, size * sizeof(float));
-
-        if (err != cudaSuccess)
-        {
-            LOG_ERROR("Failed to allocate Storage data on cuda device.");
-            free(s);
-            return NULL;
-        }
-
-        if (data != NULL)
-        {
-            cudaMemcpy(s->data, data, size * sizeof(float), cudaMemcpyHostToDevice);
-        }
-        else
-        {
-            cudaMemset(s->data, 0, size * sizeof(float));
-        }
+        LOG_ERROR("Unsupported device type for smalloc.");
+        return NULL;
     }
-
-    s->counter = 1;
-
-    LOG_INFO("Storage allocated at %p with size=%d", s, size);
-    return s;
 }
 
 void sfree(Storage* s, Device* device)
 {
     if (!s) return;
-    s->counter--;
-    LOG_INFO("sfree called, counter=%d for Storage %p", s->counter, s);
-    if (s->counter <= 0)
+
+    if (device->type == CPU)
     {
-        if (s->data)
-        {
-            if (!device)
-            {
-                LOG_ERROR("Cannot free Storage data with NULL device.");
-            }
-            else
-            {
-                LOG_INFO("Storage data freed at %p", s->data);
-                if (device->type == CPU)
-                {
-                    SAFE_FREE(&s->data, free);
-                }
-                else
-                {
-                    cudaFree(s->data);
-                    s->data = NULL;
-                }
-            }
-        }
-        SAFE_FREE(&s, free);
+        sfree_cpu(s, device);
+    }
+    else if (device->type == CUDA)
+    {
+        sfree_cuda(s, device);
+    }
+    else
+    {
+        LOG_ERROR("Unsupported device type for sfree.");
     }
 }
 
 void to(Tensor* t, Device* device)
 {
-    if (t->device->type == CPU && device->type == CUDA)
+    LOG_INFO("to() called: current device type %d, target device type %d", t->device->type,
+             device->type);
+
+    if (t->device->type == device->type && t->device->index == device->index)
     {
-        int size = t->data->size;
-        float* data_buffer = (float*) malloc(sizeof(float) * size);
-        if (!data_buffer)
-        {
-            LOG_ERROR("Failed to allocate data_buffer for device transfer.");
-            return;
-        }
-
-        memcpy(data_buffer, t->data->data, sizeof(float) * size);
-        sfree(t->data, t->device);
-
-        t->data = smalloc(data_buffer, size, device);
-        SAFE_FREE(&data_buffer, free);
-
-        if (t->requires_grad)
-        {
-            float* grad_buffer = (float*) malloc(sizeof(float) * size);
-            if (!grad_buffer)
-            {
-                LOG_ERROR("Failed to allocate grad_buffer for device transfer.");
-                return;
-            }
-            memcpy(grad_buffer, t->grad->data->data, sizeof(float) * size);
-            sfree(t->grad->data, t->device);
-
-            t->grad->data = smalloc(grad_buffer, size, device);
-            SAFE_FREE(&grad_buffer, free);
-        }
-        dfree(t->device);
-        t->device = dmalloc(device->type, device->index);
+        return;
     }
-    else if (t->device->type == CUDA && device->type == CPU)
+
+    Device* old_device = t->device;
+    Storage* dbuffer = NULL;
+
+    if (device->type == CUDA)
     {
-        int size = t->data->size;
-        float* data_buffer = (float*) malloc(sizeof(float) * size);
-        if (!data_buffer)
-        {
-            LOG_ERROR("Failed to allocate data_buffer for device transfer.");
-            return;
-        }
-
-        cudaMemcpy(data_buffer, t->data->data, sizeof(float) * size, cudaMemcpyDeviceToHost);
-        sfree(t->data, t->device);
-
-        t->data = smalloc(data_buffer, size, device);
-        SAFE_FREE(&data_buffer, free);
-
-        if (t->requires_grad)
-        {
-            float* grad_buffer = (float*) malloc(sizeof(float) * size);
-            if (!grad_buffer)
-            {
-                LOG_ERROR("Failed to allocate grad_buffer for device transfer.");
-                return;
-            }
-            cudaMemcpy(grad_buffer, t->grad->data->data, sizeof(float) * size,
-                       cudaMemcpyDeviceToHost);
-            sfree(t->grad->data, t->device);
-
-            t->grad->data = smalloc(grad_buffer, size, device);
-            SAFE_FREE(&grad_buffer, free);
-        }
-        dfree(t->device);
-        t->device = dmalloc(device->type, device->index);
-    }
-    else if (t->device->type == CUDA && device->type == CUDA)
-    {
-        if (t->device->index == device->index)
-        {
-            LOG_INFO("Attempted to transfer tensor to the same CUDA device. No action taken.");
-            return;
-        }
-
-        int size = t->data->size;
-
-        // NOTE: here we use the cudaMemcpyPeer that copies the data between the two devices
-        // directly and if there is any problem we fallback to the slow path that copy from device
-        // to host then from host to device
-        Storage* storage = smalloc(NULL, size, device);
-
-        cudaError_t err = cudaMemcpyPeer(storage->data, device->index, t->data->data,
-                                         t->device->index, sizeof(float) * size);
-
-        sfree(t->data, t->device);
-
-        t->data = storage;
-
-        if (t->requires_grad)
-        {
-            Storage* grad_storage = smalloc(NULL, size, device);
-            err = cudaMemcpyPeer(grad_storage->data, device->index, t->grad->data->data,
-                                 t->device->index, sizeof(float) * size);
-
-            sfree(t->data, t->device);
-
-            t->grad->data = grad_storage;
-        }
-
-        if (err != cudaSuccess)
-        {
-
-            float* data_buffer = (float*) malloc(sizeof(float) * size);
-            if (!data_buffer)
-            {
-                LOG_ERROR("Failed to allocate data_buffer for CUDA to CUDA transfer.");
-                return;
-            }
-
-            err = cudaMemcpy(data_buffer, t->data->data, sizeof(float) * size,
-                             cudaMemcpyDeviceToHost);
-            if (err != cudaSuccess)
-            {
-                LOG_ERROR("Failed to copy data from source CUDA device to host: %s",
-                          cudaGetErrorString(err));
-                SAFE_FREE(&data_buffer, free);
-                return;
-            }
-
-            sfree(t->data, t->device);
-
-            t->data = smalloc(data_buffer, size, device);
-            SAFE_FREE(&data_buffer, free);
-
-            if (t->requires_grad)
-            {
-                float* grad_buffer = (float*) malloc(sizeof(float) * size);
-                if (!grad_buffer)
-                {
-                    LOG_ERROR("Failed to allocate grad_buffer for CUDA to CUDA transfer.");
-                    return;
-                }
-                err = cudaMemcpy(grad_buffer, t->grad->data->data, sizeof(float) * size,
-                                 cudaMemcpyDeviceToHost);
-                if (err != cudaSuccess)
-                {
-                    LOG_ERROR("Failed to copy grad from source CUDA device to host: %s",
-                              cudaGetErrorString(err));
-                    SAFE_FREE(&grad_buffer, free);
-                    return;
-                }
-                sfree(t->grad->data, t->device);
-
-                t->grad->data = smalloc(grad_buffer, size, device);
-                SAFE_FREE(&grad_buffer, free);
-            }
-            dfree(t->device);
-        }
-        t->device = dmalloc(device->type, device->index);
+        dbuffer = smalloc_cuda(t->data->data, t->data->size, device);
     }
     else
     {
-        LOG_WARN("Attempted to transfer tensor to the same device type or unsupported "
-                 "transfer. No action taken.");
+        dbuffer = smalloc_cpu(t->data->data, t->data->size, device);
+    }
+
+    if (t->data)
+    {
+        if (old_device->type == CPU)
+        {
+            sfree_cpu(t->data, old_device);
+        }
+        else
+        {
+            sfree_cuda(t->data, old_device);
+        }
+    }
+
+    t->data = dbuffer;
+    t->device = device;
+    device->counter++;
+    dfree(old_device);
+
+    if (t->requires_grad && t->grad && t->grad->data)
+    {
+        Device* old_grad_device = t->grad->device;
+        Storage* gbuffer = NULL;
+        if (device->type == CUDA)
+        {
+            gbuffer = smalloc_cuda(t->grad->data->data, t->grad->data->size, device);
+        }
+        else
+        {
+            gbuffer = smalloc_cpu(t->grad->data->data, t->grad->data->size, device);
+        }
+        if (old_grad_device->type == CPU)
+        {
+            sfree_cpu(t->grad->data, old_grad_device);
+        }
+        else
+        {
+            sfree_cuda(t->grad->data, old_grad_device);
+        }
+        t->grad->data = gbuffer;
+        t->grad->device = device;
+        device->counter++;
+        dfree(old_grad_device);
     }
 }
 
@@ -409,7 +256,7 @@ void gmalloc(Tensor* t, float init)
             t->grad->data->data[i] = init;
         }
     }
-    else
+    else if (t->device->type == CUDA)
     {
         float* host_init_buffer = (float*) malloc(size * sizeof(float));
         if (!host_init_buffer)
@@ -446,23 +293,26 @@ Tensor* tmalloc(int* shape, int ndim, Device* device, bool requires_grad)
     if (!t->shape)
     {
         LOG_ERROR("Failed to allocate Tensor shape");
-        SAFE_FREE(&t, free);
+        free(t);
         return NULL;
     }
 
     if (ndim > 0 && !shape)
     {
         LOG_ERROR("Shape cannot be NULL for ndim > 0 in tmalloc");
-        SAFE_FREE(&t->shape, free);
-        SAFE_FREE(&t, free);
+        free(t->shape);
+        free(t);
         return NULL;
     }
     for (int i = 0; i < t->ndim; ++i)
         t->shape[i] = shape[i];
 
     t->strides = compute_strides(t->shape, t->ndim);
-    LOG_INFO("tmalloc: t=%p, t->shape=%p, t->strides=%p", t, t->shape, t->strides);
     t->device = device;
+    if (device)
+    {
+        device->counter++;
+    }
     t->requires_grad = requires_grad;
     t->data = NULL;
     t->grad = NULL;
@@ -478,16 +328,22 @@ void tfree(Tensor* t)
 
     LOG_INFO("Freeing Tensor at %p", t);
 
+    if (t->grad)
+    {
+        tfree(t->grad);
+        t->grad = NULL;
+    }
+
     if (t->shape)
     {
         LOG_INFO("Freed shape at %p", t->shape);
-        SAFE_FREE(&t->shape, free);
+        free(t->shape);
     }
 
     if (t->strides)
     {
         LOG_INFO("Freed strides at %p", t->strides);
-        SAFE_FREE(&t->strides, free);
+        free(t->strides);
     }
 
     if (t->data)
@@ -496,13 +352,12 @@ void tfree(Tensor* t)
         t->data = NULL;
     }
 
-    if (t->grad)
+    if (t->device)
     {
-        tfree(t->grad);
-        t->grad = NULL;
+        dfree(t->device);
     }
 
-    SAFE_FREE(&t, free);
+    free(t);
 }
 
 void copy_storage_to_host(Storage* s, Device* device, int size, float* host_buffer)
@@ -513,7 +368,7 @@ void copy_storage_to_host(Storage* s, Device* device, int size, float* host_buff
     {
         memcpy(host_buffer, s->data, size * sizeof(float));
     }
-    else
+    else if (device->type == CUDA)
     {
         cudaMemcpy(host_buffer, s->data, size * sizeof(float), cudaMemcpyDeviceToHost);
     }
