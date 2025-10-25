@@ -70,7 +70,7 @@ __global__ void scalar_pow_grad_kernel(const float* out_grad, float* prev_data, 
 
     for (int i = idx; i < n; i += stride)
     {
-        prev_grad[i] += power * powf(prev_data[i], power - 1) * out_grad[i];
+        prev_grad[i] += power * powf(prev_data[i] + 1e-7f, power - 1) * out_grad[i];
     }
 }
 
@@ -82,7 +82,7 @@ __global__ void base_pow_grad_kernel(const float* out_grad, float* base_data, fl
 
     for (int i = idx; i < n; i += stride)
     {
-        base_grad[i] += power_data[i] * powf(base_data[i], power_data[i] - 1) * out_grad[i];
+        base_grad[i] += power_data[i] * powf(base_data[i] + 1e-7f, power_data[i] - 1) * out_grad[i];
     }
 }
 
@@ -94,7 +94,7 @@ __global__ void exponent_pow_grad_kernel(const float* out_grad, const float* out
 
     for (int i = idx; i < n; i += stride)
     {
-        power_grad[i] += out_data[i] * logf(base_data[i]);
+        power_grad[i] += out_data[i] * logf(base_data[i] + 1e-7f);
     }
 }
 
@@ -106,7 +106,7 @@ __global__ void numerator_div_grad_kernel(const float* out_grad, float* prev_gra
 
     for (int i = idx; i < n; i += stride)
     {
-        prev_grad[i] += out_grad[i] / denominator[i];
+        prev_grad[i] += out_grad[i] / (denominator[i] + 1e-7f);
     }
 }
 
@@ -118,19 +118,19 @@ __global__ void denominator_div_grad_kernel(const float* out_grad, const float* 
 
     for (int i = idx; i < n; i += stride)
     {
-        prev_grad[i] -= out_data[i] * out_grad[i] / denominator[i];
+        prev_grad[i] -= out_data[i] * out_grad[i] / (denominator[i] + 1e-7f);
     }
 }
 
 __global__ void scalar_div_grad_kernel(const float* out_grad, float* prev_grad,
                                        float scalar_denominator, int n)
 {
-    int idx = blockDim.x * blockDim.x + threadIdx.x;
-    int stride = gridDim.x * blockDim.x;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
 
     for (int i = idx; i < n; i += stride)
     {
-        prev_grad[i] += out_grad[i] / scalar_denominator;
+        prev_grad[i] += out_grad[i] / (scalar_denominator + 1e-7f);
     }
 }
 
@@ -143,12 +143,13 @@ __global__ void scalar_rdiv_grad_kernel(const float* out_grad, const float* out_
 
     for (int i = idx; i < n; i += stride)
     {
-        prev_grad[i] -= out_grad[i] * out_data[i] / prev_data[i];
+        prev_grad[i] -= out_grad[i] * out_data[i] / (prev_data[i] + 1e-7f);
     }
 }
 
 __global__ void matmul_grad_kernel(const float* lhs, const float* rhs, float* grad, int B, int N,
-                                   int P, int K, bool transpose_lhs, bool transpose_rhs)
+                                   int P, int K, bool transpose_lhs, bool transpose_rhs,
+                                   bool is_lhs_batched, bool is_rhs_batched, bool is_grad_batched)
 {
     __shared__ float lhs_tile[TILE_DIM][TILE_DIM];
     __shared__ float rhs_tile[TILE_DIM][TILE_DIM];
@@ -164,16 +165,17 @@ __global__ void matmul_grad_kernel(const float* lhs, const float* rhs, float* gr
     int rhs_storage_rows = transpose_rhs ? P : K;
     int rhs_storage_cols = transpose_rhs ? K : P;
 
-    const float* batched_lhs = lhs + batch * lhs_storage_rows * lhs_storage_cols;
-    const float* batched_rhs = rhs + batch * rhs_storage_rows * rhs_storage_cols;
-    float* batched_grad = grad + batch * N * P;
+    const float* batched_lhs =
+        is_lhs_batched ? lhs + batch * lhs_storage_rows * lhs_storage_cols : lhs;
+    const float* batched_rhs =
+        is_rhs_batched ? rhs + batch * rhs_storage_rows * rhs_storage_cols : rhs;
+    float* grad_ptr = is_grad_batched ? grad + batch * N * P : grad;
 
     for (int t = 0; t < (K + TILE_DIM - 1) / TILE_DIM; ++t)
     {
         int inner_dim_idx_lhs = TILE_DIM * t + threadIdx.x;
         int inner_dim_idx_rhs = TILE_DIM * t + threadIdx.y;
 
-        // Load lhs tile
         if (row < N && inner_dim_idx_lhs < K)
         {
             if (transpose_lhs)
@@ -214,7 +216,17 @@ __global__ void matmul_grad_kernel(const float* lhs, const float* rhs, float* gr
         __syncthreads();
     }
 
-    if (col < P && row < N) batched_grad[row * P + col] += sum;
+    if (col < P && row < N)
+    {
+        if (is_grad_batched)
+        {
+            grad_ptr[row * P + col] += sum;
+        }
+        else
+        {
+            atomicAdd(&grad_ptr[row * P + col], sum);
+        }
+    }
 }
 
 void add_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
@@ -471,54 +483,58 @@ void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         return;
     }
 
+    MatMulBackwardExtras* matmul_extras = (MatMulBackwardExtras*) extras;
+    if (!matmul_extras)
+    {
+        LOG_ERROR("matmul_grad_op_cuda: extras is null.");
+        return;
+    }
+
     Tensor* A = prev[0];
     Tensor* B = prev[1];
 
-    int B_dim = out->shape[0];
-    int N_A = A->shape[1];
-    int K_A = A->shape[2];
-    int K_B = B->shape[1];
-    int P_B = B->shape[2];
+    bool is_A_batched = A->ndim > 2;
+    bool is_B_batched = B->ndim > 2;
+    bool is_out_batched = out->ndim > 2;
 
-    if (K_A != K_B)
+    int N_final = matmul_extras->N;
+    int K_final = matmul_extras->K;
+    int M_final = matmul_extras->M;
+
+    int B_dim = 1;
+    if (is_out_batched)
     {
-        LOG_ERROR("matmul_grad_op_cuda: Inner dimensions of A and B do not match (%d != %d).", K_A,
-                  K_B);
-        return;
-    }
-    if (out->shape[1] != N_A || out->shape[2] != P_B)
-    {
-        LOG_ERROR("matmul_grad_op_cuda: Output shape does not match A and B shapes.");
-        return;
+        B_dim = out->shape[0];
     }
 
     if (A->requires_grad)
     {
-        int N = N_A;
-        int P = K_B;
-        int K = P_B;
-
         dim3 block_matmul(TILE_DIM, TILE_DIM);
-        dim3 grid_matmul((P + block_matmul.x - 1) / block_matmul.x,
-                         (N + block_matmul.y - 1) / block_matmul.y, B_dim);
+        dim3 grid_matmul((K_final + block_matmul.x - 1) / block_matmul.x,
+                         (N_final + block_matmul.y - 1) / block_matmul.y, B_dim);
 
+        // Gradient for A: dL/dA = dL/dOut @ B.T
+        // matmul_grad_kernel(lhs, rhs, grad, B, N, P, K, transpose_lhs, transpose_rhs)
+        // lhs = out->grad, rhs = B->data, grad = A->grad
+        // N = N_final, P = K_final, K = M_final
         matmul_grad_kernel<<<grid_matmul, block_matmul>>>(
-            out->grad->data->data, B->data->data, A->grad->data->data, B_dim, N, P, K, false, true);
+            out->grad->data->data, B->data->data, A->grad->data->data, B_dim, N_final, K_final,
+            M_final, false, true, is_out_batched, is_B_batched, is_A_batched);
         CHECK_CUDA();
     }
 
     if (B->requires_grad)
     {
-        int N = K_A;
-        int P = P_B;
-        int K = N_A;
-
         dim3 block_matmul(TILE_DIM, TILE_DIM);
-        dim3 grid_matmul((P + block_matmul.x - 1) / block_matmul.x,
-                         (N + block_matmul.y - 1) / block_matmul.y, B_dim);
+        dim3 grid_matmul((M_final + block_matmul.x - 1) / block_matmul.x,
+                         (K_final + block_matmul.y - 1) / block_matmul.y, B_dim);
 
+        // Gradient for B: dL/dB = A.T @ dL/dOut
+        // lhs = A->data, rhs = out->grad, grad = B->grad
+        // N = K_final, P = M_final, K = N_final
         matmul_grad_kernel<<<grid_matmul, block_matmul>>>(
-            A->data->data, out->grad->data->data, B->grad->data->data, B_dim, N, P, K, true, false);
+            A->data->data, out->grad->data->data, B->grad->data->data, B_dim, K_final, M_final,
+            N_final, true, false, is_A_batched, is_out_batched, is_B_batched);
         CHECK_CUDA();
     }
 

@@ -26,6 +26,13 @@ extern "C"
         int Wout;
     } BackwardConvExtras;
 
+    typedef struct
+    {
+        int N;
+        int K;
+        int M;
+    } MatMulBackwardExtras;
+
     AXON_EXPORT void add_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
     AXON_EXPORT void sub_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
     AXON_EXPORT void rsub_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);

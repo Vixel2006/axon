@@ -2,6 +2,7 @@ from .module import Module
 from typing import Union, Callable
 from .linear import Linear
 from axon.core import Tensor
+from axon.core.device import Device
 
 class Pipeline(Module):
     def __init__(self, *layers):
@@ -65,6 +66,12 @@ class Pipeline(Module):
         for layer in self.layers:
             if isinstance(layer, Module):
                 layer.freeze()
+
+    def to(self, device: Device):
+        for layer in self.layers:
+            if isinstance(layer, Module):
+                layer.to(device)
+        return self
 
     def reset_parameters(self):
         for layer in self.layers:

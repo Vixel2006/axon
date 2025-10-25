@@ -10,6 +10,8 @@ class SGD(Optimizer):
         self.lr = lr
     
     def step(self):
+        for param in self.params:
+            param.grad.realize()
         params_ptr = [param.c_tensor_ptr for param in self.params]
         sgd = get_op_function("sgd", self.params[0].device)
         sgd(params_ptr, self.num_params, self.lr)

@@ -3,7 +3,7 @@ from typing import Any
 import ctypes
 import math
 from .op import LazyOp
-from axon.axon_bindings.ctypes_definitions import CTensor, Conv2DBackwardExtras
+from axon.axon_bindings.ctypes_definitions import CTensor, Conv2DBackwardExtras, MatMulBackwardExtras
 from axon.axon_bindings.c_wrapper_functions import get_op_function
 
 class BOp(LazyOp):
@@ -329,7 +329,39 @@ class MatMul(BOp):
 
     @staticmethod
     def create_ctx_struct(*args: Any, **kwargs: Any) -> Tuple[Dict[str, Any], Any]:
-        return {}, None
+        from axon.core.tensor import Tensor
+
+        if len(args) < 2:
+            raise ValueError("MatMul.create_ctx_struct requires two Tensor operands.")
+        a_tensor: Tensor = args[0]
+        b_tensor: Tensor = args[1]
+
+        N_final: int
+        K_final: int
+        M_final: int
+
+        a_shape = a_tensor.shape
+        b_shape = b_tensor.shape
+
+        if a_tensor.ndim == 1 and b_tensor.ndim == 1:
+            N_final = 1
+            K_final = a_shape[0]
+            M_final = 1
+        elif a_tensor.ndim == 1:
+            N_final = 1
+            K_final = a_shape[0]
+            M_final = b_shape[-1]
+        elif b_tensor.ndim == 1:
+            N_final = a_shape[-2]
+            K_final = a_shape[-1]
+            M_final = 1
+        else:
+            N_final = a_shape[-2]
+            K_final = a_shape[-1]
+            M_final = b_shape[-1]
+
+        backward_ctx_struct = MatMulBackwardExtras(N=N_final, K=K_final, M=M_final)
+        return {}, ctypes.pointer(backward_ctx_struct)
 
     @staticmethod
     def forward(out: "Tensor", a_tensor: "Tensor", b_tensor: "Tensor"):

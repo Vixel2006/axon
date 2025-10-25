@@ -5,6 +5,9 @@
 #include <stdlib.h>
 
 #include "axon_export.h" // Include the generated export header
+#include "core_types.h"
+#include "tensor_cpu.h"
+#include "tensor_cuda.h"
 
 #define SAFE_FREE(ptr_addr, free_func)                                                             \
     do                                                                                             \
@@ -16,29 +19,10 @@
         }                                                                                          \
     } while (0)
 
-typedef enum
-{
-    CPU,
-    CUDA
-} DeviceType;
-
-typedef struct
-{
-    float* data;
-    int size;
-    int counter;
-} Storage;
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-    typedef struct
-    {
-        DeviceType type;
-        int index;
-    } Device;
 
     AXON_EXPORT Device* dmalloc(DeviceType type, int index);
     AXON_EXPORT void dfree(Device* device);

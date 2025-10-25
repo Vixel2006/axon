@@ -13,7 +13,7 @@ class ReLU(Module):
 
 class Tanh(Module):
     def forward(self, x: Tensor) -> Tensor:
-        return (x.exp() - (-x).exp()) / (x.exp() + (-x).exp())
+        return 2 / ((-2*x).exp() + 1) - 1
 
     def reset_parameters(self):
         pass

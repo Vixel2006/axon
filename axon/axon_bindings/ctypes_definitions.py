@@ -4,6 +4,7 @@ class CDevice(ctypes.Structure):
     _fields_ = [
         ("type", ctypes.c_int),
         ("index", ctypes.c_int),
+        ("counter", ctypes.c_int),
     ]
 
 class CStorage(ctypes.Structure):
@@ -59,5 +60,12 @@ class ReductionExtras(ctypes.Structure):
 class ConcatExtras(ctypes.Structure):
     _fields_ = [
         ("axis", ctypes.c_int),
+    ]
+
+class MatMulBackwardExtras(ctypes.Structure):
+    _fields_ = [
+        ("N", ctypes.c_int),
+        ("K", ctypes.c_int),
+        ("M", ctypes.c_int),
     ]
 

@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from axon.core.tensor import Tensor
 from axon.axon_bindings.c_wrapper_functions import c_tfree
 from typing import Any, Iterable
+from axon.core.device import Device
 
 class Module(ABC):
     @abstractmethod
@@ -49,6 +50,13 @@ class Module(ABC):
                 param.c_tensor_ptr.contents.grad = None
             param.requires_grad = False
 
-    @abstractmethod
+    def to(self, device: Device):
+        for name, value in self.__dict__.items():
+            if isinstance(value, Tensor):
+                setattr(self, name, value.to(device))
+            elif isinstance(value, Module):
+                setattr(self, name, value.to(device))
+        return self
+
     def reset_parameters(self):
         pass
