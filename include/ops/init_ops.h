@@ -7,16 +7,16 @@
 
 #include "axon_export.h" // Include the generated export header
 
+#include "ops/cpu/init.h"
+#include "ops/cuda/init.h"
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-    AXON_EXPORT void zeros(Tensor* t);
-    AXON_EXPORT void ones(Tensor* t);
-    AXON_EXPORT void randn(Tensor* t);
-    AXON_EXPORT void uniform(Tensor* t, float low, float high);
-    AXON_EXPORT void from_data(Tensor* t, float* data);
-    AXON_EXPORT void borrow(Tensor* t, Storage* data, Tensor* grad);
+
+// Individual function declarations are now in ops/cpu/init.h and ops/cuda/init.h
+
 #ifdef __cplusplus
 }
 #endif

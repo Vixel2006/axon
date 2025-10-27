@@ -37,28 +37,26 @@ static void map_in_coords_to_out_offset(int* in_coords, int in_ndim, int reduced
 
 void sum_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: sum_grad_op: Computing gradient for sum reduction");
+    LOG_INFO("sum_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     if (!out || !out->grad || !out->grad->data->data || !prev)
     {
-        LOG_ERROR("sum_grad_op ERROR: Output tensor, output gradient, or previous "
-                  "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
+        LOG_ERROR("sum_grad_op: Output tensor, output gradient, or previous tensors array is NULL! "
+                  "out=%p, out->grad=%p, prev=%p",
                   (void*) out, out ? (void*) out->grad : NULL, (void*) prev);
-        return;
+        exit(31);
     }
 
     if (n_prev != 1)
     {
-        LOG_ERROR("sum_grad_op ERROR: Invalid number of previous tensors: %d. "
-                  "Expected 1.",
-                  n_prev);
-        return;
+        LOG_ERROR("sum_grad_op: Invalid number of previous tensors: %d. Expected 1.", n_prev);
+        exit(32);
     }
 
     if (!prev[0])
     {
-        LOG_ERROR("sum_grad_op ERROR: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
-        return;
+        LOG_ERROR("sum_grad_op: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
+        exit(33);
     }
 
     Tensor* in = prev[0];
@@ -70,8 +68,8 @@ void sum_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!in->grad || !in->grad->data->data)
     {
-        LOG_ERROR("sum_grad_op ERROR: Input tensor requires grad but its grad data is NULL!");
-        return;
+        LOG_ERROR("sum_grad_op: Input tensor requires grad but its grad data is NULL!");
+        exit(34);
     }
 
     int reduced_dim = get_reduced_dim(in->shape, out->shape, in->ndim, out->ndim);
@@ -133,7 +131,7 @@ void sum_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
         if (!in_coords)
         {
             LOG_ERROR("sum_grad_op: Failed to allocate coordinates");
-            return;
+            exit(35);
         }
 
         for (int in_linear_idx = 0; in_linear_idx < in_size; ++in_linear_idx)
@@ -190,31 +188,30 @@ void sum_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
         }
     }
+    LOG_INFO("sum_grad_op_cpu: Exiting function.");
 }
 
 void mean_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: mean_grad_op: Computing gradient for mean reduction");
+    LOG_INFO("mean_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     if (!out || !out->grad || !out->grad->data->data || !prev)
     {
-        LOG_ERROR("mean_grad_op ERROR: Output tensor, output gradient, or previous "
-                  "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
+        LOG_ERROR("mean_grad_op: Output tensor, output gradient, or previous tensors array is "
+                  "NULL! out=%p, out->grad=%p, prev=%p",
                   (void*) out, out ? (void*) out->grad : NULL, (void*) prev);
         return;
     }
 
     if (n_prev != 1)
     {
-        LOG_ERROR("mean_grad_op ERROR: Invalid number of previous tensors: %d. "
-                  "Expected 1.",
-                  n_prev);
+        LOG_ERROR("mean_grad_op: Invalid number of previous tensors: %d. Expected 1.", n_prev);
         return;
     }
 
     if (!prev[0])
     {
-        LOG_ERROR("mean_grad_op ERROR: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
+        LOG_ERROR("mean_grad_op: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
         return;
     }
 
@@ -227,7 +224,7 @@ void mean_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!in->grad || !in->grad->data->data)
     {
-        LOG_ERROR("mean_grad_op ERROR: Input tensor requires grad but its grad data is NULL!");
+        LOG_ERROR("mean_grad_op: Input tensor requires grad but its grad data is NULL!");
         return;
     }
 
@@ -348,23 +345,24 @@ void mean_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
         }
     }
+    LOG_INFO("mean_grad_op_cpu: Exiting function.");
 }
 
 void max_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
+    LOG_INFO("max_grad_op_cpu: Entering function with n_prev=%d", n_prev);
+
     if (!out || !out->grad || !out->grad->data->data || !prev)
     {
-        LOG_ERROR("max_grad_op ERROR: Output tensor, output gradient, or previous "
-                  "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
+        LOG_ERROR("max_grad_op: Output tensor, output gradient, or previous tensors array is NULL! "
+                  "out=%p, out->grad=%p, prev=%p",
                   (void*) out, out ? (void*) out->grad : NULL, (void*) prev);
         return;
     }
 
     if (n_prev != 1)
     {
-        LOG_ERROR("max_grad_op ERROR: Invalid number of previous tensors: %d. "
-                  "Expected 1.",
-                  n_prev);
+        LOG_ERROR("max_grad_op: Invalid number of previous tensors: %d. Expected 1.", n_prev);
         return;
     }
 
@@ -523,11 +521,12 @@ void max_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
         }
     }
+    LOG_INFO("max_grad_op_cpu: Exiting function.");
 }
 
 void sum_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: sum_full_grad_op: Computing gradient for full sum reduction");
+    LOG_INFO("sum_full_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     if (!out || !out->grad || !out->grad->data->data || !prev)
     {
@@ -605,11 +604,12 @@ void sum_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             in->grad->data->data[in_offset] += output_grad;
         }
     }
+    LOG_INFO("sum_full_grad_op_cpu: Exting function.");
 }
 
 void mean_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: mean_full_grad_op: Computing gradient for full mean reduction");
+    LOG_INFO("mean_full_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     if (!out || !out->grad || !out->grad->data->data || !prev)
     {
@@ -689,11 +689,12 @@ void mean_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             in->grad->data->data[in_offset] += scaled_grad;
         }
     }
+    LOG_INFO("mean_full_grad_op_cpu: Exiting function.");
 }
 
 void max_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: max_full_grad_op: Computing gradient for full max reduction");
+    LOG_INFO("max_full_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     if (!out || !out->grad || !out->grad->data->data || !prev)
     {
@@ -782,4 +783,5 @@ void max_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
         }
     }
+    LOG_INFO("max_full_grad_op_cpu: Exiting function.");
 }

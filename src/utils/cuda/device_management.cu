@@ -14,6 +14,7 @@
 
 int count_devices()
 {
+    LOG_INFO("count_devices: Entering function");
     int num_devices;
     cudaError_t err = cudaGetDeviceCount(&num_devices);
     CHECK_CUDA(err);
@@ -22,12 +23,14 @@ int count_devices()
 
 bool is_cuda_available()
 {
+    LOG_INFO("is_cuda_available: Entering function");
     if (count_devices() == 0) return false;
     return true;
 }
 
 void print_device_props()
 {
+    LOG_INFO("print_device_props: Entering function");
     int runtime_version = 0;
     int driver_version = 0;
 
@@ -58,6 +61,7 @@ void print_device_props()
 
 void print_cuda_device_info(int index)
 {
+    LOG_INFO("print_cuda_device_info: Entering function with index=%d", index);
     cudaDeviceProp props;
     cudaError_t err = cudaGetDeviceProperties(&props, index);
     CHECK_CUDA(err);
@@ -104,6 +108,7 @@ void print_cuda_device_info(int index)
 
 void get_cuda_memory_info(int device_id)
 {
+    LOG_INFO("get_cuda_memory_info: Entering function with device_id=%d", device_id);
     cudaError_t err = cudaSetDevice(device_id);
     CHECK_CUDA(err);
 

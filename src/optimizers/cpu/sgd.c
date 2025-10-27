@@ -7,6 +7,8 @@
 
 void sgd_cpu(Tensor** params, int num_params, float lr)
 {
+    LOG_INFO("sgd_cpu: Entering function with num_params=%d, lr=%.4f", num_params, lr);
+
     __m256 lr_vec = _mm256_set1_ps(lr);
 
     for (int i = 0; i < num_params; ++i)
@@ -85,4 +87,5 @@ void sgd_cpu(Tensor** params, int num_params, float lr)
             free(indices);
         }
     }
+    LOG_INFO("sgd_cpu: sgd completed successfully");
 }

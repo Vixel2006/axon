@@ -45,10 +45,23 @@ __global__ void zero_grad_kernel_noncontig(float* param_grad, int n, const int* 
 
 void zero_grad_cuda(Tensor** params, int num_parameters)
 {
-    LOG_INFO("zero_grad_cuda: Zero gradient running on CUDA.");
+    LOG_INFO("zero_grad_cuda: Entering function with num_parameters=%d", num_parameters);
 
     for (int i = 0; i < num_parameters; ++i)
     {
+        if (!params[i] || !params[i]->requires_grad)
+        {
+            continue;
+        }
+
+        if (!params[i]->grad || !params[i]->grad->data || !params[i]->grad->data->data)
+        {
+            LOG_WARN("zero_grad_cuda: Parameter %d requires grad but its grad tensor or data is "
+                     "NULL. Skipping.",
+                     i);
+            continue;
+        }
+
         int N = numel(params[i]->shape, params[i]->ndim);
         int num_threads_per_block = 256;
         int num_blocks = (N + num_threads_per_block + 1) / num_threads_per_block;
@@ -66,6 +79,4 @@ void zero_grad_cuda(Tensor** params, int num_parameters)
             CHECK_CUDA(cudaGetLastError());
         }
     }
-
-    LOG_INFO("zero_grad_cuda: Zero gradient ran successfully");
 }

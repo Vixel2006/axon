@@ -5,7 +5,7 @@
 
 void zero_grad_cpu(Tensor** parameters, int num_parameters)
 {
-    LOG_INFO("zero_grad: Zeroing gradients for %d parameters", num_parameters);
+    LOG_INFO("zero_grad_cpu: Entering function with num_parameters=%d", num_parameters);
 
     for (int i = 0; i < num_parameters; ++i)
     {

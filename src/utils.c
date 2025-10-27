@@ -5,6 +5,7 @@
 
 int get_num_batches(const int* shape, int ndim)
 {
+    LOG_INFO("get_num_batches: Entering function with ndim=%d", ndim);
     int batch_nums = 1;
     for (int i = 0; i < ndim - 2; ++i)
     {
@@ -16,6 +17,7 @@ int get_num_batches(const int* shape, int ndim)
 
 int get_flat_index(const Tensor* t, const int* indices)
 {
+    LOG_INFO("get_flat_index: Entering function");
     int flat_index = 0;
     for (int i = 0; i < t->ndim; ++i)
     {
@@ -26,6 +28,7 @@ int get_flat_index(const Tensor* t, const int* indices)
 
 void print_shape(const int* shape, int ndim)
 {
+    LOG_INFO("print_shape: Entering function with ndim=%d", ndim);
     if (!_idrak_debug_enabled)
     {
         return;

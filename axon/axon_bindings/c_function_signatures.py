@@ -61,6 +61,9 @@ if tensor_lib:
         ctypes.POINTER(CStorage),
         ctypes.POINTER(CDevice),
         ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int), # shape
+        ctypes.POINTER(ctypes.c_int), # strides
+        ctypes.c_int,                 # ndim
         ctypes.POINTER(ctypes.c_float),
     ]
     tensor_lib.copy_storage_to_host.restype = None

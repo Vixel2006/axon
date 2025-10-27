@@ -22,15 +22,111 @@ else()
 endif()
 
 add_library(axon SHARED
-  src/tensor.c src/tensor_cpu.c src/tensor_cuda.cu src/ops/cpu/unary_ops_cpu.c src/ops/cpu/reduction_ops_cpu.c src/ops/cpu/init_ops_cpu.c
-  src/ops/cpu/binary_ops_cpu.c src/ops/cpu/binary_ops_scalar_cpu.c src/ops/cpu/movement_ops_cpu.c
-  src/autograd/cpu/binary_ops_grad_cpu.c src/autograd/cpu/unary_ops_grad_cpu.c
-  src/autograd/cpu/reduction_ops_grad_cpu.c src/utils.c src/autograd/autograd_utils.c 
-  src/optimizers/cpu/sgd.c src/optimizers/cpu/adam.c src/optimizers/cpu/zero_grad.c src/autograd/cpu/movement_ops_grad_cpu.c
-  src/ops/cuda/binary_ops_cuda.cu src/ops/cuda/init_ops_cuda.cu src/ops/cuda/binary_ops_scalar_cuda.cu
-  src/ops/cuda/unary_ops_cuda.cu src/ops/cuda/reduction_ops_cuda.cu src/ops/cuda/movement_ops_cuda.cu
-  src/autograd/cuda/binary_ops_grad_cuda.cu src/autograd/cuda/reduction_ops_grad_cuda.cu src/autograd/cuda/movement_ops_grad_cuda.cu
-  src/autograd/cuda/unary_ops_grad_cuda.cu src/optimizers/cuda/sgd_cuda.cu src/optimizers/cuda/adam_cuda.cu src/optimizers/cuda/zero_grad_cuda.cu src/utils/cuda/device_management.cu
+  src/tensor.c
+  src/tensor_cpu.c
+  src/tensor_cuda.cu
+
+  # CPU Operations
+  src/ops/cpu/binary/add.c
+  src/ops/cpu/binary/sub.c
+  src/ops/cpu/binary/mul.c
+  src/ops/cpu/binary/div.c
+  src/ops/cpu/binary/matmul.c
+  src/ops/cpu/binary/conv2d.c
+  src/ops/cpu/binary/dot.c
+  src/ops/cpu/binary/pow.c
+
+  src/ops/cpu/binary_scalar/add.c
+  src/ops/cpu/binary_scalar/sub.c
+  src/ops/cpu/binary_scalar/rsub.c
+  src/ops/cpu/binary_scalar/mul.c
+  src/ops/cpu/binary_scalar/div.c
+  src/ops/cpu/binary_scalar/rdiv.c
+  src/ops/cpu/binary_scalar/pow.c
+
+  src/ops/cpu/init/zeros.c
+  src/ops/cpu/init/ones.c
+  src/ops/cpu/init/randn.c
+  src/ops/cpu/init/uniform.c
+  src/ops/cpu/init/from_data.c
+  src/ops/cpu/init/borrow.c
+
+  src/ops/cpu/movement/view.c
+  src/ops/cpu/movement/unsqueeze.c
+  src/ops/cpu/movement/squeeze.c
+  src/ops/cpu/movement/transpose.c
+  src/ops/cpu/movement/expand.c
+  src/ops/cpu/movement/broadcast.c
+  src/ops/cpu/movement/concat.c
+
+  src/ops/cpu/reduction/sum.c
+  src/ops/cpu/reduction/mean.c
+  src/ops/cpu/reduction/max.c
+  src/ops/cpu/reduction/sum_full.c
+  src/ops/cpu/reduction/mean_full.c
+  src/ops/cpu/reduction/max_full.c
+
+  src/ops/cpu/unary/relu.c
+  src/ops/cpu/unary/log.c
+  src/ops/cpu/unary/exp.c
+  src/ops/cpu/unary/neg.c
+  src/ops/cpu/unary/clip.c
+  src/ops/cpu/unary/abs.c
+
+  # CUDA Operations
+  src/ops/cuda/binary/add.cu
+  src/ops/cuda/binary/sub.cu
+  src/ops/cuda/binary/mul.cu
+  src/ops/cuda/binary/div.cu
+  src/ops/cuda/binary/pow.cu
+  src/ops/cuda/binary/matmul.cu
+  src/ops/cuda/binary/conv2d.cu
+  src/ops/cuda/binary/dot.cu
+
+  src/ops/cuda/binary_scalar/add.cu
+  src/ops/cuda/binary_scalar/sub.cu
+  src/ops/cuda/binary_scalar/rsub.cu
+  src/ops/cuda/binary_scalar/mul.cu
+  src/ops/cuda/binary_scalar/div.cu
+  src/ops/cuda/binary_scalar/rdiv.cu
+  src/ops/cuda/binary_scalar/pow.cu
+
+  # src/ops/cuda/init is empty, no .cu files to add
+
+  src/ops/cuda/movement/concat.cu
+
+  src/ops/cuda/reduction/sum.cu
+  src/ops/cuda/reduction/mean.cu
+  src/ops/cuda/reduction/max.cu
+  src/ops/cuda/reduction/sum_full.cu
+  src/ops/cuda/reduction/mean_full.cu
+  src/ops/cuda/reduction/max_full.cu
+
+  src/ops/cuda/unary/relu.cu
+  src/ops/cuda/unary/log.cu
+  src/ops/cuda/unary/exp.cu
+  src/ops/cuda/unary/neg.cu
+  src/ops/cuda/unary/abs.cu
+  src/ops/cuda/unary/clip.cu
+
+  # Remaining files (autograd, utils, optimizers)
+  src/autograd/cpu/binary_ops_grad_cpu.c
+  src/autograd/cpu/unary_ops_grad_cpu.c
+  src/autograd/cpu/reduction_ops_grad_cpu.c
+  src/utils.c
+  src/autograd/autograd_utils.c 
+  src/optimizers/cpu/sgd.c
+  src/optimizers/cpu/adam.c
+  src/optimizers/cpu/zero_grad.c
+  src/autograd/cpu/movement_ops_grad_cpu.c
+  src/autograd/cuda/binary_ops_grad_cuda.cu
+  src/autograd/cuda/reduction_ops_grad_cuda.cu
+  src/autograd/cuda/movement_ops_grad_cuda.cu
+  src/autograd/cuda/unary_ops_grad_cuda.cu
+  src/optimizers/cuda/sgd_cuda.cu
+  src/optimizers/cuda/adam_cuda.cu
+  src/optimizers/cuda/zero_grad_cuda.cu
+  src/utils/cuda/device_management.cu
 )
 
 target_include_directories(axon PUBLIC include ${SLEEF_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${CMAKE_BINARY_DIR})

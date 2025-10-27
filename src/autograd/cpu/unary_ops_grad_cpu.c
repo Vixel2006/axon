@@ -4,7 +4,7 @@
 
 void relu_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: relu_grad_op: Computing gradient for ReLU");
+    LOG_INFO("relu_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     Tensor* a = prev[0];
 
@@ -56,13 +56,16 @@ void relu_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
         }
     }
+    LOG_INFO("relu_grad_op_cpu: Exiting function.");
 }
 
 void log_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
+    LOG_INFO("log_grad_op_cpu: Entering function with n_prev=%d", n_prev);
+
     if (!out || !out->grad || !out->grad->data || !out->grad->data->data || !prev)
     {
-        LOG_ERROR("log_grad_op ERROR: Output tensor, output gradient, or previous "
+        LOG_ERROR("log_grad_op: Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
                   (void*) out, (void*) out->grad->data->data, (void*) prev);
         return;
@@ -70,7 +73,7 @@ void log_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (n_prev != 1)
     {
-        LOG_ERROR("log_grad_op ERROR: Invalid number of previous tensors: %d. "
+        LOG_ERROR("log_grad_op: Invalid number of previous tensors: %d. "
                   "Expected 1.",
                   n_prev);
         return;
@@ -78,7 +81,7 @@ void log_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!prev[0])
     {
-        LOG_ERROR("log_grad_op ERROR: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
+        LOG_ERROR("log_grad_op: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
         return;
     }
 
@@ -86,7 +89,7 @@ void log_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (a->requires_grad && !a->grad->data)
     {
-        LOG_ERROR("log_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
+        LOG_ERROR("log_grad_op: Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
 
@@ -111,7 +114,7 @@ void log_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                 }
                 if (a->data->data[a_offset] == 0.0f)
                 {
-                    LOG_ERROR("log_grad_op ERROR: Division by zero in gradient at "
+                    LOG_ERROR("log_grad_op: Division by zero in gradient at "
                               "index %d! Input to log was zero.",
                               linear);
                     // Handle this error, e.g., set gradient to 0 or NaN
@@ -156,7 +159,7 @@ void log_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
         {
             if (a->data->data[i] == 0.0f)
             {
-                LOG_ERROR("log_grad_op ERROR: Division by zero in gradient at index "
+                LOG_ERROR("log_grad_op: Division by zero in gradient at index "
                           "%d! Input to log was zero.",
                           i);
                 a->grad->data->data[i] += 0.0f; // Or NAN
@@ -167,16 +170,17 @@ void log_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
         }
     }
+    LOG_INFO("log_grad_op_cpu: Exiting function.");
 }
 
 void exp_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: exp_grad_op: Computing gradient for exponential");
+    LOG_INFO("exp_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     // Error checking for null tensors and invalid n_prev
     if (!out || !out->grad->data->data || !prev)
     {
-        LOG_ERROR("exp_grad_op ERROR: Output tensor, output gradient, or previous "
+        LOG_ERROR("exp_grad_op Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
                   (void*) out, (void*) out->grad->data->data, (void*) prev);
         return;
@@ -184,7 +188,7 @@ void exp_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (n_prev != 1)
     {
-        LOG_ERROR("exp_grad_op ERROR: Invalid number of previous tensors: %d. "
+        LOG_ERROR("exp_grad_op Invalid number of previous tensors: %d. "
                   "Expected 1.",
                   n_prev);
         return;
@@ -192,7 +196,7 @@ void exp_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!prev[0])
     {
-        LOG_ERROR("exp_grad_op ERROR: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
+        LOG_ERROR("exp_grad_op Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
         return;
     }
 
@@ -200,7 +204,7 @@ void exp_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (a->requires_grad && !a->grad->data->data)
     {
-        LOG_ERROR("exp_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
+        LOG_ERROR("exp_grad_op Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
 
@@ -248,15 +252,16 @@ void exp_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             a->grad->data->data[i] += out->grad->data->data[i] * out->data->data[i];
         }
     }
+    LOG_INFO("exp_grad_op_cpu: Exiting function.");
 }
 
 void abs_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: abs_grad_op: Computing gradient for absolute value");
+    LOG_INFO("abs_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     if (!out || !out->grad->data->data || !prev)
     {
-        LOG_ERROR("abs_grad_op ERROR: Output tensor, output gradient, or previous "
+        LOG_ERROR("abs_grad_op Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
                   (void*) out, (void*) out->grad->data->data, (void*) prev);
         return;
@@ -264,7 +269,7 @@ void abs_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (n_prev != 1)
     {
-        LOG_ERROR("abs_grad_op ERROR: Invalid number of previous tensors: %d. "
+        LOG_ERROR("abs_grad_op Invalid number of previous tensors: %d. "
                   "Expected 1.",
                   n_prev);
         return;
@@ -272,7 +277,7 @@ void abs_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!prev[0])
     {
-        LOG_ERROR("abs_grad_op ERROR: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
+        LOG_ERROR("abs_grad_op Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
         return;
     }
 
@@ -280,7 +285,7 @@ void abs_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (a->requires_grad && !a->grad->data->data)
     {
-        LOG_ERROR("abs_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
+        LOG_ERROR("abs_grad_op Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
 
@@ -360,12 +365,12 @@ void abs_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
 void neg_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: neg_grad_op: Computing gradient for negation");
+    LOG_INFO("neg_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     // Error checking for null tensors and invalid n_prev
     if (!out || !out->grad->data->data || !prev)
     {
-        LOG_ERROR("neg_grad_op ERROR: Output tensor, output gradient, or previous "
+        LOG_ERROR("neg_grad_op Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
                   (void*) out, (void*) out->grad->data->data, (void*) prev);
         return;
@@ -373,7 +378,7 @@ void neg_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (n_prev != 1)
     {
-        LOG_ERROR("neg_grad_op ERROR: Invalid number of previous tensors: %d. "
+        LOG_ERROR("neg_grad_op Invalid number of previous tensors: %d. "
                   "Expected 1.",
                   n_prev);
         return;
@@ -381,7 +386,7 @@ void neg_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!prev[0])
     {
-        LOG_ERROR("neg_grad_op ERROR: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
+        LOG_ERROR("neg_grad_op Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
         return;
     }
 
@@ -389,7 +394,7 @@ void neg_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (a->requires_grad && !a->grad->data->data)
     {
-        LOG_ERROR("neg_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
+        LOG_ERROR("neg_grad_op Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
 
@@ -439,15 +444,16 @@ void neg_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             a->grad->data->data[i] += -out->grad->data->data[i];
         }
     }
+    LOG_INFO("neg_grad_op_cpu: Exiting function.");
 }
 
 void clip_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("GRAD: clip_grad_op: Computing gradient for clipping");
+    LOG_INFO("clip_grad_op_cpu: Entering function with n_prev=%d", n_prev);
 
     if (!out || !out->grad->data->data || !prev)
     {
-        LOG_ERROR("clip_grad_op ERROR: Output tensor, output gradient, or previous "
+        LOG_ERROR("clip_grad_op Output tensor, output gradient, or previous "
                   "tensors array is NULL! out=%p, out->grad=%p, prev=%p",
                   (void*) out, (void*) out->grad->data->data, (void*) prev);
         return;
@@ -455,7 +461,7 @@ void clip_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (n_prev != 1)
     {
-        LOG_ERROR("clip_grad_op ERROR: Invalid number of previous tensors: %d. "
+        LOG_ERROR("clip_grad_op Invalid number of previous tensors: %d. "
                   "Expected 1.",
                   n_prev);
         return;
@@ -463,7 +469,7 @@ void clip_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (!prev[0])
     {
-        LOG_ERROR("clip_grad_op ERROR: Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
+        LOG_ERROR("clip_grad_op Previous tensor is NULL! prev[0]=%p", (void*) prev[0]);
         return;
     }
 
@@ -471,7 +477,7 @@ void clip_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (a->requires_grad && !a->grad->data->data)
     {
-        LOG_ERROR("clip_grad_op ERROR: Tensor 'a' requires grad but its grad is NULL!");
+        LOG_ERROR("clip_grad_op Tensor 'a' requires grad but its grad is NULL!");
         return;
     }
 
@@ -547,4 +553,5 @@ void clip_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
         }
     }
+    LOG_INFO("clip_grad_op_cpu: Exiting function.", n_prev);
 }

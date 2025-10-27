@@ -1,6 +1,7 @@
 #include "autograd/autograd_binary.h"
 #include "logger.h"
 #include "ops/movement_ops.h"
+#include <assert.h>
 #include <cuda_runtime.h>
 #include <math.h>
 
@@ -14,7 +15,7 @@
         {                                                                                          \
             LOG_ERROR("CUDA runtime error at %s:%d: %s", __FILE__, __LINE__,                       \
                       cudaGetErrorString(err));                                                    \
-            return;                                                                                \
+            assert(0 && "CUDA runtime error");                                                     \
         }                                                                                          \
     } while (0)
 
@@ -231,7 +232,14 @@ __global__ void matmul_grad_kernel(const float* lhs, const float* rhs, float* gr
 
 void add_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("add_grad_op_cuda: CUDA implementation called.");
+    LOG_INFO("add_grad_op_cuda: Entering function with n_prev=%d", n_prev);
+
+    assert(out && "Output tensor cannot be NULL");
+    assert(out->grad && "Output tensor gradient cannot be NULL");
+    assert(out->grad->data && "Output tensor gradient data cannot be NULL");
+    assert(out->grad->data->data && "Output tensor gradient data pointer cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert((n_prev == 1 || n_prev == 2) && "n_prev must be 1 or 2 for add_grad_op_cuda");
 
     int N = numel(out->shape, out->ndim);
 
@@ -240,8 +248,16 @@ void add_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (n_prev == 1)
     {
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
                                                                    prev[0]->grad->data->data, N);
             CHECK_CUDA();
@@ -249,8 +265,20 @@ void add_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
     else
     {
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
+        assert(prev[1] && "Previous tensor 1 cannot be NULL");
+        assert(prev[1]->data && "Previous tensor 1 data cannot be NULL");
+        assert(prev[1]->data->data && "Previous tensor 1 data pointer cannot be NULL");
+
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
                                                                    prev[0]->grad->data->data, N);
             CHECK_CUDA();
@@ -258,17 +286,29 @@ void add_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
         if (prev[1]->requires_grad)
         {
+            assert(prev[1]->grad && "Previous tensor 1 gradient cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data &&
+                   "Previous tensor 1 gradient data cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data->data &&
+                   "Previous tensor 1 gradient data pointer cannot be NULL if requires_grad");
             add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
                                                                    prev[1]->grad->data->data, N);
             CHECK_CUDA();
         }
     }
-    LOG_INFO("add_grad_op_cuda: CUDA implementation finished successfully.");
 }
 
 void sub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("sub_grad_op_cuda: CUDA implementation called.");
+    LOG_INFO("sub_grad_op_cuda: Entering function with n_prev=%d", n_prev);
+
+    assert(out && "Output tensor cannot be NULL");
+    assert(out->grad && "Output tensor gradient cannot be NULL");
+    assert(out->grad->data && "Output tensor gradient data cannot be NULL");
+    assert(out->grad->data->data && "Output tensor gradient data pointer cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert((n_prev == 1 || n_prev == 2) && "n_prev must be 1 or 2 for sub_grad_op_cuda");
+
     int N = numel(out->shape, out->ndim);
 
     int num_threads_per_block = 256;
@@ -276,8 +316,16 @@ void sub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (n_prev == 1)
     {
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
                                                                    prev[0]->grad->data->data, N);
             CHECK_CUDA();
@@ -285,8 +333,20 @@ void sub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
     else
     {
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
+        assert(prev[1] && "Previous tensor 1 cannot be NULL");
+        assert(prev[1]->data && "Previous tensor 1 data cannot be NULL");
+        assert(prev[1]->data->data && "Previous tensor 1 data pointer cannot be NULL");
+
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             add_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
                                                                    prev[0]->grad->data->data, N);
             CHECK_CUDA();
@@ -294,45 +354,79 @@ void sub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
         if (prev[1]->requires_grad)
         {
+            assert(prev[1]->grad && "Previous tensor 1 gradient cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data &&
+                   "Previous tensor 1 gradient data cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data->data &&
+                   "Previous tensor 1 gradient data pointer cannot be NULL if requires_grad");
             sub_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
                                                                    prev[1]->grad->data->data, N);
             CHECK_CUDA();
         }
     }
-
-    LOG_INFO("sub_grad_op_cuda: CUDA implementation finished successfully.");
 }
 
 void rsub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
+    LOG_INFO("rsub_grad_op_cuda: Entering function with n_prev=%d", n_prev);
 
-    LOG_INFO("rsub_grad_op_cuda: CUDA implementation called.");
+    assert(out && "Output tensor cannot be NULL");
+    assert(out->grad && "Output tensor gradient cannot be NULL");
+    assert(out->grad->data && "Output tensor gradient data cannot be NULL");
+    assert(out->grad->data->data && "Output tensor gradient data pointer cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert(n_prev == 1 && "n_prev must be 1 for rsub_grad_op_cuda");
+    assert(prev[0] && "Previous tensor 0 cannot be NULL");
+    assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+    assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
+    assert(extras && "Extras (scalar value) cannot be NULL");
+
     int N = numel(out->shape, out->ndim);
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     if (prev[0]->requires_grad)
     {
+        assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+        assert(prev[0]->grad->data &&
+               "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+        assert(prev[0]->grad->data->data &&
+               "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
         sub_grad_kernel<<<num_blocks, num_threads_per_block>>>(out->grad->data->data,
                                                                prev[0]->grad->data->data, N);
         CHECK_CUDA();
     }
-
-    LOG_INFO("rsub_grad_op_cuda: CUDA implementation finished successfully.");
 }
 
 void mul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("mul_grad_op_cuda: CUDA implementation called.");
+    LOG_INFO("mul_grad_op_cuda: Entering function with n_prev=%d", n_prev);
+
+    assert(out && "Output tensor cannot be NULL");
+    assert(out->grad && "Output tensor gradient cannot be NULL");
+    assert(out->grad->data && "Output tensor gradient data cannot be NULL");
+    assert(out->grad->data->data && "Output tensor gradient data pointer cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert((n_prev == 1 || n_prev == 2) && "n_prev must be 1 or 2 for mul_grad_op_cuda");
+
     int N = numel(out->shape, out->ndim);
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     if (n_prev == 1)
     {
+        assert(extras && "Extras (scalar value) cannot be NULL for scalar multiplication");
         float* scalar = (float*) extras;
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             scalar_mul_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, prev[0]->grad->data->data, *scalar, N);
             CHECK_CUDA();
@@ -340,8 +434,20 @@ void mul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
     else
     {
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
+        assert(prev[1] && "Previous tensor 1 cannot be NULL");
+        assert(prev[1]->data && "Previous tensor 1 data cannot be NULL");
+        assert(prev[1]->data->data && "Previous tensor 1 data pointer cannot be NULL");
+
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             mul_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, prev[0]->grad->data->data, prev[1]->data->data, N);
             CHECK_CUDA();
@@ -349,26 +455,46 @@ void mul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
         if (prev[1]->requires_grad)
         {
+            assert(prev[1]->grad && "Previous tensor 1 gradient cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data &&
+                   "Previous tensor 1 gradient data cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data->data &&
+                   "Previous tensor 1 gradient data pointer cannot be NULL if requires_grad");
             mul_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, prev[1]->grad->data->data, prev[0]->data->data, N);
             CHECK_CUDA();
         }
     }
-
-    LOG_INFO("mul_grad_op_cuda: CUDA implementation finished successfully.");
 }
 void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("pow_grad_op_cuda: CUDA implementation called.");
+    LOG_INFO("pow_grad_op_cuda: Entering function with n_prev=%d", n_prev);
+
+    assert(out && "Output tensor cannot be NULL");
+    assert(out->grad && "Output tensor gradient cannot be NULL");
+    assert(out->grad->data && "Output tensor gradient data cannot be NULL");
+    assert(out->grad->data->data && "Output tensor gradient data pointer cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert((n_prev == 1 || n_prev == 2) && "n_prev must be 1 or 2 for pow_grad_op_cuda");
+
     int N = numel(out->shape, out->ndim);
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     if (n_prev == 1) // prev[0] ** scalar
     {
+        assert(extras && "Extras (scalar value) cannot be NULL for scalar power");
         float scalar_power = *((float*) extras);
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             scalar_pow_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data, scalar_power,
                 N);
@@ -377,12 +503,20 @@ void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
     else // base ** power
     {
+        assert(prev[0] && "Previous tensor 0 (base) cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 (base) data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 (base) data pointer cannot be NULL");
+        assert(prev[1] && "Previous tensor 1 (power) cannot be NULL");
+        assert(prev[1]->data && "Previous tensor 1 (power) data cannot be NULL");
+        assert(prev[1]->data->data && "Previous tensor 1 (power) data pointer cannot be NULL");
+
         if (prev[0]->requires_grad) // gradient for base
         {
-            // NOTE: The 'power_grad' parameter in base_pow_grad_kernel is used as the exponent.
-            // This might be a typo in the kernel definition, as it should ideally be 'power_data -
-            // 1'. Using prev[1]->data->data for both power_data and power_grad to match the
-            // signature.
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             base_pow_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data,
                 prev[1]->data->data, prev[1]->data->data, N);
@@ -391,27 +525,48 @@ void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
         if (prev[1]->requires_grad) // gradient for power
         {
+            assert(prev[1]->grad && "Previous tensor 1 gradient cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data &&
+                   "Previous tensor 1 gradient data cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data->data &&
+                   "Previous tensor 1 gradient data pointer cannot be NULL if requires_grad");
             exponent_pow_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, out->data->data, prev[0]->data->data,
                 prev[1]->grad->data->data, N);
             CHECK_CUDA();
         }
     }
-    LOG_INFO("pow_grad_op_cuda: CUDA implementation finished successfully.");
 }
 
 void div_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("div_grad_op_cuda: CUDA implementation called.");
+    LOG_INFO("div_grad_op_cuda: Entering function with n_prev=%d", n_prev);
+
+    assert(out && "Output tensor cannot be NULL");
+    assert(out->grad && "Output tensor gradient cannot be NULL");
+    assert(out->grad->data && "Output tensor gradient data cannot be NULL");
+    assert(out->grad->data->data && "Output tensor gradient data pointer cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert((n_prev == 1 || n_prev == 2) && "n_prev must be 1 or 2 for div_grad_op_cuda");
+
     int N = numel(out->shape, out->ndim);
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     if (n_prev == 1) // prev[0] / scalar
     {
+        assert(extras && "Extras (scalar value) cannot be NULL for scalar division");
         float scalar_denominator = *((float*) extras);
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             scalar_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, prev[0]->grad->data->data, scalar_denominator, N);
             CHECK_CUDA();
@@ -419,8 +574,21 @@ void div_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
     else
     {
+        assert(prev[0] && "Previous tensor 0 (numerator) cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 (numerator) data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 (numerator) data pointer cannot be NULL");
+        assert(prev[1] && "Previous tensor 1 (denominator) cannot be NULL");
+        assert(prev[1]->data && "Previous tensor 1 (denominator) data cannot be NULL");
+        assert(prev[1]->data->data &&
+               "Previous tensor 1 (denominator) data pointer cannot be NULL");
+
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             numerator_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, prev[0]->grad->data->data, prev[1]->data->data, N);
             CHECK_CUDA();
@@ -428,26 +596,47 @@ void div_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
         if (prev[1]->requires_grad)
         {
+            assert(prev[1]->grad && "Previous tensor 1 gradient cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data &&
+                   "Previous tensor 1 gradient data cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data->data &&
+                   "Previous tensor 1 gradient data pointer cannot be NULL if requires_grad");
             denominator_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, out->data->data, prev[1]->grad->data->data,
                 prev[1]->data->data, N);
             CHECK_CUDA();
         }
     }
-    LOG_INFO("div_grad_op_cuda: CUDA implementation finished successfully.");
 }
 void rdiv_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("rdiv_grad_op_cuda: CUDA implementation called.");
+    LOG_INFO("rdiv_grad_op_cuda: Entering function with n_prev=%d", n_prev);
+
+    assert(out && "Output tensor cannot be NULL");
+    assert(out->grad && "Output tensor gradient cannot be NULL");
+    assert(out->grad->data && "Output tensor gradient data cannot be NULL");
+    assert(out->grad->data->data && "Output tensor gradient data pointer cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert((n_prev == 1 || n_prev == 2) && "n_prev must be 1 or 2 for rdiv_grad_op_cuda");
+
     int N = numel(out->shape, out->ndim);
     int num_threads_per_block = 256;
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     if (n_prev == 1)
     {
+        assert(extras && "Extras (scalar value) cannot be NULL for scalar rdiv");
         float scalar_numerator = *((float*) extras);
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             scalar_rdiv_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, out->data->data, prev[0]->grad->data->data, scalar_numerator,
                 prev[0]->data->data, N);
@@ -456,8 +645,20 @@ void rdiv_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     }
     else
     {
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
+        assert(prev[1] && "Previous tensor 1 cannot be NULL");
+        assert(prev[1]->data && "Previous tensor 1 data cannot be NULL");
+        assert(prev[1]->data->data && "Previous tensor 1 data pointer cannot be NULL");
+
         if (prev[0]->requires_grad)
         {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
             denominator_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, out->data->data, prev[0]->grad->data->data,
                 prev[0]->data->data, N);
@@ -466,32 +667,56 @@ void rdiv_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
         if (prev[1]->requires_grad)
         {
+            assert(prev[1]->grad && "Previous tensor 1 gradient cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data &&
+                   "Previous tensor 1 gradient data cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data->data &&
+                   "Previous tensor 1 gradient data pointer cannot be NULL if requires_grad");
             numerator_div_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                 out->grad->data->data, prev[1]->grad->data->data, prev[0]->data->data, N);
             CHECK_CUDA();
         }
     }
-    LOG_INFO("rdiv_grad_op_cuda: CUDA implementation finished successfully.");
 }
 void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
-    LOG_INFO("matmul_grad_op_cuda: CUDA implementation called.");
+    LOG_INFO("matmul_grad_op_cuda: Entering function with n_prev=%d", n_prev);
 
-    if (n_prev != 2)
-    {
-        LOG_ERROR("matmul_grad_op_cuda: Expected 2 previous tensors, got %d.", n_prev);
-        return;
-    }
+    assert(out && "Output tensor cannot be NULL");
+    assert(out->grad && "Output tensor gradient cannot be NULL");
+    assert(out->grad->data && "Output tensor gradient data cannot be NULL");
+    assert(out->grad->data->data && "Output tensor gradient data pointer cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert(n_prev == 2 && "matmul_grad_op_cuda: Expected 2 previous tensors.");
 
     MatMulBackwardExtras* matmul_extras = (MatMulBackwardExtras*) extras;
-    if (!matmul_extras)
-    {
-        LOG_ERROR("matmul_grad_op_cuda: extras is null.");
-        return;
-    }
+    assert(matmul_extras && "matmul_grad_op_cuda: extras is null.");
 
     Tensor* A = prev[0];
     Tensor* B = prev[1];
+
+    assert(A && "Tensor A cannot be NULL");
+    assert(B && "Tensor B cannot be NULL");
+    assert(A->data && "Tensor A data cannot be NULL");
+    assert(A->data->data && "Tensor A data pointer cannot be NULL");
+    assert(B->data && "Tensor B data cannot be NULL");
+    assert(B->data->data && "Tensor B data pointer cannot be NULL");
+
+    assert(A->ndim >= 2 && "Tensor A must have at least 2 dimensions");
+    assert(B->ndim >= 2 && "Tensor B must have at least 2 dimensions");
+    assert(out->ndim >= 2 && "Output tensor must have at least 2 dimensions");
+
+    assert(A->shape && "Tensor A shape cannot be NULL");
+    assert(B->shape && "Tensor B shape cannot be NULL");
+    assert(out->shape && "Output tensor shape cannot be NULL");
+
+    assert(A->strides && "Tensor A strides cannot be NULL");
+    assert(B->strides && "Tensor B strides cannot be NULL");
+    assert(out->strides && "Output tensor strides cannot be NULL");
+
+    // Dimension compatibility check
+    assert(A->shape[A->ndim - 1] == B->shape[B->ndim - 2] &&
+           "Dimension mismatch for matrix multiplication");
 
     bool is_A_batched = A->ndim > 2;
     bool is_B_batched = B->ndim > 2;
@@ -501,14 +726,26 @@ void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     int K_final = matmul_extras->K;
     int M_final = matmul_extras->M;
 
+    // Validate output dimensions match expected result
+    assert(out->shape[out->ndim - 2] == N_final && "Output row dimension mismatch");
+    assert(out->shape[out->ndim - 1] == M_final && "Output column dimension mismatch");
+
     int B_dim = 1;
     if (is_out_batched)
     {
-        B_dim = out->shape[0];
+        for (int i = 0; i < out->ndim - 2; ++i)
+        {
+            B_dim *= out->shape[i];
+        }
     }
 
     if (A->requires_grad)
     {
+        assert(A->grad && "Tensor A gradient cannot be NULL if requires_grad");
+        assert(A->grad->data && "Tensor A gradient data cannot be NULL if requires_grad");
+        assert(A->grad->data->data &&
+               "Tensor A gradient data pointer cannot be NULL if requires_grad");
+
         dim3 block_matmul(TILE_DIM, TILE_DIM);
         dim3 grid_matmul((K_final + block_matmul.x - 1) / block_matmul.x,
                          (N_final + block_matmul.y - 1) / block_matmul.y, B_dim);
@@ -525,6 +762,11 @@ void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 
     if (B->requires_grad)
     {
+        assert(B->grad && "Tensor B gradient cannot be NULL if requires_grad");
+        assert(B->grad->data && "Tensor B gradient data cannot be NULL if requires_grad");
+        assert(B->grad->data->data &&
+               "Tensor B gradient data pointer cannot be NULL if requires_grad");
+
         dim3 block_matmul(TILE_DIM, TILE_DIM);
         dim3 grid_matmul((M_final + block_matmul.x - 1) / block_matmul.x,
                          (K_final + block_matmul.y - 1) / block_matmul.y, B_dim);
@@ -537,14 +779,25 @@ void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
             N_final, true, false, is_A_batched, is_out_batched, is_B_batched);
         CHECK_CUDA();
     }
-
-    LOG_INFO("matmul_grad_op_cuda: CUDA implementation finished successfully.");
 }
 void conv2d_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
+    LOG_INFO("conv2d_grad_op_cuda: Entering function with n_prev=%d", n_prev);
+    assert(out && "Output tensor cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert(n_prev == 2 && "conv2d_grad_op_cuda: Expected 2 previous tensors.");
+    assert(prev[0] && "Input tensor cannot be NULL");
+    assert(prev[1] && "Kernel tensor cannot be NULL");
+    assert(extras && "Extras cannot be NULL");
     LOG_WARN("conv2d_grad_op_cuda: CUDA implementation not available yet.");
 }
 void dot_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
+    LOG_INFO("dot_grad_op_cuda: Entering function with n_prev=%d", n_prev);
+    assert(out && "Output tensor cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert(n_prev == 2 && "dot_grad_op_cuda: Expected 2 previous tensors.");
+    assert(prev[0] && "Input tensor A cannot be NULL");
+    assert(prev[1] && "Input tensor B cannot be NULL");
     LOG_WARN("dot_grad_op_cuda: CUDA implementation not available yet.");
 }
