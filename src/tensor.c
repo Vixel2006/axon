@@ -14,6 +14,7 @@
 
 bool is_contiguous(Tensor* t)
 {
+    LOG_INFO("is_contiguous: Entering function");
     int expected_stride = 1;
     for (int i = t->ndim - 1; i >= 0; --i)
     {
@@ -34,6 +35,7 @@ bool is_contiguous(Tensor* t)
 
 bool shapes_equal(const int* shape1, int ndim1, const int* shape2, int ndim2)
 {
+    LOG_INFO("shapes_equal: Entering function with ndim1=%d, ndim2=%d", ndim1, ndim2);
     if (ndim1 != ndim2) return false;
     for (int i = 0; i < ndim1; ++i)
     {
@@ -44,6 +46,7 @@ bool shapes_equal(const int* shape1, int ndim1, const int* shape2, int ndim2)
 
 int numel(const int* shape, int ndim)
 {
+    LOG_INFO("numel: Entering function with ndim=%d", ndim);
     if (ndim == 0) return 1;
     if (ndim < 0 || !shape) return 0;
 
@@ -63,6 +66,7 @@ int numel(const int* shape, int ndim)
 
 int* compute_strides(const int* shape, int ndim)
 {
+    LOG_INFO("compute_strides: Entering function with ndim=%d", ndim);
     if (ndim <= 0 || !shape) return NULL;
 
     int* strides = malloc(ndim * sizeof(int));
@@ -84,6 +88,7 @@ int* compute_strides(const int* shape, int ndim)
 
 Device* dmalloc(DeviceType type, int index)
 {
+    LOG_INFO("dmalloc: Entering function with type=%d, index=%d", type, index);
     LOG_INFO("Initializing device %d, %d", type, index);
     Device* device = malloc(sizeof(Device));
     if (!device)
@@ -102,6 +107,7 @@ Device* dmalloc(DeviceType type, int index)
 
 void dfree(Device* device)
 {
+    LOG_INFO("dfree: Entering function");
     if (!device) return;
 
     if (--device->counter <= 0)
@@ -114,6 +120,7 @@ void dfree(Device* device)
 
 Storage* smalloc(float* data, int size, Device* device)
 {
+    LOG_INFO("smalloc: Entering function with size=%d", size);
     if (!device)
     {
         LOG_ERROR("smalloc requires a non-NULL device.");
@@ -137,6 +144,7 @@ Storage* smalloc(float* data, int size, Device* device)
 
 void sfree(Storage* s, Device* device)
 {
+    LOG_INFO("sfree: Entering function");
     if (!s) return;
 
     if (device->type == CPU)
@@ -155,6 +163,7 @@ void sfree(Storage* s, Device* device)
 
 void to(Tensor* t, Device* device)
 {
+    LOG_INFO("to: Entering function");
     LOG_INFO("to() called: current device type %d, target device type %d", t->device->type,
              device->type);
 
@@ -194,7 +203,6 @@ void to(Tensor* t, Device* device)
 
     if (t->requires_grad && t->grad && t->grad->data)
     {
-        Device* old_grad_device = t->grad->device;
         Storage* gbuffer = NULL;
         if (device->type == CUDA)
         {
@@ -204,14 +212,15 @@ void to(Tensor* t, Device* device)
         {
             gbuffer = smalloc_cpu(t->grad->data->data, t->grad->data->size, device);
         }
-        if (old_grad_device->type == CPU)
+        if (old_device->type == CPU)
         {
-            sfree_cpu(t->grad->data, old_grad_device);
+            sfree_cpu(t->grad->data, old_device);
         }
         else
         {
-            sfree_cuda(t->grad->data, old_grad_device);
+            sfree_cuda(t->grad->data, old_device);
         }
+        Device* old_grad_device = t->grad->device;
         t->grad->data = gbuffer;
         t->grad->device = device;
         device->counter++;
@@ -221,6 +230,7 @@ void to(Tensor* t, Device* device)
 
 void gmalloc(Tensor* t, float init)
 {
+    LOG_INFO("gmalloc: Entering function with init=%.2f", init);
     if (!t->device)
     {
         LOG_ERROR("gmalloc cannot proceed on a tensor with a NULL device.");
@@ -281,6 +291,7 @@ void gmalloc(Tensor* t, float init)
 
 Tensor* tmalloc(int* shape, int ndim, Device* device, bool requires_grad)
 {
+    LOG_INFO("tmalloc: Entering function with ndim=%d, requires_grad=%d", ndim, requires_grad);
     Tensor* t = malloc(sizeof(Tensor));
     if (!t)
     {
@@ -324,13 +335,36 @@ Tensor* tmalloc(int* shape, int ndim, Device* device, bool requires_grad)
 
 void tfree(Tensor* t)
 {
+    LOG_INFO("tfree: Entering function");
     if (!t) return;
 
     LOG_INFO("Freeing Tensor at %p", t);
 
     if (t->grad)
     {
-        tfree(t->grad);
+        Tensor* grad = t->grad;
+        if (grad->shape)
+        {
+            free(grad->shape);
+            grad->shape = NULL;
+        }
+        if (grad->strides)
+        {
+            free(grad->strides);
+            grad->strides = NULL;
+        }
+        if (grad->data)
+        {
+            sfree(grad->data, grad->device);
+            grad->data = NULL;
+        }
+        // The grad holds a reference, so we decrement the device counter.
+        if (grad->device)
+        {
+            dfree(grad->device);
+            grad->device = NULL;
+        }
+        free(grad);
         t->grad = NULL;
     }
 
@@ -338,12 +372,14 @@ void tfree(Tensor* t)
     {
         LOG_INFO("Freed shape at %p", t->shape);
         free(t->shape);
+        t->shape = NULL;
     }
 
     if (t->strides)
     {
         LOG_INFO("Freed strides at %p", t->strides);
         free(t->strides);
+        t->strides = NULL;
     }
 
     if (t->data)
@@ -355,13 +391,16 @@ void tfree(Tensor* t)
     if (t->device)
     {
         dfree(t->device);
+        t->device = NULL;
     }
 
     free(t);
 }
 
-void copy_storage_to_host(Storage* s, Device* device, int size, float* host_buffer)
+void copy_storage_to_host(Storage* s, Device* device, int size, const int* shape,
+                          const int* strides, int ndim, float* host_buffer)
 {
+    LOG_INFO("copy_storage_to_host: Entering function with size=%d", size);
     if (!s || !host_buffer) return;
 
     if (device->type == CPU)
@@ -370,6 +409,22 @@ void copy_storage_to_host(Storage* s, Device* device, int size, float* host_buff
     }
     else if (device->type == CUDA)
     {
-        cudaMemcpy(host_buffer, s->data, size * sizeof(float), cudaMemcpyDeviceToHost);
+        // Create a dummy Tensor object to use is_contiguous
+        Tensor dummy_tensor;
+        dummy_tensor.shape = (int*) shape;
+        dummy_tensor.strides = (int*) strides;
+        dummy_tensor.ndim = ndim;
+
+        if (is_contiguous(&dummy_tensor))
+        {
+            LOG_INFO("copy_storage_to_host: CUDA tensor is contiguous. Using cudaMemcpy.");
+            cudaMemcpy(host_buffer, s->data, size * sizeof(float), cudaMemcpyDeviceToHost);
+        }
+        else
+        {
+            LOG_INFO("copy_storage_to_host: CUDA tensor is NON-contiguous. Using "
+                     "copy_non_contiguous_cuda_to_host.");
+            copy_non_contiguous_cuda_to_host(s, shape, strides, ndim, size, host_buffer);
+        }
     }
 }

@@ -49,7 +49,7 @@ __global__ void sgd_kernel_noncontig(float* param_data, float* param_grad, float
 
 void sgd_cuda(Tensor** params, int num_params, float lr)
 {
-    LOG_INFO("sgd_cuda: Applying SGD optimization (CUDA)");
+    LOG_INFO("sgd_cuda: Entering function with num_params=%d, lr=%.4f", num_params, lr);
 
     for (int i = 0; i < num_params; ++i)
     {
@@ -70,6 +70,4 @@ void sgd_cuda(Tensor** params, int num_params, float lr)
             CHECK_CUDA(cudaGetLastError());
         }
     }
-
-    LOG_INFO("sgd_cuda: SGD optimization done successfully.");
 }

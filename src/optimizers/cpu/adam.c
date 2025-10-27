@@ -12,8 +12,8 @@
 void adam_cpu(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int num_params,
               int time_step, float learning_rate, float beta1, float beta2, float epsilon)
 {
-    LOG_INFO("DEBUG: adam: Running Adam optimizer (time_step=%d, lr=%.4f)", time_step,
-             learning_rate);
+    LOG_INFO("adam_cpu: Entering function with num_params=%d, time_step=%d, learning_rate=%.4f",
+             num_params, time_step, learning_rate);
 
     __m256 learning_rate_vec = _mm256_set1_ps(learning_rate);
     __m256 beta1_vec = _mm256_set1_ps(beta1);

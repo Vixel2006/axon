@@ -11,12 +11,13 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
     ConcatExtras* concat_extras = (ConcatExtras*) extras;
     int axis = concat_extras->axis;
 
-    LOG_INFO("Starting concat_grad_op_cpu: out.numel=%d, n_prev=%d, axis=%d",
+    LOG_INFO("concat_grad_op_cpu: Entering function with out.numel=%d, n_prev=%d, axis=%d",
              numel(out->shape, out->ndim), n_prev, axis);
 
     if (out->grad == NULL || out->grad->data->data == NULL || out->grad->data->data == NULL)
     {
-        LOG_WARN("Output tensor has no gradient data, skipping backward pass for concat.");
+        LOG_WARN("concat_grad_op: Output tensor has no gradient data, skipping backward pass for "
+                 "concat.");
         return;
     }
 
@@ -40,8 +41,8 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
             if (current_prev->grad == NULL || current_prev->grad->data->data == NULL ||
                 current_prev->grad->data->data == NULL)
             {
-                LOG_WARN(
-                    "concat_grad_op_cpu: prev tensor %d has no gradient data buffer, skipping.", i);
+                LOG_WARN("concat_grad_op: prev tensor %d has no gradient data buffer, skipping.",
+                         i);
                 offset_in_axis += current_prev->shape[axis];
                 continue;
             }
@@ -66,9 +67,9 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
                 // Here comes the uncontiguous path without SIMD
                 if (current_prev->ndim > MAX_DIMS)
                 {
-                    LOG_ERROR("Tensor dimensions %d exceed MAX_DIMS %d", current_prev->ndim,
-                              MAX_DIMS);
-                    return;
+                    LOG_ERROR("concat_grad_op: Tensor dimensions %d exceed MAX_DIMS %d",
+                              current_prev->ndim, MAX_DIMS);
+                    exit(30);
                 }
                 for (int j = 0; j < N; ++j)
                 {
@@ -100,5 +101,5 @@ void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
         offset_in_axis += current_prev->shape[axis];
     }
 
-    LOG_INFO("Finished concat_grad_op_cpu successfully.");
+    LOG_INFO("concat_grad_op: Exiting function.");
 }

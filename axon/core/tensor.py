@@ -63,7 +63,10 @@ class Tensor:
             c_wrapper_functions.c_copy_storage_to_host(
                 self.c_tensor_ptr.contents.data,
                 self.device,
-                num_elements,
+                self.numel(), # Use self.numel() for the logical number of elements
+                self.shape,
+                self.strides,
+                self.ndim,
                 host_buffer_ptr
             )
 
@@ -129,7 +132,7 @@ class Tensor:
     def numel(self) -> int: return c_wrapper_functions.c_numel(self.shape, self.ndim)
 
     def to(self, device: Device) -> Tensor:
-        c_wrapper_functions.c_to(self.c_tensor_ptr, device)
+        c_wrapper_functions.c_to(self.c_tensor_ptr, device.c_device_ptr)
         self.device = device
         return self
 
@@ -172,19 +175,23 @@ class Tensor:
 
 
 if __name__ == "__main__":
-    from axon.functions import zeros, ones, uniform
+    from axon.functions import zeros, ones, uniform, max, log, sum, exp
     from axon.utils import *
 
     device = Device("cuda")
 
     #cuda_device_info(device)
 
-    a = ones((2,2)) # .to(device)
-    #b = uniform((2,2)).to(device)
+    a = from_data((2,2), [[2,3], [4,5]], device=device)
 
-    print(a)
-    print(a.grad)
+    x_max = max(a, dim=-1, keepdim=True)
 
-    #c = a @ b
+    d = x_max.broadcast((2,2))
 
-    #c.backward()
+    d.realize()
+
+    print(x_max)
+    print(d.data)
+    print(d.c_tensor_ptr.contents.shape[0], d.c_tensor_ptr.contents.shape[1])
+    print(d.c_tensor_ptr.contents.strides[0], d.c_tensor_ptr.contents.strides[1])
+

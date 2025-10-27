@@ -29,7 +29,6 @@ class Device:
     def __del__(self):
         if self.c_device_ptr:
             c_dfree(self.c_device_ptr)
-        del self
 
     @property
     def type_id(self) -> int:

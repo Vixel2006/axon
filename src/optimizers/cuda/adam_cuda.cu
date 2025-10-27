@@ -32,8 +32,21 @@ __global__ void adam_kernel_contig(float* param_data, float* param_grad, float* 
 
     for (int i = idx; i < n; i += stride)
     {
-        param_data[i] -= adam_update(param_grad[i], m_estimates[i], v_estimates[i], beta1, beta2,
-                                     beta1_pow_t, beta2_pow_t, lr, epsilon);
+        float current_param_grad = param_grad[i];
+        float m_estimate = m_estimates[i];
+        float v_estimate = v_estimates[i];
+
+        m_estimate = beta1 * m_estimate + (1.0f - beta1) * current_param_grad;
+        v_estimate = beta2 * v_estimate + (1.0f - beta2) * powf(current_param_grad, 2);
+
+        float m_hat = m_estimate / (1.0f - beta1_pow_t);
+        float v_hat = v_estimate / (1.0f - beta2_pow_t);
+
+        float update_term = lr * m_hat / (rsqrtf(v_hat) + epsilon);
+
+        param_data[i] -= update_term;
+        m_estimates[i] = m_estimate; // Write back updated m_estimate
+        v_estimates[i] = v_estimate; // Write back updated v_estimate
     }
 }
 
@@ -56,17 +69,29 @@ __global__ void adam_kernel_noncontig(float* param_data, float* param_grad, floa
             current_k /= shape[d];
         }
 
-        param_data[data_idx] -=
-            adam_update(param_grad[data_idx], m_estimates[data_idx], v_estimates[data_idx], beta1,
-                        beta2, beta1_pow_t, beta2_pow_t, lr, epsilon);
+        float current_param_grad = param_grad[data_idx];
+        float m_estimate = m_estimates[data_idx];
+        float v_estimate = v_estimates[data_idx];
+
+        m_estimate = beta1 * m_estimate + (1.0f - beta1) * current_param_grad;
+        v_estimate = beta2 * v_estimate + (1.0f - beta2) * powf(current_param_grad, 2);
+
+        float m_hat = m_estimate / (1.0f - beta1_pow_t);
+        float v_hat = v_estimate / (1.0f - beta2_pow_t);
+
+        float update_term = lr * m_hat / (rsqrtf(v_hat) + epsilon);
+
+        param_data[data_idx] -= update_term;
+        m_estimates[data_idx] = m_estimate; // Write back updated m_estimate
+        v_estimates[data_idx] = v_estimate; // Write back updated v_estimate
     }
 }
 
 void adam_cuda(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int num_params,
                int time_step, float learning_rate, float beta1, float beta2, float epsilon)
 {
-    LOG_INFO("adam_cuda: Running Adam optimizer (time_step=%d, lr=%.4f).", time_step,
-             learning_rate);
+    LOG_INFO("adam_cuda: Entering function with num_params=%d, time_step=%d, learning_rate=%.4f",
+             num_params, time_step, learning_rate);
 
     for (int i = 0; i < num_params; ++i)
     {

@@ -1,15 +1,18 @@
 #include "tensor_cpu.h"
 #include "logger.h"
 #include "tensor.h"
+#include <assert.h>
+#include <cuda_runtime.h>
 #include <stdlib.h>
 #include <string.h>
 
 Storage* smalloc_cpu(float* data, int size, Device* device)
 {
+    LOG_INFO("smalloc_cpu: Entering function with size=%d", size);
     if (!device)
     {
         LOG_ERROR("smalloc_cpu requires a non-NULL device.");
-        return NULL;
+        assert(0 && "smalloc_cpu requires a non-NULL device.");
     }
 
     Storage* s = malloc(sizeof(Storage));
@@ -17,7 +20,7 @@ Storage* smalloc_cpu(float* data, int size, Device* device)
     if (!s)
     {
         LOG_ERROR("Failed to allocate Storage");
-        return NULL;
+        assert(0 && "Failed to allocate Storage");
     }
 
     s->size = size;
@@ -28,7 +31,7 @@ Storage* smalloc_cpu(float* data, int size, Device* device)
     {
         LOG_ERROR("Failed to allocate Storage data on cpu.");
         free(s);
-        return NULL;
+        assert(0 && "Failed to allocate Storage data on cpu.");
     }
 
     if (data != NULL)
@@ -50,6 +53,7 @@ Storage* smalloc_cpu(float* data, int size, Device* device)
 
 void sfree_cpu(Storage* s, Device* device)
 {
+    LOG_INFO("sfree_cpu: Entering function");
     if (!s) return;
     s->counter--;
     LOG_INFO("sfree_cpu called, counter=%d for Storage %p", s->counter, s);

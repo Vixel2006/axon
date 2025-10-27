@@ -77,9 +77,11 @@ if tensor_lib:
     def c_tfree(tensor_ptr):
         tensor_lib.tfree(tensor_ptr)
 
-    def c_copy_storage_to_host(storage_ptr, device: "Device", size, host_buffer):
+    def c_copy_storage_to_host(storage_ptr, device: "Device", size, shape, strides, ndim, host_buffer):
         c_device = CDevice(type=device.type_id, index=device.index)
-        tensor_lib.copy_storage_to_host(storage_ptr, ctypes.byref(c_device), size, host_buffer)
+        c_shape = (ctypes.c_int * ndim)(*shape)
+        c_strides = (ctypes.c_int * ndim)(*strides)
+        tensor_lib.copy_storage_to_host(storage_ptr, ctypes.byref(c_device), size, c_shape, c_strides, ndim, host_buffer)
 
     def c_zeros(tensor_ptr):
         return tensor_lib.zeros(tensor_ptr)
@@ -100,8 +102,7 @@ if tensor_lib:
         return tensor_lib.borrow(out_tensor_ptr, storage_ptr, grad_storage_ptr)
 
     def c_to(tensor_ptr, device: "Device"):
-        c_device = CDevice(type=device.type_id, index=device.index)
-        return tensor_lib.to(tensor_ptr, ctypes.byref(c_device))
+        return tensor_lib.to(tensor_ptr, device)
 
     # Gradient operations wrappers
     def c_add_grad_op_cpu(out_tensor_ptr, prev_tensor_ptrs, n_prev, extras):

@@ -28,6 +28,20 @@ static inline int idrak_is_debug_enabled(void)
         if (idrak_is_debug_enabled()) printf(GREEN "[INFO] " RESET msg "\n", ##__VA_ARGS__);       \
     } while (0)
 
+#define LOG_SCOPE(msg, ...)                                                                        \
+    do                                                                                             \
+    {                                                                                              \
+        if (idrak_is_debug_enabled())                                                              \
+            printf(BLUE "==================== " msg " ====================\n" RESET,               \
+                   ##__VA_ARGS__);                                                                 \
+    } while (0)
+
+#define LOG_DEBUG(msg, ...)                                                                        \
+    do                                                                                             \
+    {                                                                                              \
+        if (idrak_is_debug_enabled()) printf(BLUE "[DEBUG] " RESET msg "\n", ##__VA_ARGS__);       \
+    } while (0)
+
 #define LOG_WARN(msg, ...) printf(YELLOW "[WARNING] " RESET msg "\n", ##__VA_ARGS__)
 #define LOG_ERROR(msg, ...) printf(RED "[ERROR] " RESET msg "\n", ##__VA_ARGS__)
 

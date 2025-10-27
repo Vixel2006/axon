@@ -125,11 +125,3 @@ def sum(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: retu
 def mean(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Mean.create_node(a, dim=dim, keepdim=keepdim)
 def max(a: Tensor, dim: int | None = None, keepdim: bool = True) -> Tensor: return Max.create_node(a, dim=dim, keepdim=keepdim)
 
-if __name__ == "__main__":
-    a = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cpu")
-    
-    a_grad_flattened = a.grad.flatten()
-
-    a_grad_flattened.realize()
-    print(a_grad_flattened)
-    #b = from_data((2, 2, 2), [[[1, 2], [2, 3]], [[3, 4], [4, 5]]], device="cpu")
