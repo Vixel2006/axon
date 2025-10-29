@@ -1,7 +1,22 @@
 #include "ops/cuda/init.h" // For smalloc, gmalloc (if needed)
 #include "ops/cuda/unary.h"
 
-__global__ void relu_kernel(const float* a, float* b, int n)
+#include "utils/indexing.cuh"
+
+__global__ void noncontig_relu_kernel(const float* a, float* b, int n, const int* a_shape,
+                                      const int* a_strides, int a_ndim)
+{
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = idx; i < n; i += stride)
+    {
+        int a_idx = get_idx(a_shape, a_strides, a_ndim, i);
+        b[i] = fmaxf(a[a_idx], 0);
+    }
+}
+
+__global__ void contig_relu_kernel(const float* a, float* b, int n)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
@@ -40,7 +55,16 @@ extern "C" void relu_op_cuda(Tensor* in, Tensor* out)
         assert(0 && "Failed to allocate CUDA memory for out->data->data in relu_op_cuda");
     }
 
-    relu_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data, N);
+    if (is_contiguous(in))
+    {
+        contig_relu_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data,
+                                                                  N);
+    }
+    else
+    {
+        noncontig_relu_kernel<<<num_blocks, num_threads_per_block>>>(
+            in->data->data, out->data->data, N, in->shape, in->strides, in->ndim);
+    }
 
     CHECK_CUDA();
 }

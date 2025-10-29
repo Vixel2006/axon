@@ -1,7 +1,24 @@
 #include "ops/cuda/binary.h"
-#include "ops/cuda/init.h" // For smalloc, gmalloc (if needed)
+#include "ops/cuda/init.h"
+#include "utils/indexing.cuh"
 
-__global__ void add_kernel(const float* a, const float* b, float* out, const int n)
+__global__ void noncontig_add_kernel(const float* a, const float* b, float* out, const int n,
+                                     const int* a_shape, const int* a_strides, int a_ndim,
+                                     const int* b_shape, const int* b_strides, int b_ndim)
+{
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    for (int i = idx; i < n; i += stride)
+    {
+        int a_idx = get_idx(a_shape, a_strides, a_ndim, i);
+        int b_idx = get_idx(b_shape, b_strides, b_ndim, i);
+
+        out[i] = a[a_idx] + b[b_idx];
+    }
+}
+
+__global__ void contig_add_kernel(const float* a, const float* b, float* out, const int n)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
@@ -37,8 +54,18 @@ extern "C" void add_op_cuda(Tensor* a, Tensor* b, Tensor* out)
         assert(0 && "Failed to allocate CUDA memory for out->data->data in add_op_cuda");
     }
 
-    add_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data, out->data->data,
-                                                      N);
+    if (is_contiguous(a) && is_contiguous(b))
+    {
+
+        contig_add_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data,
+                                                                 out->data->data, N);
+    }
+    else
+    {
+        noncontig_add_kernel<<<num_blocks, num_threads_per_block>>>(
+            a->data->data, b->data->data, out->data->data, N, a->shape, a->strides, a->ndim,
+            b->shape, b->strides, b->ndim);
+    }
 
     CHECK_CUDA();
 

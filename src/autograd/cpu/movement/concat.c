@@ -1,6 +1,7 @@
 #include "autograd/autograd_movement.h"
 #include "logger.h"
 #include "tensor.h"
+#include "utils.h"
 #include <stdlib.h>
 
 #define SIMD_WIDTH 8
