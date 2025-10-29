@@ -33,27 +33,29 @@ extern "C"
         int M;
     } MatMulBackwardExtras;
 
-    AXON_EXPORT void add_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void sub_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void rsub_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void mul_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void div_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void rdiv_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void matmul_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void conv2d_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void dot_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void pow_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    // CPU Binary Ops
+    #include "autograd/cpu/binary/add.h"
+    #include "autograd/cpu/binary/sub.h"
+    #include "autograd/cpu/binary/rsub.h"
+    #include "autograd/cpu/binary/mul.h"
+    #include "autograd/cpu/binary/div.h"
+    #include "autograd/cpu/binary/rdiv.h"
+    #include "autograd/cpu/binary/matmul.h"
+    #include "autograd/cpu/binary/conv2d.h"
+    #include "autograd/cpu/binary/dot.h"
+    #include "autograd/cpu/binary/pow.h"
 
-    AXON_EXPORT void add_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void sub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void rsub_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void mul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void div_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void rdiv_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void conv2d_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void dot_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    // CUDA Binary Ops
+    #include "autograd/cuda/binary/add.h"
+    #include "autograd/cuda/binary/sub.h"
+    #include "autograd/cuda/binary/rsub.h"
+    #include "autograd/cuda/binary/mul.h"
+    #include "autograd/cuda/binary/pow.h"
+    #include "autograd/cuda/binary/div.h"
+    #include "autograd/cuda/binary/rdiv.h"
+    #include "autograd/cuda/binary/matmul.h"
+    #include "autograd/cuda/binary/conv2d.h"
+    #include "autograd/cuda/binary/dot.h"
 #ifdef __cplusplus
 }
 #endif

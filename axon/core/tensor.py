@@ -182,16 +182,14 @@ if __name__ == "__main__":
 
     #cuda_device_info(device)
 
-    a = from_data((2,2), [[2,3], [4,5]], device=device)
+    a = from_data((2,2), [[1,2], [3,4]]).to(device)
+    b = from_data((1,2), [[1,2]]).to(device)
 
-    x_max = max(a, dim=-1, keepdim=True)
+    c = a + b
 
-    d = x_max.broadcast((2,2))
+    c.backward()
 
-    d.realize()
-
-    print(x_max)
-    print(d.data)
-    print(d.c_tensor_ptr.contents.shape[0], d.c_tensor_ptr.contents.shape[1])
-    print(d.c_tensor_ptr.contents.strides[0], d.c_tensor_ptr.contents.strides[1])
+    print(c)
+    print(a.grad)
+    print(b.grad)
 

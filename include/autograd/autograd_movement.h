@@ -18,9 +18,12 @@ extern "C"
         int axis;
     } ConcatExtras;
 
-    AXON_EXPORT void concat_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    // CPU Movement Ops
+    #include "autograd/cpu/movement/concat.h"
 
-    AXON_EXPORT void concat_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    // CUDA Movement Ops
+    #include "autograd/cuda/movement/concat.h"
+
 #ifdef __cplusplus
 }
 #endif

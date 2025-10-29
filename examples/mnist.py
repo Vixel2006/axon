@@ -10,7 +10,7 @@ import axon.optim as optim
 from axon.utils.model_io import save_model, load_model
 from sklearn.datasets import fetch_openml
 
-#device = axon.Device("cuda")
+device = axon.Device("cuda")
 
 # ========== Initializing the dataset for the training ===============
 class Mnist(Dataset):
@@ -21,8 +21,8 @@ class Mnist(Dataset):
         y = y.astype(int)
         
         # Split data into training and testing sets (e.g., 60,000 for training, 10,000 for testing)
-        x_train, x_test = X[:60000], X[60000:]
-        y_train, y_test = y[:60000], y[60000:]
+        x_train, x_test = X[:64], X[64:]
+        y_train, y_test = y[:64], y[64:]
 
         if train:
             self.images = x_train
@@ -86,10 +86,10 @@ testset = Mnist(train=False)
 class FFNExperiment:
     name = "Feed Forward Network Model for MNIST"
     description = "Using a Feed forward network model with 2 layer and adam optimizer for classifying hand-written digits"
-    EPOCHS = 5
-    BATCH_SIZE = 64
+    EPOCHS = 25
+    BATCH_SIZE = 16
     LR = 0.01
-    model = nn.Pipeline(nn.Linear(784, 10), nn.LogSoftmax())#.to(device)
+    model = nn.Pipeline(nn.Linear(784, 10), nn.LogSoftmax()).to(device)
     optim = optim.Adam(model.params, lr=LR)
 
 # ======== Define the dataloader for the data =====================
@@ -120,8 +120,8 @@ def run_experiment():
     # Start the training loop
     for epoch in range(FFNExperiment.EPOCHS):
         for i, (images, labels) in enumerate(trainloader):
-            images = images#.to(device)
-            labels = labels#.to(device)
+            images = images.to(device)
+            labels = labels.to(device)
 
             optim.zero_grad()
 
@@ -179,5 +179,5 @@ def evaluate_experiment(experiment_id):
 
 if __name__ == "__main__":
     run_experiment()
-    evaluate_experiment("ua1893uae134")
+    #evaluate_experiment("ua1893uae134")
 

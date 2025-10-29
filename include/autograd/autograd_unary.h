@@ -9,29 +9,27 @@
 
 #include "axon_export.h" // Include the generated export header
 
-typedef struct
-{
-    float min_val;
-    float max_val;
-} ClipExtras;
+
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-    AXON_EXPORT void relu_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void abs_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void log_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void exp_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void neg_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void clip_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    // CPU Unary Ops
+    #include "autograd/cpu/unary/relu.h"
+    #include "autograd/cpu/unary/abs.h"
+    #include "autograd/cpu/unary/log.h"
+    #include "autograd/cpu/unary/exp.h"
+    #include "autograd/cpu/unary/neg.h"
+    #include "autograd/cpu/unary/clip.h"
 
-    AXON_EXPORT void relu_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void abs_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void log_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void exp_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void neg_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void clip_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    // CUDA Unary Ops
+    #include "autograd/cuda/unary/relu.h"
+    #include "autograd/cuda/unary/abs.h"
+    #include "autograd/cuda/unary/log.h"
+    #include "autograd/cuda/unary/exp.h"
+    #include "autograd/cuda/unary/neg.h"
+    #include "autograd/cuda/unary/clip.h"
 #ifdef __cplusplus
 }
 #endif

@@ -110,23 +110,68 @@ add_library(axon SHARED
   src/ops/cuda/unary/clip.cu
 
   # Remaining files (autograd, utils, optimizers)
-  src/autograd/cpu/binary_ops_grad_cpu.c
-  src/autograd/cpu/unary_ops_grad_cpu.c
-  src/autograd/cpu/reduction_ops_grad_cpu.c
   src/utils.c
-  src/autograd/autograd_utils.c 
+  src/utils/cuda/device_management.cu
+
+  # Autograd CPU
+  src/autograd/utils/autograd_utils.c
+  src/autograd/cpu/binary/add.c
+  src/autograd/cpu/binary/sub.c
+  src/autograd/cpu/binary/rsub.c
+  src/autograd/cpu/binary/mul.c
+  src/autograd/cpu/binary/pow.c
+  src/autograd/cpu/binary/div.c
+  src/autograd/cpu/binary/rdiv.c
+  src/autograd/cpu/binary/matmul.c
+  src/autograd/cpu/binary/conv2d.c
+  src/autograd/cpu/binary/dot.c
+  src/autograd/cpu/binary/utils.c
+  src/autograd/cpu/movement/concat.c
+  src/autograd/cpu/reduction/sum.c
+  src/autograd/cpu/reduction/mean.c
+  src/autograd/cpu/reduction/max.c
+  src/autograd/cpu/reduction/sum_full.c
+  src/autograd/cpu/reduction/mean_full.c
+  src/autograd/cpu/reduction/max_full.c
+  src/autograd/cpu/unary/relu.c
+  src/autograd/cpu/unary/log.c
+  src/autograd/cpu/unary/exp.c
+  src/autograd/cpu/unary/abs.c
+  src/autograd/cpu/unary/neg.c
+  src/autograd/cpu/unary/clip.c
+
+  # Autograd CUDA
+  src/autograd/cuda/binary/add.cu
+  src/autograd/cuda/binary/sub.cu
+  src/autograd/cuda/binary/rsub.cu
+  src/autograd/cuda/binary/mul.cu
+  src/autograd/cuda/binary/pow.cu
+  src/autograd/cuda/binary/div.cu
+  src/autograd/cuda/binary/rdiv.cu
+  src/autograd/cuda/binary/matmul.cu
+  src/autograd/cuda/binary/conv2d.cu
+  src/autograd/cuda/binary/dot.cu
+  src/autograd/cuda/movement/concat.cu
+  src/autograd/cuda/reduction/sum.cu
+  src/autograd/cuda/reduction/mean.cu
+  src/autograd/cuda/reduction/max.cu
+  src/autograd/cuda/reduction/sum_full.cu
+  src/autograd/cuda/reduction/mean_full.cu
+  src/autograd/cuda/reduction/max_full.cu
+  src/autograd/cuda/unary/relu.cu
+  src/autograd/cuda/unary/log.cu
+  src/autograd/cuda/unary/exp.cu
+  src/autograd/cuda/unary/abs.cu
+  src/autograd/cuda/unary/neg.cu
+  src/autograd/cuda/unary/clip.cu
+
+  # Optimizers
   src/optimizers/cpu/sgd.c
   src/optimizers/cpu/adam.c
   src/optimizers/cpu/zero_grad.c
-  src/autograd/cpu/movement_ops_grad_cpu.c
-  src/autograd/cuda/binary_ops_grad_cuda.cu
-  src/autograd/cuda/reduction_ops_grad_cuda.cu
-  src/autograd/cuda/movement_ops_grad_cuda.cu
-  src/autograd/cuda/unary_ops_grad_cuda.cu
   src/optimizers/cuda/sgd_cuda.cu
   src/optimizers/cuda/adam_cuda.cu
   src/optimizers/cuda/zero_grad_cuda.cu
-  src/utils/cuda/device_management.cu
 )
 
 target_include_directories(axon PUBLIC include ${SLEEF_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${CMAKE_BINARY_DIR})

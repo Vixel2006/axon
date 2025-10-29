@@ -1,21 +1,5 @@
-#include "autograd/autograd_movement.h"
-#include "logger.h"
-#include "tensor.h"
-#include <assert.h>
-#include <cuda_runtime.h>
-#include <stdlib.h>
-
-#define CHECK_CUDA()                                                                               \
-    do                                                                                             \
-    {                                                                                              \
-        cudaError_t err = cudaGetLastError();                                                      \
-        if (err != cudaSuccess)                                                                    \
-        {                                                                                          \
-            LOG_ERROR("CUDA runtime error at %s:%d: %s", __FILE__, __LINE__,                       \
-                      cudaGetErrorString(err));                                                    \
-            assert(0 && "CUDA runtime error");                                                     \
-        }                                                                                          \
-    } while (0)
+#include "autograd/cuda/movement/common.cuh"
+#include "utils/indexing.cuh"
 
 __global__ void concat_grad_kernel_contiguous(const float* out_grad, float* prev_grad,
                                               size_t outer_size, size_t prev_concat_axis_size,

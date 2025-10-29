@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "autograd/autograd_utils.h"
+#include "autograd_utils.h"
 #include "axon_export.h" // Include the generated export header
 #include "logger.h"
 #include "ops/init_ops.h"
@@ -15,19 +15,21 @@
 extern "C"
 {
 #endif
-    AXON_EXPORT void sum_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void mean_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void max_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void sum_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void mean_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void max_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    // CPU Reduction Ops
+    #include "autograd/cpu/reduction/sum.h"
+    #include "autograd/cpu/reduction/mean.h"
+    #include "autograd/cpu/reduction/max.h"
+    #include "autograd/cpu/reduction/sum_full.h"
+    #include "autograd/cpu/reduction/mean_full.h"
+    #include "autograd/cpu/reduction/max_full.h"
 
-    AXON_EXPORT void sum_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void mean_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void max_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void sum_full_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void mean_full_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
-    AXON_EXPORT void max_full_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras);
+    // CUDA Reduction Ops
+    #include "autograd/cuda/reduction/sum.h"
+    #include "autograd/cuda/reduction/mean.h"
+    #include "autograd/cuda/reduction/max.h"
+    #include "autograd/cuda/reduction/sum_full.h"
+    #include "autograd/cuda/reduction/mean_full.h"
+    #include "autograd/cuda/reduction/max_full.h"
 #ifdef __cplusplus
 }
 #endif

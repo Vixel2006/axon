@@ -1,0 +1,93 @@
+#include "autograd/cuda/binary/common.cuh"
+#include "utils/indexing.cuh"
+
+__global__ void mul_grad_kernel(const float* out_grad, float* prev_grad, float* other_data, int n)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = idx; i < n; i += stride)
+    {
+        prev_grad[i] += out_grad[i] * other_data[i];
+    }
+}
+
+__global__ void scalar_mul_grad_kernel(const float* out_grad, float* prev_grad, float scalar, int n)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = idx; i < n; i += stride)
+    {
+        prev_grad[i] += out_grad[i] * scalar;
+    }
+}
+
+void mul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
+{
+    LOG_INFO("mul_grad_op_cuda: Entering function with n_prev=%d", n_prev);
+
+    assert(out && "Output tensor cannot be NULL");
+    assert(out->grad && "Output tensor gradient cannot be NULL");
+    assert(out->grad->data && "Output tensor gradient data cannot be NULL");
+    assert(out->grad->data->data && "Output tensor gradient data pointer cannot be NULL");
+    assert(prev && "Previous tensors array cannot be NULL");
+    assert((n_prev == 1 || n_prev == 2) && "n_prev must be 1 or 2 for mul_grad_op_cuda");
+
+    int N = numel(out->shape, out->ndim);
+    int num_threads_per_block = 256;
+    int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
+
+    if (n_prev == 1)
+    {
+        assert(extras && "Extras (scalar value) cannot be NULL for scalar multiplication");
+        float* scalar = (float*) extras;
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
+        if (prev[0]->requires_grad)
+        {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
+            scalar_mul_grad_kernel<<<num_blocks, num_threads_per_block>>>(
+                out->grad->data->data, prev[0]->grad->data->data, *scalar, N);
+            CHECK_CUDA();
+        }
+    }
+    else
+    {
+        assert(prev[0] && "Previous tensor 0 cannot be NULL");
+        assert(prev[0]->data && "Previous tensor 0 data cannot be NULL");
+        assert(prev[0]->data->data && "Previous tensor 0 data pointer cannot be NULL");
+        assert(prev[1] && "Previous tensor 1 cannot be NULL");
+        assert(prev[1]->data && "Previous tensor 1 data cannot be NULL");
+        assert(prev[1]->data->data && "Previous tensor 1 data pointer cannot be NULL");
+
+        if (prev[0]->requires_grad)
+        {
+            assert(prev[0]->grad && "Previous tensor 0 gradient cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data &&
+                   "Previous tensor 0 gradient data cannot be NULL if requires_grad");
+            assert(prev[0]->grad->data->data &&
+                   "Previous tensor 0 gradient data pointer cannot be NULL if requires_grad");
+            mul_grad_kernel<<<num_blocks, num_threads_per_block>>>(
+                out->grad->data->data, prev[0]->grad->data->data, prev[1]->data->data, N);
+            CHECK_CUDA();
+        }
+
+        if (prev[1]->requires_grad)
+        {
+            assert(prev[1]->grad && "Previous tensor 1 gradient cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data &&
+                   "Previous tensor 1 gradient data cannot be NULL if requires_grad");
+            assert(prev[1]->grad->data->data &&
+                   "Previous tensor 1 gradient data pointer cannot be NULL if requires_grad");
+            mul_grad_kernel<<<num_blocks, num_threads_per_block>>>(
+                out->grad->data->data, prev[1]->grad->data->data, prev[0]->data->data, N);
+            CHECK_CUDA();
+        }
+    }
+}
