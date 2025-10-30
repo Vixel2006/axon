@@ -9,7 +9,7 @@ extern "C"
 {
 #endif
 
-    Storage* smalloc_cuda(float* data, int size, Device* device);
+    Storage* smalloc_cuda(float* data, int size, Device* device, Device* src_device);
     void sfree_cuda(Storage* s, Device* device);
     void copy_non_contiguous_cuda_to_host_kernel(float* d_data, const int* shape,
                                                  const int* strides, int ndim, int num_elements,

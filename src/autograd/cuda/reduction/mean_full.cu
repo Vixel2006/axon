@@ -1,11 +1,12 @@
 #include "autograd/cuda/reduction/common.cuh"
+#include "autograd/cuda/reduction/reduction_ops_cuda.h"
 #include "utils/indexing.cuh"
 
 __global__ void mean_full_grad_kernel(float* in_grad_data, float* output_grad, int in_size,
                                       const int* in_grad_shape, const int* in_grad_strides,
                                       int in_grad_ndim)
 {
-    int idx = blockIdx.x * blockIdx.x + threadIdx.x;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = idx; i < in_size; i += stride)

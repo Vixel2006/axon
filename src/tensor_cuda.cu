@@ -57,7 +57,7 @@ void copy_non_contiguous_cuda_to_host(Storage* s, const int* shape, const int* s
     cudaFree(d_staging_buffer);
 }
 
-Storage* smalloc_cuda(float* data, int size, Device* device)
+Storage* smalloc_cuda(float* data, int size, Device* device, Device* src_device)
 {
     LOG_INFO("smalloc_cuda: Entering function with size=%d", size);
 
@@ -97,7 +97,15 @@ Storage* smalloc_cuda(float* data, int size, Device* device)
 
     if (data != NULL)
     {
-        err = cudaMemcpy(s->data, data, size * sizeof(float), cudaMemcpyHostToDevice);
+        if (src_device->type == CPU)
+        {
+            err = cudaMemcpy(s->data, data, size * sizeof(float), cudaMemcpyHostToDevice);
+        }
+        else // CUDA to CUDA copy (or device to device)
+        {
+            err = cudaMemcpy(s->data, data, size * sizeof(float), cudaMemcpyDeviceToDevice);
+        }
+
         if (err != cudaSuccess)
         {
             LOG_ERROR("smalloc_cuda: Failed to copy data to CUDA device %d: %s", device->index,

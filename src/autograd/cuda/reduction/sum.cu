@@ -1,4 +1,5 @@
 #include "autograd/cuda/reduction/common.cuh"
+#include "autograd/cuda/reduction/reduction_ops_cuda.h"
 #include "utils/indexing.cuh"
 
 __global__ void sum_grad_kernel(const float* out_grad, float* in_grad, const int* shape, int ndim,
@@ -26,7 +27,7 @@ __global__ void sum_grad_kernel(const float* out_grad, float* in_grad, const int
         strides *= shape[d];
     }
     int in_grad_idx = get_idx(in_grad_shape, in_grad_strides, in_grad_ndim, idx);
-    in_grad[in_grad_idx] = out_grad[out_offset];
+    in_grad[in_grad_idx] += out_grad[out_offset];
 }
 
 void sum_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
@@ -54,7 +55,7 @@ void sum_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
     int N = numel(a->shape, a->ndim);
 
     int num_threads_per_block = 256;
-    int num_blocks = (N + num_threads_per_block - 1) / N;
+    int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     if (a->requires_grad)
     {

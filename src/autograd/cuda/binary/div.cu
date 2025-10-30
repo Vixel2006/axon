@@ -4,7 +4,7 @@
 __global__ void numerator_div_grad_kernel(const float* out_grad, float* prev_grad,
                                           const float* denominator, int n)
 {
-    int idx = blockDim.x * blockDim.x + threadIdx.x;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
 
     for (int i = idx; i < n; i += stride)
@@ -30,7 +30,7 @@ __global__ void noncontig_numerator_div_grad_kernel(const float* out_grad, float
 __global__ void denominator_div_grad_kernel(const float* out_grad, const float* out_data,
                                             float* prev_grad, float* denominator, int n)
 {
-    int idx = blockDim.x * blockDim.x + threadIdx.x;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
 
     for (int i = idx; i < n; i += stride)

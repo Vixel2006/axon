@@ -127,13 +127,16 @@ Storage* smalloc(float* data, int size, Device* device)
         return NULL;
     }
 
+    // Create a dummy CPU device for the source if data is provided from host
+    Device host_device = {CPU, 0, 1}; // Assuming host data is always from CPU device 0
+
     if (device->type == CPU)
     {
-        return smalloc_cpu(data, size, device);
+        return smalloc_cpu(data, size, device, data != NULL ? &host_device : NULL);
     }
     else if (device->type == CUDA)
     {
-        return smalloc_cuda(data, size, device);
+        return smalloc_cuda(data, size, device, data != NULL ? &host_device : NULL);
     }
     else
     {
@@ -177,11 +180,11 @@ void to(Tensor* t, Device* device)
 
     if (device->type == CUDA)
     {
-        dbuffer = smalloc_cuda(t->data->data, t->data->size, device);
+        dbuffer = smalloc_cuda(t->data->data, t->data->size, device, old_device);
     }
     else
     {
-        dbuffer = smalloc_cpu(t->data->data, t->data->size, device);
+        dbuffer = smalloc_cpu(t->data->data, t->data->size, device, old_device);
     }
 
     if (t->data)
@@ -206,11 +209,11 @@ void to(Tensor* t, Device* device)
         Storage* gbuffer = NULL;
         if (device->type == CUDA)
         {
-            gbuffer = smalloc_cuda(t->grad->data->data, t->grad->data->size, device);
+            gbuffer = smalloc_cuda(t->grad->data->data, t->grad->data->size, device, old_device);
         }
         else
         {
-            gbuffer = smalloc_cpu(t->grad->data->data, t->grad->data->size, device);
+            gbuffer = smalloc_cpu(t->grad->data->data, t->grad->data->size, device, old_device);
         }
         if (old_device->type == CPU)
         {

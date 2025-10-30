@@ -1,9 +1,9 @@
 #include "logger.h"
-#include "optimizers/optimizers.h"
 
 #include "cuda_utils.h"
 #include "logger.h"
 #include "optimizers/optimizers.h"
+#include "utils/indexing.cuh"
 #include <cuda_runtime.h>
 
 #define CHECK_CUDA(err)                                                                            \
@@ -35,14 +35,8 @@ __global__ void sgd_kernel_noncontig(float* param_data, float* param_grad, float
 
     for (int i = idx; i < n; i += stride)
     {
-        int current_k = i;
-        int data_idx = 0;
-        for (int d = ndim - 1; d >= 0; --d)
-        {
-            int dim_idx = current_k % shape[d];
-            data_idx += dim_idx * strides[d];
-            current_k /= shape[d];
-        }
+        int data_idx = get_idx(shape, strides, ndim, i);
+
         param_data[data_idx] -= lr * param_grad[data_idx];
     }
 }

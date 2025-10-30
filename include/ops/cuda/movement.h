@@ -11,7 +11,7 @@
     {                                                                                              \
         if (err != cudaSuccess)                                                                    \
         {                                                                                          \
-            LOG_ERROR("cuda-runtime error at %s %d: %s", __FILE__, __LINE__,                       \
+            LOG_ERROR("CUDA runtime error at %s:%d: %s", __FILE__, __LINE__,                       \
                       cudaGetErrorString(err));                                                    \
             assert(0 && "CUDA runtime error");                                                     \
         }                                                                                          \

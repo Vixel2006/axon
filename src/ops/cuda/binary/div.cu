@@ -5,7 +5,8 @@
 
 __global__ void noncontig_div_kernel(const float* a, const float* b, float* out, const int n,
                                      const int* a_shape, const int* a_strides, int a_ndim,
-                                     const int* b_shape, const int* b_strides, int b_ndim)
+                                     const int* b_shape, const int* b_strides, int b_ndim,
+                                     const int* out_shape, const int* out_strides, int out_ndim)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
@@ -14,8 +15,9 @@ __global__ void noncontig_div_kernel(const float* a, const float* b, float* out,
     {
         int a_idx = get_idx(a_shape, a_strides, a_ndim, i);
         int b_idx = get_idx(b_shape, b_strides, b_ndim, i);
+        int out_idx = get_idx(out_shape, out_strides, out_ndim, i);
 
-        out[i] = a[a_idx] / (b[b_idx] + 1e-7f);
+        out[out_idx] = a[a_idx] / (b[b_idx] + 1e-7f);
     }
 }
 
@@ -56,7 +58,7 @@ extern "C" void div_op_cuda(Tensor* a, Tensor* b, Tensor* out)
         assert(0 && "Failed to allocate CUDA memory for out->data->data in div_op_cuda");
     }
 
-    if (is_contiguous(a) && is_contiguous(b))
+    if (is_contiguous(a) && is_contiguous(b) && is_contiguous(out))
     {
         contig_div_kernel<<<num_blocks, num_threads_per_block>>>(a->data->data, b->data->data,
                                                                  out->data->data, N);
@@ -65,7 +67,7 @@ extern "C" void div_op_cuda(Tensor* a, Tensor* b, Tensor* out)
     {
         noncontig_div_kernel<<<num_blocks, num_threads_per_block>>>(
             a->data->data, b->data->data, out->data->data, N, a->shape, a->strides, a->ndim,
-            b->shape, b->strides, b->ndim);
+            b->shape, b->strides, b->ndim, out->shape, out->strides, out->ndim);
     }
 
     CHECK_CUDA();

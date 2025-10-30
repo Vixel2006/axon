@@ -1,4 +1,5 @@
 #include "autograd/cuda/reduction/common.cuh"
+#include "autograd/cuda/reduction/reduction_ops_cuda.h"
 #include "utils/indexing.cuh"
 
 // WARNING: This kernel is very stupid, there is million places it can do warp divergence in.
@@ -45,7 +46,8 @@ __global__ void max_grad_kernel(const float* out_grad, float* in_grad, const flo
             }
         }
 
-        if (in_data[in_offset] == out_data[out_offset])
+        // Use an epsilon-based comparison for floating-point equality
+        if (fabsf(in_data[in_offset] - out_data[out_offset]) < EPSILON)
         {
             int in_grad_idx = get_idx(in_grad_shape, in_grad_strides, in_grad_ndim, i);
             in_grad[in_grad_idx] += out_grad[out_offset];

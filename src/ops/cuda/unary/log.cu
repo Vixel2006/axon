@@ -4,7 +4,8 @@
 #include "utils/indexing.cuh"
 
 __global__ void noncontig_log_kernel(const float* a, float* b, int n, const int* a_shape,
-                                     const int* a_strides, int a_ndim)
+                                     const int* a_strides, int a_ndim, const int* out_shape,
+                                     const int* out_strides, int out_ndim)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
@@ -12,7 +13,8 @@ __global__ void noncontig_log_kernel(const float* a, float* b, int n, const int*
     for (int i = idx; i < n; i += stride)
     {
         int a_idx = get_idx(a_shape, a_strides, a_ndim, i);
-        b[i] = logf(a[a_idx] + 1e-7f);
+        int out_idx = get_idx(out_shape, out_strides, out_ndim, i);
+        b[out_idx] = logf(a[a_idx] + 1e-7f);
     }
 }
 
@@ -53,15 +55,17 @@ extern "C" void log_op_cuda(Tensor* in, Tensor* out)
         assert(0 && "Failed to allocate CUDA memory for out->data->data in log_op_cuda");
     }
 
-    if (is_contiguous(in))
+    if (is_contiguous(in) && is_contiguous(out))
     {
         contig_log_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data,
                                                                  N);
     }
     else
     {
-        noncontig_log_kernel<<<num_blocks, num_threads_per_block>>>(
-            in->data->data, out->data->data, N, in->shape, in->strides, in->ndim);
+        noncontig_log_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data,
+                                                                 N, in->shape, in->strides,
+                                                                 in->ndim, out->shape, out->strides,
+                                                                 out->ndim);
     }
 
     CHECK_CUDA();

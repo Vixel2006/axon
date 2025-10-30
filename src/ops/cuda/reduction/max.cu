@@ -51,7 +51,7 @@ __global__ void max_kernel(float* a, float* out, int n, int axis_dim, int inner_
     if (tid == 0)
     {
         int output_idx = outer_idx * inner_dim + inner_idx;
-        out[output_idx] = fmaxf(out[output_idx], rdata[0]);
+        out[output_idx] = rdata[0];
     }
 }
 

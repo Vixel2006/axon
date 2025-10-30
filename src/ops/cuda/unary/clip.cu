@@ -5,7 +5,8 @@
 
 __global__ void noncontig_clip_kernel(const float* a, float* b, const float min_val,
                                       const float max_val, int n, const int* a_shape,
-                                      const int* a_strides, int a_ndim)
+                                      const int* a_strides, int a_ndim, const int* out_shape,
+                                      const int* out_strides, int out_ndim)
 {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
@@ -13,7 +14,8 @@ __global__ void noncontig_clip_kernel(const float* a, float* b, const float min_
     for (int i = idx; i < n; i += stride)
     {
         int a_idx = get_idx(a_shape, a_strides, a_ndim, i);
-        b[i] = fmaxf(min_val, fminf(max_val, a[a_idx]));
+        int out_idx = get_idx(out_shape, out_strides, out_ndim, i);
+        b[out_idx] = fmaxf(min_val, fminf(max_val, a[a_idx]));
     }
 }
 
@@ -57,7 +59,7 @@ extern "C" void clip_op_cuda(Tensor* in, Tensor* out, float min_val, float max_v
         assert(0 && "Failed to allocate CUDA memory for out->data->data in clip_op_cuda");
     }
 
-    if (is_contiguous(in))
+    if (is_contiguous(in) && is_contiguous(out))
     {
         contig_clip_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data,
                                                                   min_val, max_val, N);
@@ -65,7 +67,8 @@ extern "C" void clip_op_cuda(Tensor* in, Tensor* out, float min_val, float max_v
     else
     {
         noncontig_clip_kernel<<<num_blocks, num_threads_per_block>>>(
-            in->data->data, out->data->data, min_val, max_val, N, in->shape, in->strides, in->ndim);
+            in->data->data, out->data->data, min_val, max_val, N, in->shape, in->strides, in->ndim,
+            out->shape, out->strides, out->ndim);
     }
 
     CHECK_CUDA();
