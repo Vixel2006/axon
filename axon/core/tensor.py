@@ -191,5 +191,4 @@ if __name__ == "__main__":
 
     print(c)
     print(a.grad)
-    print(b.grad)
 

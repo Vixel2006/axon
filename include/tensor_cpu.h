@@ -9,7 +9,7 @@ extern "C"
 {
 #endif
 
-    Storage* smalloc_cpu(float* data, int size, Device* device);
+    Storage* smalloc_cpu(float* data, int size, Device* device, Device* src_device);
     void sfree_cpu(Storage* s, Device* device);
 
 #ifdef __cplusplus

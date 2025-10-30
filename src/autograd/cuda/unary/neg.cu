@@ -1,4 +1,5 @@
 #include "autograd/cuda/unary/common.cuh"
+#include "autograd/cuda/unary/unary_ops_cuda.h"
 #include "utils/indexing.cuh"
 
 __global__ void neg_grad_kernel(const float* out_grad, float* prev_grad, int n)

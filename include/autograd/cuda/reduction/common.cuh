@@ -1,13 +1,13 @@
-#ifndef AUTOGRAD_CUDA_REDUCTION_COMMON_CUH
-#define AUTOGRAD_CUDA_REDUCTION_COMMON_CUH
+#ifndef AXON_AUTOGRAD_CUDA_REDUCTION_COMMON_CUH
+#define AXON_AUTOGRAD_CUDA_REDUCTION_COMMON_CUH
 
-#include "autograd/autograd_reduction.h"
-#include "cuda_utils.h" // For CHECK_CUDA
 #include "logger.h"
 #include "tensor.h"
-#include "utils.h" // For numel
+#include "utils/indexing.cuh"
 #include <assert.h>
-#include <cuda_runtime.h>
+#include <math.h>
+
+const float EPSILON = 1e-5f;
 
 #define CHECK_CUDA()                                                                               \
     do                                                                                             \
@@ -31,8 +31,8 @@ __global__ void sum_full_grad_kernel(float* in_grad_data, float* output_grad, in
                                      const int* in_grad_shape, const int* in_grad_strides,
                                      int in_grad_ndim);
 __global__ void mean_full_grad_kernel(float* in_grad_data, float* output_grad, int in_size,
-                                     const int* in_grad_shape, const int* in_grad_strides,
-                                     int in_grad_ndim);
+                                      const int* in_grad_shape, const int* in_grad_strides,
+                                      int in_grad_ndim);
 __global__ void max_full_grad_kernel(float* in_grad_data, float* in_data, float* output_grad,
                                      int in_size, float* max, const int* in_grad_shape,
                                      const int* in_grad_strides, int in_grad_ndim);
@@ -48,4 +48,4 @@ __global__ void max_grad_kernel(const float* out_grad, float* in_grad, const flo
                                 int n, const int* in_grad_shape, const int* in_grad_strides,
                                 int in_grad_ndim);
 
-#endif // AUTOGRAD_CUDA_REDUCTION_COMMON_CUH
+#endif // AXON_AUTOGRAD_CUDA_REDUCTION_COMMON_CUH

@@ -1,5 +1,6 @@
 #include "autograd/autograd_utils.h"
 #include "autograd/cuda/unary/common.cuh"
+#include "autograd/cuda/unary/unary_ops_cuda.h"
 #include "utils/indexing.cuh"
 
 __global__ void clip_grad_kernel(const float* out_grad, const float* prev_data, float* prev_grad,
@@ -11,7 +12,7 @@ __global__ void clip_grad_kernel(const float* out_grad, const float* prev_data, 
     for (int i = idx; i < n; i += stride)
     {
         float x = prev_data[i];
-        float mask = (prev_data[i] >= min_val) & (x <= max_val);
+        float mask = (prev_data[i] >= min_val) && (x <= max_val);
         prev_grad[i] += out_grad[i] * mask;
     }
 }
@@ -27,7 +28,7 @@ __global__ void noncontig_clip_grad_kernel(const float* out_grad, const float* p
     {
         int in_idx = get_idx(shape, strides, ndim, i);
         float x = prev_data[in_idx];
-        float mask = (prev_data[in_idx] >= min_val) & (x <= max_val);
+        float mask = (prev_data[in_idx] >= min_val) && (x <= max_val);
         prev_grad[in_idx] += out_grad[i] * mask;
     }
 }

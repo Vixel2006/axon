@@ -5,7 +5,7 @@ __global__ void scalar_rdiv_grad_kernel(const float* out_grad, const float* out_
                                         float* prev_grad, float scalar_numerator,
                                         const float* prev_data, int n)
 {
-    int idx = blockDim.x * blockDim.x + threadIdx.x;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = gridDim.x * blockDim.x;
 
     for (int i = idx; i < n; i += stride)

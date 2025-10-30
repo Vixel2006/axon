@@ -1,5 +1,20 @@
 #include "ops/cuda/binary.h"
-#include "ops/cuda/init.h" // For smalloc, gmalloc (if needed)
+#include "ops/cuda/init.h"
+#include "utils/indexing.cuh"
+
+__global__ void copy_non_contiguous_to_contiguous_kernel(const float* in_data, float* out_data,
+                                                         const int* shape, const int* strides,
+                                                         int ndim, int num_elements)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
+
+    for (int i = idx; i < num_elements; i += stride)
+    {
+        int in_idx = get_idx(shape, strides, ndim, i);
+        out_data[i] = in_data[in_idx];
+    }
+}
 
 __global__ void matmul_kernel(const float* a, const float* b, float* out, const int N, const int M,
                               const int K)
@@ -70,12 +85,51 @@ extern "C" void matmul_op_cuda(Tensor* a, Tensor* b, Tensor* out, int N, int K, 
         assert(0 && "Failed to allocate CUDA memory for out->data->data in matmul_op_cuda");
     }
 
+    float* a_data_ptr = a->data->data;
+    float* b_data_ptr = b->data->data;
+    float* a_temp_data = NULL;
+    float* b_temp_data = NULL;
+
+    int num_elements_a = numel(a->shape, a->ndim);
+    int num_elements_b = numel(b->shape, b->ndim);
+
+    int num_threads_per_block = 256;
+    int num_blocks_a = (num_elements_a + num_threads_per_block - 1) / num_threads_per_block;
+    int num_blocks_b = (num_elements_b + num_threads_per_block - 1) / num_threads_per_block;
+
+    if (!is_contiguous(a))
+    {
+        cudaMalloc((void**) &a_temp_data, num_elements_a * sizeof(float));
+        copy_non_contiguous_to_contiguous_kernel<<<num_blocks_a, num_threads_per_block>>>(
+            a->data->data, a_temp_data, a->shape, a->strides, a->ndim, num_elements_a);
+        a_data_ptr = a_temp_data;
+        CHECK_CUDA();
+    }
+
+    if (!is_contiguous(b))
+    {
+        cudaMalloc((void**) &b_temp_data, num_elements_b * sizeof(float));
+        copy_non_contiguous_to_contiguous_kernel<<<num_blocks_b, num_threads_per_block>>>(
+            b->data->data, b_temp_data, b->shape, b->strides, b->ndim, num_elements_b);
+        b_data_ptr = b_temp_data;
+        CHECK_CUDA();
+    }
+
     dim3 block(TILE_DIM, TILE_DIM);
     dim3 grid((P + TILE_DIM - 1) / TILE_DIM, (N + TILE_DIM - 1) / TILE_DIM, B);
 
-    matmul_kernel<<<grid, block>>>(a->data->data, b->data->data, out->data->data, N, P, K);
+    matmul_kernel<<<grid, block>>>(a_data_ptr, b_data_ptr, out->data->data, N, P, K);
 
     CHECK_CUDA();
+
+    if (a_temp_data)
+    {
+        cudaFree(a_temp_data);
+    }
+    if (b_temp_data)
+    {
+        cudaFree(b_temp_data);
+    }
 
     LOG_INFO("MATMUL kernel done successfully");
 }

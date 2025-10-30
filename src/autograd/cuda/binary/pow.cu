@@ -62,7 +62,7 @@ __global__ void exponent_pow_grad_kernel(const float* out_grad, const float* out
 
     for (int i = idx; i < n; i += stride)
     {
-        power_grad[i] += out_data[i] * logf(base_data[i] + 1e-7f);
+        power_grad[i] += out_grad[i] * out_data[i] * logf(base_data[i] + 1e-7f);
     }
 }
 
@@ -76,7 +76,7 @@ __global__ void noncontig_exponent_pow_grad_kernel(const float* out_grad, const 
     for (int i = idx; i < n; i += stride)
     {
         int in_idx = get_idx(shape, strides, ndim, i);
-        power_grad[in_idx] += out_data[i] * logf(base_data[in_idx] + 1e-7f);
+        power_grad[in_idx] += out_grad[i] * out_data[i] * logf(base_data[in_idx] + 1e-7f);
     }
 }
 

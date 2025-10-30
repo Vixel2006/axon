@@ -1,5 +1,45 @@
 #include "autograd/cuda/reduction/common.cuh"
-#include "utils/indexing.cuh"
+#include "autograd/cuda/reduction/reduction_ops_cuda.h"
+#include "ops/cuda/init.h" // For smalloc, gmalloc (if needed)
+#include "ops/cuda/reduction.h"
+#include <float.h>
+
+template <int block_size> __global__ void full_max_kernel(float* a, float* out, int n)
+{
+    extern __shared__ float sdata[];
+
+    unsigned int tid = threadIdx.x;
+    unsigned int i = blockIdx.x * (block_size * 2) + tid;
+    unsigned int gridSize = block_size * 2 * gridDim.x;
+
+    sdata[tid] = -FLT_MAX; // Initialize with smallest possible float
+
+    while (i < n)
+    {
+        sdata[tid] = fmaxf(sdata[tid], a[i]);
+        if (i + block_size < n)
+        {
+            sdata[tid] = fmaxf(sdata[tid], a[i + block_size]);
+        }
+        i += gridSize;
+    }
+    __syncthreads();
+
+    // Perform reduction in shared memory
+    for (unsigned int s = block_size / 2; s > 0; s >>= 1)
+    {
+        if (tid < s)
+        {
+            sdata[tid] = fmaxf(sdata[tid], sdata[tid + s]);
+        }
+        __syncthreads();
+    }
+
+    if (tid == 0)
+    {
+        out[blockIdx.x] = sdata[0];
+    }
+}
 
 __global__ void max_full_grad_kernel(float* in_grad_data, float* in_data, float* output_grad,
                                      int in_size, float* max, const int* in_grad_shape,
@@ -11,7 +51,11 @@ __global__ void max_full_grad_kernel(float* in_grad_data, float* in_data, float*
     for (int i = idx; i < in_size; i += stride)
     {
         int in_grad_idx = get_idx(in_grad_shape, in_grad_strides, in_grad_ndim, i);
-        in_grad_data[in_grad_idx] += (float) (in_data[i] == max[0]) * output_grad[0];
+        // Use an epsilon-based comparison for floating-point equality
+        if (fabsf(in_data[i] - max[0]) < EPSILON)
+        {
+            in_grad_data[in_grad_idx] += output_grad[0];
+        }
     }
 }
 

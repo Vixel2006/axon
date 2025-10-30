@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-Storage* smalloc_cpu(float* data, int size, Device* device)
+Storage* smalloc_cpu(float* data, int size, Device* device, Device* src_device)
 {
     LOG_INFO("smalloc_cpu: Entering function with size=%d", size);
     if (!device)
@@ -36,8 +36,23 @@ Storage* smalloc_cpu(float* data, int size, Device* device)
 
     if (data != NULL)
     {
-        for (int i = 0; i < size; ++i)
-            s->data[i] = data[i];
+        if (src_device->type == CUDA)
+        {
+            cudaError_t err = cudaMemcpy(s->data, data, size * sizeof(float), cudaMemcpyDeviceToHost);
+            if (err != cudaSuccess)
+            {
+                LOG_ERROR("smalloc_cpu: Failed to copy data from CUDA device %d to host: %s",
+                          src_device->index, cudaGetErrorString(err));
+                free(s->data);
+                free(s);
+                assert(0 && "smalloc_cpu: Failed to copy data from CUDA device to host");
+            }
+        }
+        else // CPU to CPU copy
+        {
+            for (int i = 0; i < size; ++i)
+                s->data[i] = data[i];
+        }
     }
     else
     {

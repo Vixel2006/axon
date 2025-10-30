@@ -1,6 +1,8 @@
 #include "logger.h"
 #include "optimizers/optimizers.h"
+#include "utils/indexing.cuh"
 #include <cuda_runtime.h>
+#include <math.h>
 
 #define CHECK_CUDA(err)                                                                            \
     do                                                                                             \
@@ -17,10 +19,10 @@ __device__ inline float adam_update(float param_grad, float m_estimate, float v_
                                     float lr, float epsilon)
 {
     m_estimate = beta1 * m_estimate + (1.0f - beta1) * param_grad;
-    v_estimate = beta2 * v_estimate + (1.0f - beta2) * powf(param_grad, 2);
+    v_estimate = beta2 * v_estimate + (1.0f - beta2) * (param_grad * param_grad);
     float m_hat = m_estimate / (1.0f - beta1_pow_t);
     float v_hat = v_estimate / (1.0f - beta2_pow_t);
-    return lr * m_hat / (rsqrtf(v_hat) + epsilon);
+    return lr * m_hat / (sqrtf(v_hat) + epsilon);
 }
 
 __global__ void adam_kernel_contig(float* param_data, float* param_grad, float* m_estimates,
@@ -37,12 +39,13 @@ __global__ void adam_kernel_contig(float* param_data, float* param_grad, float* 
         float v_estimate = v_estimates[i];
 
         m_estimate = beta1 * m_estimate + (1.0f - beta1) * current_param_grad;
-        v_estimate = beta2 * v_estimate + (1.0f - beta2) * powf(current_param_grad, 2);
+        v_estimate =
+            beta2 * v_estimate + (1.0f - beta2) * (current_param_grad * current_param_grad);
 
         float m_hat = m_estimate / (1.0f - beta1_pow_t);
         float v_hat = v_estimate / (1.0f - beta2_pow_t);
 
-        float update_term = lr * m_hat / (rsqrtf(v_hat) + epsilon);
+        float update_term = lr * m_hat / (sqrtf(v_hat) + epsilon);
 
         param_data[i] -= update_term;
         m_estimates[i] = m_estimate; // Write back updated m_estimate
@@ -60,26 +63,20 @@ __global__ void adam_kernel_noncontig(float* param_data, float* param_grad, floa
 
     for (int i = idx; i < n; i += stride)
     {
-        int current_k = i;
-        int data_idx = 0;
-        for (int d = ndim - 1; d >= 0; --d)
-        {
-            int dim_idx = current_k % shape[d];
-            data_idx += dim_idx * strides[d];
-            current_k /= shape[d];
-        }
+        int data_idx = get_idx(shape, strides, ndim, i);
 
         float current_param_grad = param_grad[data_idx];
         float m_estimate = m_estimates[data_idx];
         float v_estimate = v_estimates[data_idx];
 
         m_estimate = beta1 * m_estimate + (1.0f - beta1) * current_param_grad;
-        v_estimate = beta2 * v_estimate + (1.0f - beta2) * powf(current_param_grad, 2);
+        v_estimate =
+            beta2 * v_estimate + (1.0f - beta2) * (current_param_grad * current_param_grad);
 
         float m_hat = m_estimate / (1.0f - beta1_pow_t);
         float v_hat = v_estimate / (1.0f - beta2_pow_t);
 
-        float update_term = lr * m_hat / (rsqrtf(v_hat) + epsilon);
+        float update_term = lr * m_hat / (sqrtf(v_hat) + epsilon);
 
         param_data[data_idx] -= update_term;
         m_estimates[data_idx] = m_estimate; // Write back updated m_estimate

@@ -1,5 +1,6 @@
 #include "logger.h"
 #include "optimizers/optimizers.h"
+#include "utils/indexing.cuh"
 #include <cuda_runtime.h>
 
 #define CHECK_CUDA(err)                                                                            \
@@ -31,14 +32,8 @@ __global__ void zero_grad_kernel_noncontig(float* param_grad, int n, const int* 
 
     for (int i = idx; i < n; i += stride)
     {
-        int current_k = i;
-        int data_idx = 0;
-        for (int d = ndim - 1; d >= 0; --d)
-        {
-            int dim_idx = current_k % shape[d];
-            data_idx += dim_idx * strides[d];
-            current_k /= shape[d];
-        }
+        int data_idx = get_idx(shape, strides, ndim, i);
+
         param_grad[data_idx] = 0.0f;
     }
 }
@@ -64,7 +59,7 @@ void zero_grad_cuda(Tensor** params, int num_parameters)
 
         int N = numel(params[i]->shape, params[i]->ndim);
         int num_threads_per_block = 256;
-        int num_blocks = (N + num_threads_per_block + 1) / num_threads_per_block;
+        int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
         if (is_contiguous(params[i]))
         {
             zero_grad_kernel_contig<<<num_blocks, num_threads_per_block>>>(

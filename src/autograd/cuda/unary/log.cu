@@ -1,4 +1,5 @@
 #include "autograd/cuda/unary/common.cuh"
+#include "autograd/cuda/unary/unary_ops_cuda.h"
 #include "utils/indexing.cuh"
 
 __global__ void log_grad_kernel(const float* out_grad, const float* prev_data, float* prev_grad,
