@@ -22,12 +22,36 @@
 template <int block_size>
 __device__ __forceinline__ void wrap_sum_reduce(volatile float* rdata, int tid)
 {
-    if (block_size >= 64) rdata[tid] += rdata[tid + 32];
-    if (block_size >= 32) rdata[tid] += rdata[tid + 16];
-    if (block_size >= 16) rdata[tid] += rdata[tid + 8];
-    if (block_size >= 8) rdata[tid] += rdata[tid + 4];
-    if (block_size >= 4) rdata[tid] += rdata[tid + 2];
-    if (block_size >= 2) rdata[tid] += rdata[tid + 1];
+    if (block_size >= 64)
+    {
+        if (tid < 32) rdata[tid] += rdata[tid + 32];
+        __syncthreads();
+    }
+    if (block_size >= 32)
+    {
+        if (tid < 16) rdata[tid] += rdata[tid + 16];
+        __syncthreads();
+    }
+    if (block_size >= 16)
+    {
+        if (tid < 8) rdata[tid] += rdata[tid + 8];
+        __syncthreads();
+    }
+    if (block_size >= 8)
+    {
+        if (tid < 4) rdata[tid] += rdata[tid + 4];
+        __syncthreads();
+    }
+    if (block_size >= 4)
+    {
+        if (tid < 2) rdata[tid] += rdata[tid + 2];
+        __syncthreads();
+    }
+    if (block_size >= 2)
+    {
+        if (tid < 1) rdata[tid] += rdata[tid + 1];
+        __syncthreads();
+    }
 }
 
 template <int block_size>
@@ -40,12 +64,36 @@ __global__ void mean_kernel(float* a, float* out, int n, int axis_dim, int outer
 template <int block_size>
 __device__ __forceinline__ void wrap_max_reduce(volatile float* rdata, int tid)
 {
-    if (block_size >= 64) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 32]);
-    if (block_size >= 32) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 16]);
-    if (block_size >= 16) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 8]);
-    if (block_size >= 8) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 4]);
-    if (block_size >= 4) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 2]);
-    if (block_size >= 2) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 1]);
+    if (block_size >= 64)
+    {
+        if (tid < 32) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 32]);
+        __syncthreads();
+    }
+    if (block_size >= 32)
+    {
+        if (tid < 16) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 16]);
+        __syncthreads();
+    }
+    if (block_size >= 16)
+    {
+        if (tid < 8) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 8]);
+        __syncthreads();
+    }
+    if (block_size >= 8)
+    {
+        if (tid < 4) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 4]);
+        __syncthreads();
+    }
+    if (block_size >= 4)
+    {
+        if (tid < 2) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 2]);
+        __syncthreads();
+    }
+    if (block_size >= 2)
+    {
+        if (tid < 1) rdata[tid] = fmaxf(rdata[tid], rdata[tid + 1]);
+        __syncthreads();
+    }
 }
 
 template <int block_size>

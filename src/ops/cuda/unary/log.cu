@@ -62,10 +62,9 @@ extern "C" void log_op_cuda(Tensor* in, Tensor* out)
     }
     else
     {
-        noncontig_log_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data,
-                                                                 N, in->shape, in->strides,
-                                                                 in->ndim, out->shape, out->strides,
-                                                                 out->ndim);
+        noncontig_log_kernel<<<num_blocks, num_threads_per_block>>>(
+            in->data->data, out->data->data, N, in->shape, in->strides, in->ndim, out->shape,
+            out->strides, out->ndim);
     }
 
     CHECK_CUDA();

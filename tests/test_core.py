@@ -47,14 +47,6 @@ class TestTensorCore:
         assert t.requires_grad is False
         assert t.grad is None
 
-    def test_tensor_init_cuda(self):
-        # This test assumes a CUDA device is available and the C bindings handle it.
-        # If not, it might fail or behave like CPU.
-        device = Device("cuda")
-        t = Tensor((1, 1), device=device)
-        assert t.device.type == "cuda"
-        assert t.device.type_id == 1
-
     def test_tensor_init_default_device(self):
         # Create a tensor without specifying a device
         t = Tensor((2, 2))

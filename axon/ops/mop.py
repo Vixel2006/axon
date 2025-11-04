@@ -477,11 +477,33 @@ class Stack(LazyOp):
             unsqueezed_shape.insert(normalized_axis_for_unsqueeze, 1)
             unsqueezed_shape_tuple = tuple(unsqueezed_shape)
 
+    @staticmethod
+    def forward(out: "Tensor", *a_tensors: "Tensor", axis: int):
+        from axon.core.tensor import Tensor
+        LazyOp._check_same_device(*a_tensors)
+        temp_unsqueezed_ptrs: List[ctypes.POINTER(CTensor)] = []
+
+        temp_unsqueezed_tensors: List[Tensor] = []
+
+        for t in a_tensors:
+            if axis < 0:
+                normalized_axis_for_unsqueeze = t.ndim + axis + 1
+            else:
+                normalized_axis_for_unsqueeze = axis
+
+            unsqueezed_shape = list(t.shape)
+            unsqueezed_shape.insert(normalized_axis_for_unsqueeze, 1)
+            unsqueezed_shape_tuple = tuple(unsqueezed_shape)
+
             temp_t = Tensor(shape=unsqueezed_shape_tuple, device=t.device, requires_grad=t.requires_grad)
             get_op_function("unsqueeze", t.device)(t.c_tensor_ptr, temp_t.c_tensor_ptr, normalized_axis_for_unsqueeze)
             
             temp_unsqueezed_ptrs.append(temp_t.c_tensor_ptr)
             temp_unsqueezed_tensors.append(temp_t)
+
+        c_inputs_array = (ctypes.POINTER(CTensor) * len(temp_unsqueezed_ptrs))(*temp_unsqueezed_ptrs)
+        c_concat_op_func = get_op_function("concat", a_tensors[0].device)
+        c_concat_op_func(c_inputs_array, out.c_tensor_ptr, len(temp_unsqueezed_ptrs), axis)
 
         c_inputs_array = (ctypes.POINTER(CTensor) * len(temp_unsqueezed_ptrs))(*temp_unsqueezed_ptrs)
         c_concat_op_func = get_op_function("concat", a_tensors[0].device)

@@ -1,5 +1,7 @@
 #include "autograd/cpu/reduction/common.h"
 
+#include "autograd/cpu/reduction/common.h"
+
 void max_full_grad_op_cpu(Tensor* out, Tensor** prev, int n_prev, void* extras)
 {
     LOG_INFO("max_full_grad_op_cpu: Entering function with n_prev=%d", n_prev);

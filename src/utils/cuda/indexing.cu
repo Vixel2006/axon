@@ -1,9 +1,6 @@
-#ifndef AXON_CUDA_INDEXING_UTIL
-#define AXON_CUDA_INDEXING_UTIL
+#include "cuda_utils.h"
+#include "utils.h"
 
-#include <cuda_runtime.h>
-
-// Definition of the device function (should be in header for inlining)
 __device__ __forceinline__ int get_idx(const int* shape, const int* strides, int ndim, int i)
 {
     int tmp = i;
@@ -18,9 +15,16 @@ __device__ __forceinline__ int get_idx(const int* shape, const int* strides, int
     return data_idx;
 }
 
-// Declaration of the global kernel
 __global__ void copy_non_contiguous_to_contiguous_kernel(const float* in_data, float* out_data,
                                                          const int* shape, const int* strides,
-                                                         int ndim, int num_elements);
+                                                         int ndim, int num_elements)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = gridDim.x * blockDim.x;
 
-#endif
+    for (int i = idx; i < num_elements; i += stride)
+    {
+        int in_idx = get_idx(shape, strides, ndim, i);
+        out_data[i] = in_data[in_idx];
+    }
+}

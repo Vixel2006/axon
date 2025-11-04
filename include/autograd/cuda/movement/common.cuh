@@ -21,6 +21,7 @@
             assert(0 && "CUDA runtime error");                                                     \
         }                                                                                          \
     } while (0)
+
 // Kernel declarations
 __global__ void concat_grad_kernel_contiguous(const float* out_grad, float* prev_grad,
                                               size_t outer_size, size_t prev_concat_axis_size,

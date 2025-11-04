@@ -1,5 +1,6 @@
 #include "ops/cuda/binary_scalar.h"
 #include "utils/indexing.cuh"
+#include <assert.h>
 
 __global__ void noncontig_mul_scalar_kernel(const float* in, float* out, float scalar, int n,
                                             const int* in_shape, const int* in_strides, int in_ndim,
@@ -38,21 +39,21 @@ void mul_scalar_op_cuda(Tensor* a, float b, Tensor* out)
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     out->data = (Storage*) malloc(sizeof(Storage));
-
     if (!out->data)
     {
         LOG_ERROR("Failed to allocate Storage for out tensor in mul_scalar_op_cuda");
+        assert(0 && "Failed to allocate Storage for out tensor in mul_scalar_op_cuda");
     }
     out->data->counter = 1;
     out->data->size = N;
 
     cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
-
     if (err != cudaSuccess)
     {
-        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in mul_op_cuda: %s",
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in mul_scalar_op_cuda: %s",
                   cudaGetErrorString(err));
         SAFE_FREE(&out->data, free);
+        assert(0 && "Failed to allocate CUDA memory for out->data->data in mul_scalar_op_cuda");
     }
 
     if (is_contiguous(a) && is_contiguous(out))

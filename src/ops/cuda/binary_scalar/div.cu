@@ -1,5 +1,6 @@
 #include "ops/cuda/binary_scalar.h"
 #include "utils/indexing.cuh"
+#include <assert.h>
 
 __global__ void noncontig_div_scalar_kernel(const float* in, float* out, float scalar, int n,
                                             const int* in_shape, const int* in_strides, int in_ndim,
@@ -14,7 +15,7 @@ __global__ void noncontig_div_scalar_kernel(const float* in, float* out, float s
         int in_idx = get_idx(in_shape, in_strides, in_ndim, i);
         int out_idx = get_idx(out_shape, out_strides, out_ndim, i);
 
-        out[out_idx] = in[in_idx] / scalar;
+        out[out_idx] = in[in_idx] / (scalar + 1e-7f);
     }
 }
 
@@ -25,7 +26,7 @@ __global__ void contig_div_scalar_kernel(const float* in, float* out, float scal
 
     for (int i = idx; i < n; i += stride)
     {
-        out[i] = in[i] / scalar;
+        out[i] = in[i] / (scalar + 1e-7f);
     }
 }
 
@@ -35,6 +36,14 @@ void div_scalar_op_cuda(Tensor* a, float b, Tensor* out)
     if (b == 0.0f)
     {
         LOG_ERROR("Division by zero in div_scalar_op_cuda");
+        // Ensure allocated memory is freed before returning
+        if (out->data)
+        {
+            if (out->data->data) cudaFree(out->data->data);
+            free(out->data);
+            out->data = NULL;
+        }
+        assert(0 && "Division by zero in div_scalar_op_cuda");
         return;
     }
     int N = numel(a->shape, a->ndim);
@@ -47,6 +56,7 @@ void div_scalar_op_cuda(Tensor* a, float b, Tensor* out)
     if (!out->data)
     {
         LOG_ERROR("Failed to allocate Storage for out tensor in div_scalar_op_cuda");
+        assert(0 && "Failed to allocate Storage for out tensor in div_scalar_op_cuda");
     }
     out->data->counter = 1;
     out->data->size = N;
@@ -55,9 +65,10 @@ void div_scalar_op_cuda(Tensor* a, float b, Tensor* out)
 
     if (err != cudaSuccess)
     {
-        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in div_op_cuda: %s",
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in div_scalar_op_cuda: %s",
                   cudaGetErrorString(err));
         SAFE_FREE(&out->data, free);
+        assert(0 && "Failed to allocate CUDA memory for out->data->data in div_scalar_op_cuda");
     }
 
     if (is_contiguous(a) && is_contiguous(out))

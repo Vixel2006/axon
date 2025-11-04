@@ -1,4 +1,5 @@
 #include "ops/cpu/binary_scalar.h"
+#include "ops/cpu/init.h"
 
 #define SIMD_WIDTH 8
 

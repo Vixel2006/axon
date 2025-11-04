@@ -5,7 +5,10 @@
 #include "tensor.h"
 
 #include "ops/cpu/movement.h"
+
+#ifdef __CUDACC__
 #include "ops/cuda/movement.h"
+#endif
 
 #ifdef __cplusplus
 extern "C"

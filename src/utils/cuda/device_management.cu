@@ -121,3 +121,34 @@ void get_cuda_memory_info(int device_id)
            (double) free_byte / (1024.0 * 1024.0 * 1024.0),
            (double) total_byte / (1024.0 * 1024.0 * 1024.0));
 }
+
+void copy_shape_and_strides_to_device(const int* host_shape, const int* host_strides, int ndim, int** device_shape, int** device_strides) {
+    LOG_INFO("copy_shape_and_strides_to_device: Entering function");
+    if (ndim == 0) {
+        *device_shape = NULL;
+        *device_strides = NULL;
+        return;
+    }
+
+    // Allocate device memory for shape and strides
+    cudaError_t err_shape = cudaMalloc((void**)device_shape, ndim * sizeof(int));
+    CHECK_CUDA(err_shape);
+    cudaError_t err_strides = cudaMalloc((void**)device_strides, ndim * sizeof(int));
+    CHECK_CUDA(err_strides);
+
+    // Copy shape and strides from host to device
+    cudaError_t err_memcpy_shape = cudaMemcpy(*device_shape, host_shape, ndim * sizeof(int), cudaMemcpyHostToDevice);
+    CHECK_CUDA(err_memcpy_shape);
+    cudaError_t err_memcpy_strides = cudaMemcpy(*device_strides, host_strides, ndim * sizeof(int), cudaMemcpyHostToDevice);
+    CHECK_CUDA(err_memcpy_strides);
+}
+
+void free_device_memory(int* device_shape, int* device_strides) {
+    LOG_INFO("free_device_memory: Entering function");
+    if (device_shape != NULL) {
+        cudaFree(device_shape);
+    }
+    if (device_strides != NULL) {
+        cudaFree(device_strides);
+    }
+}

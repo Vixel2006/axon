@@ -1,4 +1,5 @@
 #include "ops/cpu/binary.h"
+#include "ops/cpu/init.h"
 
 void matmul_op_cpu(Tensor* a, Tensor* b, Tensor* out, int N, int K, int P)
 {

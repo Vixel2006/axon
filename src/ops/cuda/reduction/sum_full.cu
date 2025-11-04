@@ -1,5 +1,6 @@
 #include "ops/cuda/init.h" // For smalloc, gmalloc (if needed)
 #include "ops/cuda/reduction.h"
+#include "utils/indexing.cuh"
 
 template <int block_size> __global__ void full_sum_kernel(const float* a, float* out, int n)
 {
@@ -51,6 +52,21 @@ template <int block_size> __global__ void full_sum_kernel(const float* a, float*
 extern "C" void sum_full_op_cuda(Tensor* a, Tensor* out)
 {
     LOG_INFO("Sum operation on cuda starting......");
+
+    float* a_data_ptr = a->data->data;
+    float* a_temp_data = NULL;
+    if (!is_contiguous(a))
+    {
+        int num_elements = numel(a->shape, a->ndim);
+        cudaMalloc((void**) &a_temp_data, num_elements * sizeof(float));
+        int num_threads_per_block = 256;
+        int num_blocks = (num_elements + num_threads_per_block - 1) / num_threads_per_block;
+        copy_non_contiguous_to_contiguous_kernel<<<num_blocks, num_threads_per_block>>>(
+            a->data->data, a_temp_data, a->shape, a->strides, a->ndim, num_elements);
+        a_data_ptr = a_temp_data;
+        CHECK_CUDA();
+    }
+
     int N = numel(a->shape, a->ndim);
 
     int num_threads_per_block = 256;
@@ -63,7 +79,7 @@ extern "C" void sum_full_op_cuda(Tensor* a, Tensor* out)
     cudaMalloc((void**) &d_out_partial_sums, sizeof(float) * blocks);
 
     full_sum_kernel<256><<<blocks, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, d_out_partial_sums, N);
+        a_data_ptr, d_out_partial_sums, N);
 
     cudaMemcpy(h_out_partial_sums, d_out_partial_sums, sizeof(float) * blocks,
                cudaMemcpyDeviceToHost);
@@ -80,6 +96,7 @@ extern "C" void sum_full_op_cuda(Tensor* a, Tensor* out)
         LOG_ERROR("Failed to allocate Storage for out tensor in sum_full_op_cuda");
         SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
         SAFE_FREE(&d_out_partial_sums, cudaFree);
+        if (a_temp_data) cudaFree(a_temp_data);
         return;
     }
     out->data->counter = 1;
@@ -93,6 +110,7 @@ extern "C" void sum_full_op_cuda(Tensor* a, Tensor* out)
         SAFE_FREE(&out->data, free);
         SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
         SAFE_FREE(&d_out_partial_sums, cudaFree);
+        if (a_temp_data) cudaFree(a_temp_data);
         return;
     }
     err = cudaMemcpy(out->data->data, &total_sum, sizeof(float), cudaMemcpyHostToDevice);
@@ -104,11 +122,16 @@ extern "C" void sum_full_op_cuda(Tensor* a, Tensor* out)
         SAFE_FREE(&out->data, free);
         SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
         SAFE_FREE(&d_out_partial_sums, cudaFree);
+        if (a_temp_data) cudaFree(a_temp_data);
         return;
     }
 
     SAFE_FREE(&h_out_partial_sums, cudaFreeHost);
     SAFE_FREE(&d_out_partial_sums, cudaFree);
+    if (a_temp_data)
+    {
+        cudaFree(a_temp_data);
+    }
 
     LOG_INFO("Sum operation on cuda done.");
 }

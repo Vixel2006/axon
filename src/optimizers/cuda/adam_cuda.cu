@@ -92,6 +92,13 @@ void adam_cuda(Tensor** params, Tensor** m_estimates, Tensor** v_estimates, int 
 
     for (int i = 0; i < num_params; ++i)
     {
+        if (!params[i]->grad || !params[i]->grad->data || !params[i]->grad->data->data)
+        {
+            LOG_WARN("adam_cuda: Parameter %d requires grad but its grad tensor or data is "
+                     "NULL. Skipping.",
+                     i);
+            continue;
+        }
         int N = numel(params[i]->shape, params[i]->ndim);
 
         float* current_m_estimates = m_estimates[i]->data->data;
