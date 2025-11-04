@@ -1,6 +1,7 @@
 #include "ops/cuda/binary_scalar.h"
 #include "utils/indexing.cuh"
 #include <math.h>
+#include <assert.h>
 
 __global__ void noncontig_pow_scalar_kernel(const float* in, float* out, float scalar, int n,
                                             const int* in_shape, const int* in_strides, int in_ndim,
@@ -15,7 +16,7 @@ __global__ void noncontig_pow_scalar_kernel(const float* in, float* out, float s
         int in_idx = get_idx(in_shape, in_strides, in_ndim, i);
         int out_idx = get_idx(out_shape, out_strides, out_ndim, i);
 
-        out[out_idx] = powf(in[in_idx], scalar);
+        out[out_idx] = powf(fmaxf(in[in_idx], 0.0f) + 1e-9f, scalar);
     }
 }
 
@@ -26,7 +27,7 @@ __global__ void contig_pow_scalar_kernel(const float* in, float* out, float scal
 
     for (int i = idx; i < n; i += stride)
     {
-        out[i] = powf(in[i], scalar);
+        out[i] = powf(fmaxf(in[i], 0.0f) + 1e-9f, scalar);
     }
 }
 
@@ -39,21 +40,21 @@ void pow_scalar_op_cuda(Tensor* a, float b, Tensor* out)
     int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;
 
     out->data = (Storage*) malloc(sizeof(Storage));
-
     if (!out->data)
     {
         LOG_ERROR("Failed to allocate Storage for out tensor in pow_scalar_op_cuda");
+        assert(0 && "Failed to allocate Storage for out tensor in pow_scalar_op_cuda");
     }
     out->data->counter = 1;
     out->data->size = N;
 
     cudaError_t err = cudaMalloc((void**) &out->data->data, out->data->size * sizeof(float));
-
     if (err != cudaSuccess)
     {
-        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in pow_op_cuda: %s",
+        LOG_ERROR("Failed to allocate CUDA memory for out->data->data in pow_scalar_op_cuda: %s",
                   cudaGetErrorString(err));
         SAFE_FREE(&out->data, free);
+        assert(0 && "Failed to allocate CUDA memory for out->data->data in pow_scalar_op_cuda");
     }
 
     if (is_contiguous(a) && is_contiguous(out))

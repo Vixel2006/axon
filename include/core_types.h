@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#define MAX_NDIM 32
+
 typedef enum
 {
     CPU,

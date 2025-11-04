@@ -1,4 +1,5 @@
 #include "ops/cpu/binary.h"
+#include "ops/cpu/init.h"
 
 void conv2d_op_cpu(Tensor* in, Tensor* kernel, Tensor* out, const int* kernel_size,
                    const int* stride, const int padding)

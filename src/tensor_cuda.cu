@@ -4,15 +4,10 @@
 #include <assert.h>
 #include <cuda_runtime.h>
 
-#define MAX_NDIM 8 // Define MAX_NDIM
-
-// CUDA kernel to copy non-contiguous data from device to a contiguous device buffer
 __global__ void copy_non_contiguous_kernel(const float* d_data, const int* shape,
                                            const int* strides, int ndim, float* d_out_buffer)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    // Assuming d_out_buffer is linear and contiguous
-    // Calculate logical coordinates from linear index
     int logical_coords[MAX_NDIM];
     int temp_idx = idx;
     for (int i = ndim - 1; i >= 0; --i)
@@ -21,7 +16,6 @@ __global__ void copy_non_contiguous_kernel(const float* d_data, const int* shape
         temp_idx /= shape[i];
     }
 
-    // Calculate memory offset in the non-contiguous d_data
     int memory_offset_elements = 0;
     for (int i = 0; i < ndim; ++i)
     {
@@ -30,30 +24,24 @@ __global__ void copy_non_contiguous_kernel(const float* d_data, const int* shape
     d_out_buffer[idx] = d_data[memory_offset_elements];
 }
 
-// Host-side function to manage the non-contiguous copy from device to host
 void copy_non_contiguous_cuda_to_host(Storage* s, const int* shape, const int* strides, int ndim,
                                       int num_elements, float* host_buffer)
 {
     LOG_INFO("copy_non_contiguous_cuda_to_host: shape=(%d, %d), strides=(%d, %d), ndim=%d, "
              "num_elements=%d",
              shape[0], shape[1], strides[0], strides[1], ndim, num_elements);
-    // Allocate a temporary contiguous device buffer
     float* d_staging_buffer;
     cudaMalloc((void**) &d_staging_buffer, num_elements * sizeof(float));
 
-    // Configure kernel launch parameters
     int blockSize = 256;
     int numBlocks = (num_elements + blockSize - 1) / blockSize;
 
-    // Launch kernel to copy from non-contiguous device memory to contiguous device staging buffer
     copy_non_contiguous_kernel<<<numBlocks, blockSize>>>(s->data, shape, strides, ndim,
                                                          d_staging_buffer);
-    cudaDeviceSynchronize(); // Wait for kernel to complete
+    cudaDeviceSynchronize();
 
-    // Copy from contiguous device staging buffer to host buffer
     cudaMemcpy(host_buffer, d_staging_buffer, num_elements * sizeof(float), cudaMemcpyDeviceToHost);
 
-    // Free temporary device buffer
     cudaFree(d_staging_buffer);
 }
 

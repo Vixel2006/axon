@@ -1,4 +1,5 @@
 #include "autograd/cuda/binary/common.cuh"
+#include "autograd/cuda/broadcast_utils.cuh"
 #include "utils/indexing.cuh"
 
 __global__ void scalar_pow_grad_kernel(const float* out_grad, float* prev_data, float* prev_grad,
@@ -15,15 +16,19 @@ __global__ void scalar_pow_grad_kernel(const float* out_grad, float* prev_data, 
 
 __global__ void noncontig_scalar_pow_grad_kernel(const float* out_grad, float* prev_data,
                                                  float* prev_grad, float power, int n,
-                                                 const int* shape, const int* strides, int ndim)
+                                                 const int* prev_shape, const int* prev_strides,
+                                                 int prev_ndim, const int* out_shape,
+                                                 const int* out_strides, int out_ndim)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = idx; i < n; i += stride)
     {
-        int in_idx = get_idx(shape, strides, ndim, i);
-        prev_grad[in_idx] += power * powf(prev_data[in_idx] + 1e-7f, power - 1) * out_grad[i];
+        int in_idx =
+            get_broadcasted_input_idx(i, out_shape, out_ndim, prev_shape, prev_strides, prev_ndim);
+        atomicAdd(&prev_grad[in_idx],
+                  power * powf(prev_data[in_idx] + 1e-7f, power - 1) * out_grad[i]);
     }
 }
 
@@ -41,16 +46,25 @@ __global__ void base_pow_grad_kernel(const float* out_grad, float* base_data, fl
 
 __global__ void noncontig_base_pow_grad_kernel(const float* out_grad, float* base_data,
                                                float* base_grad, float* power_data, int n,
-                                               const int* shape, const int* strides, int ndim)
+                                               const int* base_shape, const int* base_strides,
+                                               int base_ndim, const int* out_shape,
+                                               const int* out_strides, int out_ndim)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = idx; i < n; i += stride)
     {
-        int in_idx = get_idx(shape, strides, ndim, i);
-        base_grad[in_idx] += power_data[in_idx] *
-                             powf(base_data[in_idx] + 1e-7f, power_data[in_idx] - 1) * out_grad[i];
+        int in_idx =
+            get_broadcasted_input_idx(i, out_shape, out_ndim, base_shape, base_strides, base_ndim);
+        int power_data_idx =
+            get_broadcasted_input_idx(i, out_shape, out_ndim, base_shape, base_strides,
+                                      base_ndim); // Assuming power_data has same broadcasted shape
+                                                  // as base_data for this kernel
+        atomicAdd(&base_grad[in_idx],
+                  power_data[power_data_idx] *
+                      powf(base_data[in_idx] + 1e-7f, power_data[power_data_idx] - 1) *
+                      out_grad[i]);
     }
 }
 
@@ -68,15 +82,23 @@ __global__ void exponent_pow_grad_kernel(const float* out_grad, const float* out
 
 __global__ void noncontig_exponent_pow_grad_kernel(const float* out_grad, const float* out_data,
                                                    float* base_data, float* power_grad, int n,
-                                                   const int* shape, const int* strides, int ndim)
+                                                   const int* power_shape, const int* power_strides,
+                                                   int power_ndim, const int* out_shape,
+                                                   const int* out_strides, int out_ndim)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = idx; i < n; i += stride)
     {
-        int in_idx = get_idx(shape, strides, ndim, i);
-        power_grad[in_idx] += out_grad[i] * out_data[i] * logf(base_data[in_idx] + 1e-7f);
+        int in_idx = get_broadcasted_input_idx(i, out_shape, out_ndim, power_shape, power_strides,
+                                               power_ndim);
+        int base_data_idx =
+            get_broadcasted_input_idx(i, out_shape, out_ndim, power_shape, power_strides,
+                                      power_ndim); // Assuming base_data has same broadcasted shape
+                                                   // as power_data for this kernel
+        atomicAdd(&power_grad[in_idx],
+                  out_grad[i] * out_data[i] * logf(base_data[base_data_idx] + 1e-7f));
     }
 }
 
@@ -117,9 +139,24 @@ void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
             else
             {
+                int* d_out_shape;
+                int* d_out_strides;
+
+                cudaMalloc(&d_out_shape, out->ndim * sizeof(int));
+                cudaMalloc(&d_out_strides, out->ndim * sizeof(int));
+
+                cudaMemcpy(d_out_shape, out->shape, out->ndim * sizeof(int),
+                           cudaMemcpyHostToDevice);
+                cudaMemcpy(d_out_strides, out->strides, out->ndim * sizeof(int),
+                           cudaMemcpyHostToDevice);
+
                 noncontig_scalar_pow_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                     out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data,
-                    scalar_power, N, prev[0]->shape, prev[0]->strides, prev[0]->ndim);
+                    scalar_power, N, prev[0]->shape, prev[0]->strides, prev[0]->ndim, d_out_shape,
+                    d_out_strides, out->ndim);
+
+                cudaFree(d_out_shape);
+                cudaFree(d_out_strides);
             }
             CHECK_CUDA();
         }
@@ -148,9 +185,24 @@ void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
             else
             {
+                int* d_out_shape;
+                int* d_out_strides;
+
+                cudaMalloc(&d_out_shape, out->ndim * sizeof(int));
+                cudaMalloc(&d_out_strides, out->ndim * sizeof(int));
+
+                cudaMemcpy(d_out_shape, out->shape, out->ndim * sizeof(int),
+                           cudaMemcpyHostToDevice);
+                cudaMemcpy(d_out_strides, out->strides, out->ndim * sizeof(int),
+                           cudaMemcpyHostToDevice);
+
                 noncontig_base_pow_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                     out->grad->data->data, prev[0]->data->data, prev[0]->grad->data->data,
-                    prev[1]->data->data, N, prev[0]->shape, prev[0]->strides, prev[0]->ndim);
+                    prev[1]->data->data, N, prev[0]->shape, prev[0]->strides, prev[0]->ndim,
+                    d_out_shape, d_out_strides, out->ndim);
+
+                cudaFree(d_out_shape);
+                cudaFree(d_out_strides);
             }
             CHECK_CUDA();
         }
@@ -170,9 +222,24 @@ void pow_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
             }
             else
             {
+                int* d_out_shape;
+                int* d_out_strides;
+
+                cudaMalloc(&d_out_shape, out->ndim * sizeof(int));
+                cudaMalloc(&d_out_strides, out->ndim * sizeof(int));
+
+                cudaMemcpy(d_out_shape, out->shape, out->ndim * sizeof(int),
+                           cudaMemcpyHostToDevice);
+                cudaMemcpy(d_out_strides, out->strides, out->ndim * sizeof(int),
+                           cudaMemcpyHostToDevice);
+
                 noncontig_exponent_pow_grad_kernel<<<num_blocks, num_threads_per_block>>>(
                     out->grad->data->data, out->data->data, prev[0]->data->data,
-                    prev[1]->grad->data->data, N, prev[1]->shape, prev[1]->strides, prev[1]->ndim);
+                    prev[1]->grad->data->data, N, prev[1]->shape, prev[1]->strides, prev[1]->ndim,
+                    d_out_shape, d_out_strides, out->ndim);
+
+                cudaFree(d_out_shape);
+                cudaFree(d_out_strides);
             }
             CHECK_CUDA();
         }

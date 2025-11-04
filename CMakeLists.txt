@@ -91,7 +91,7 @@ add_library(axon SHARED
   src/ops/cuda/binary_scalar/rdiv.cu
   src/ops/cuda/binary_scalar/pow.cu
 
-  # src/ops/cuda/init is empty, no .cu files to add
+  src/ops/cuda/init/from_data.cu
 
   src/ops/cuda/movement/concat.cu
 
@@ -112,6 +112,7 @@ add_library(axon SHARED
   # Remaining files (autograd, utils, optimizers)
   src/utils.c
   src/utils/cuda/device_management.cu
+  src/utils/cuda/indexing.cu
 
   # Autograd CPU
   src/autograd/utils/autograd_utils.c

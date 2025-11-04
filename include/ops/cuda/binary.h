@@ -4,7 +4,6 @@
 #include "logger.h"
 #include "ops/binary_ops.h"
 #include "ops/init_ops.h"
-#include "utils/indexing.cuh"
 #include <assert.h>
 #include <cuda_runtime.h>
 

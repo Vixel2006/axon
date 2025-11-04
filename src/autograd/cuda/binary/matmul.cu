@@ -1,5 +1,6 @@
 #include "autograd/cuda/binary/common.cuh"
 #include "utils/indexing.cuh"
+#include "tensor.h"
 
 __global__ void matmul_grad_kernel(const float* lhs, const float* rhs, float* grad, int B, int N,
                                    int P, int K, bool transpose_lhs, bool transpose_rhs,
@@ -144,6 +145,50 @@ void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         }
     }
 
+    float* out_grad_data_ptr = (float*) out->grad->data->data;
+    float* out_grad_temp_data = NULL;
+
+    if (!is_contiguous(out->grad))
+    {
+        int num_elements_out_grad = numel(out->grad->shape, out->grad->ndim);
+        cudaMalloc((void**) &out_grad_temp_data, num_elements_out_grad * sizeof(float));
+        int num_threads_per_block = 256; // Assuming 256 threads per block as in matmul.cu
+        int num_blocks = (num_elements_out_grad + num_threads_per_block - 1) / num_threads_per_block;
+        copy_non_contiguous_to_contiguous_kernel<<<num_blocks, num_threads_per_block>>>(
+            (float*) out->grad->data->data, out_grad_temp_data, out->grad->shape, out->grad->strides,
+            out->grad->ndim, num_elements_out_grad);
+        out_grad_data_ptr = out_grad_temp_data;
+        CHECK_CUDA();
+    }
+
+    float* A_data_ptr = (float*) A->data->data;
+    float* A_temp_data = NULL;
+    if (!is_contiguous(A))
+    {
+        int num_elements_A = numel(A->shape, A->ndim);
+        cudaMalloc((void**) &A_temp_data, num_elements_A * sizeof(float));
+        int num_threads_per_block = 256;
+        int num_blocks = (num_elements_A + num_threads_per_block - 1) / num_threads_per_block;
+        copy_non_contiguous_to_contiguous_kernel<<<num_blocks, num_threads_per_block>>>(
+            (float*) A->data->data, A_temp_data, A->shape, A->strides, A->ndim, num_elements_A);
+        A_data_ptr = A_temp_data;
+        CHECK_CUDA();
+    }
+
+    float* B_data_ptr = (float*) B->data->data;
+    float* B_temp_data = NULL;
+    if (!is_contiguous(B))
+    {
+        int num_elements_B = numel(B->shape, B->ndim);
+        cudaMalloc((void**) &B_temp_data, num_elements_B * sizeof(float));
+        int num_threads_per_block = 256;
+        int num_blocks = (num_elements_B + num_threads_per_block - 1) / num_threads_per_block;
+        copy_non_contiguous_to_contiguous_kernel<<<num_blocks, num_threads_per_block>>>(
+            (float*) B->data->data, B_temp_data, B->shape, B->strides, B->ndim, num_elements_B);
+        B_data_ptr = B_temp_data;
+        CHECK_CUDA();
+    }
+
     if (A->requires_grad)
     {
         assert(A->grad && "Tensor A gradient cannot be NULL if requires_grad");
@@ -155,12 +200,17 @@ void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         dim3 grid_matmul((K_final + block_matmul.x - 1) / block_matmul.x,
                          (N_final + block_matmul.y - 1) / block_matmul.y, B_dim);
 
+        // Initialize A's gradient to zero before accumulation
+        int num_elements_A_grad = numel(A->grad->shape, A->grad->ndim);
+        cudaMemset(A->grad->data->data, 0, num_elements_A_grad * sizeof(float));
+        CHECK_CUDA();
+
         // Gradient for A: dL/dA = dL/dOut @ B.T
         // matmul_grad_kernel(lhs, rhs, grad, B, N, P, K, transpose_lhs, transpose_rhs)
         // lhs = out->grad, rhs = B->data, grad = A->grad
         // N = N_final, P = K_final, K = M_final
         matmul_grad_kernel<<<grid_matmul, block_matmul>>>(
-            out->grad->data->data, B->data->data, A->grad->data->data, B_dim, N_final, K_final,
+            out_grad_data_ptr, B_data_ptr, A->grad->data->data, B_dim, N_final, K_final,
             M_final, false, true, is_out_batched, is_B_batched, is_A_batched);
         CHECK_CUDA();
     }
@@ -176,12 +226,30 @@ void matmul_grad_op_cuda(Tensor* out, Tensor** prev, int n_prev, void* extras)
         dim3 grid_matmul((M_final + block_matmul.x - 1) / block_matmul.x,
                          (K_final + block_matmul.y - 1) / block_matmul.y, B_dim);
 
+        // Initialize B's gradient to zero before accumulation
+        int num_elements_B_grad = numel(B->grad->shape, B->grad->ndim);
+        cudaMemset(B->grad->data->data, 0, num_elements_B_grad * sizeof(float));
+        CHECK_CUDA();
+
         // Gradient for B: dL/dB = A.T @ dL/dOut
         // lhs = A->data, rhs = out->grad, grad = B->grad
         // N = K_final, P = M_final, K = N_final
         matmul_grad_kernel<<<grid_matmul, block_matmul>>>(
-            A->data->data, out->grad->data->data, B->grad->data->data, B_dim, K_final, M_final,
+            A_data_ptr, out_grad_data_ptr, B->grad->data->data, B_dim, K_final, M_final,
             N_final, true, false, is_A_batched, is_out_batched, is_B_batched);
         CHECK_CUDA();
+    }
+
+    if (out_grad_temp_data)
+    {
+        cudaFree(out_grad_temp_data);
+    }
+    if (A_temp_data)
+    {
+        cudaFree(A_temp_data);
+    }
+    if (B_temp_data)
+    {
+        cudaFree(B_temp_data);
     }
 }

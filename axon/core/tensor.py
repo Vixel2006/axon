@@ -175,20 +175,22 @@ class Tensor:
 
 
 if __name__ == "__main__":
-    from axon.functions import zeros, ones, uniform, max, log, sum, exp
+    from axon.functions import zeros, ones, uniform, max, log, sum, exp, mean
     from axon.utils import *
 
     device = Device("cuda")
 
     #cuda_device_info(device)
 
-    a = from_data((2,2), [[1,2], [3,4]]).to(device)
-    b = from_data((1,2), [[1,2]]).to(device)
+    a = from_data((2, 2, 2), [[[1,2], [3,4]], [[1,2], [3,4]]]).to(device)
+    b = from_data((2, 2), [[1,2], [3,4]]).to(device)
 
-    c = a + b
+    c = b.broadcast((2,2,2))
 
-    c.backward()
+    d = mean(c)
 
-    print(c)
-    print(a.grad)
+    d.backward()
 
+    print(d)
+    print(c.grad)
+    print(b.grad)

@@ -47,6 +47,13 @@ void sgd_cuda(Tensor** params, int num_params, float lr)
 
     for (int i = 0; i < num_params; ++i)
     {
+        if (!params[i]->grad || !params[i]->grad->data || !params[i]->grad->data->data)
+        {
+            LOG_WARN("sgd_cuda: Parameter %d requires grad but its grad tensor or data is "
+                     "NULL. Skipping.",
+                     i);
+            continue;
+        }
         int N = numel(params[i]->shape, params[i]->ndim);
         int num_threads_per_block = 256;
         int num_blocks = (N + num_threads_per_block - 1) / num_threads_per_block;

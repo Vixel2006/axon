@@ -2,20 +2,6 @@
 #include "ops/cuda/init.h"
 #include "utils/indexing.cuh"
 
-__global__ void copy_non_contiguous_to_contiguous_kernel(const float* in_data, float* out_data,
-                                                         const int* shape, const int* strides,
-                                                         int ndim, int num_elements)
-{
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = gridDim.x * blockDim.x;
-
-    for (int i = idx; i < num_elements; i += stride)
-    {
-        int in_idx = get_idx(shape, strides, ndim, i);
-        out_data[i] = in_data[in_idx];
-    }
-}
-
 __global__ void matmul_kernel(const float* a, const float* b, float* out, const int N, const int M,
                               const int K)
 {
@@ -32,8 +18,6 @@ __global__ void matmul_kernel(const float* a, const float* b, float* out, const 
     const float* b_batch = b + batch * K * M;
     float* c_batch = out + batch * N * M;
 
-    // NOTE: Here we did (K + TILE_DIM - 1) / TILE_DIM instead of K / TILE_DIM because in the second
-    // case if there is leftover that is not divisable by TILE_DIM it will not be calculated
     for (int t = 0; t < (K + TILE_DIM - 1) / TILE_DIM; ++t)
     {
         int tiledColA = t * TILE_DIM + threadIdx.x;

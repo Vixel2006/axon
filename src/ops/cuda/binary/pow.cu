@@ -17,7 +17,7 @@ __global__ void noncontig_pow_kernel(const float* a, const float* b, float* out,
         int b_idx = get_idx(b_shape, b_strides, b_ndim, i);
         int out_idx = get_idx(out_shape, out_strides, out_ndim, i);
 
-        out[out_idx] = powf(a[a_idx], b[b_idx]);
+        out[out_idx] = powf(fmaxf(a[a_idx], 0.0f) + 1e-9f, b[b_idx]);
     }
 }
 
@@ -28,7 +28,7 @@ __global__ void contig_pow_kernel(const float* a, const float* b, float* out, co
 
     for (int i = idx; i < n; i += stride)
     {
-        out[i] = powf(a[i], b[i]);
+        out[i] = powf(fmaxf(a[i], 0.0f) + 1e-9f, b[i]);
     }
 }
 

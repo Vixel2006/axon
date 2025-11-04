@@ -1,5 +1,6 @@
 #include "ops/cuda/init.h" // For smalloc, gmalloc (if needed)
 #include "ops/cuda/reduction.h"
+#include "utils/indexing.cuh"
 
 template <int block_size>
 __global__ void max_kernel(float* a, float* out, int n, int axis_dim, int inner_dim, int outer_dim)
@@ -12,15 +13,15 @@ __global__ void max_kernel(float* a, float* out, int n, int axis_dim, int inner_
     rdata[tid] = -FLT_MAX;
     __syncthreads();
 
-    for (int i = tid; i < axis_dim; i += 2 * block_size)
+    for (int i = tid; i < axis_dim; i += block_size)
     {
-        int left_index = outer_idx * axis_dim * inner_dim + i * inner_dim + inner_idx;
-        int right_index =
-            outer_idx * axis_dim * inner_dim + (i + block_size) * inner_dim + inner_idx;
-        float left_val = left_index < n ? a[left_index] : -FLT_MAX;
-        float right_val = right_index < n ? a[right_index] : -FLT_MAX;
-        rdata[tid] = fmaxf(rdata[tid], fmaxf(left_val, right_val));
+        int current_index = outer_idx * axis_dim * inner_dim + i * inner_dim + inner_idx;
+        if (current_index < n)
+        {
+            rdata[tid] = fmaxf(rdata[tid], a[current_index]);
+        }
     }
+    __syncthreads();
 
     if (block_size >= 512)
     {
@@ -28,6 +29,7 @@ __global__ void max_kernel(float* a, float* out, int n, int axis_dim, int inner_
         {
             rdata[tid] = fmaxf(rdata[tid], rdata[tid + 256]);
         }
+        __syncthreads();
     }
 
     if (block_size >= 256)
@@ -36,6 +38,7 @@ __global__ void max_kernel(float* a, float* out, int n, int axis_dim, int inner_
         {
             rdata[tid] = fmaxf(rdata[tid], rdata[tid + 128]);
         }
+        __syncthreads();
     }
 
     if (block_size >= 128)
@@ -44,6 +47,7 @@ __global__ void max_kernel(float* a, float* out, int n, int axis_dim, int inner_
         {
             rdata[tid] = fmaxf(rdata[tid], rdata[tid + 64]);
         }
+        __syncthreads();
     }
 
     if (block_size >= 64) wrap_max_reduce<block_size>(rdata, tid);
@@ -59,12 +63,27 @@ extern "C" void max_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
 {
     LOG_INFO("max operation on cuda starting......");
 
+    float* a_data_ptr = a->data->data;
+    float* a_temp_data = NULL;
+    if (!is_contiguous(a))
+    {
+        int num_elements = numel(a->shape, a->ndim);
+        cudaMalloc((void**) &a_temp_data, num_elements * sizeof(float));
+        int num_threads_per_block = 256;
+        int num_blocks = (num_elements + num_threads_per_block - 1) / num_threads_per_block;
+        copy_non_contiguous_to_contiguous_kernel<<<num_blocks, num_threads_per_block>>>(
+            a->data->data, a_temp_data, a->shape, a->strides, a->ndim, num_elements);
+        a_data_ptr = a_temp_data;
+        CHECK_CUDA();
+    }
+
     int N = numel(a->shape, a->ndim);
 
     if (axis < 0 || axis >= a->ndim)
     {
         LOG_ERROR("max_op_cuda: Axis %d is out of bounds for tensor with %d dimensions.", axis,
                   a->ndim);
+        if (a_temp_data) cudaFree(a_temp_data);
         return;
     }
 
@@ -91,6 +110,7 @@ extern "C" void max_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
     if (!out->data)
     {
         LOG_ERROR("Failed to allocate Storage for out tensor in max_op_cuda");
+        if (a_temp_data) cudaFree(a_temp_data);
         return;
     }
     out->data->counter = 1;
@@ -102,11 +122,17 @@ extern "C" void max_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
         LOG_ERROR("Failed to allocate CUDA memory for out->data->data in max_op_cuda: %s",
                   cudaGetErrorString(err));
         SAFE_FREE(&out->data, free);
+        if (a_temp_data) cudaFree(a_temp_data);
         return;
     }
 
     max_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, out->data->data, N, axis_dim, inner_dim, outer_dim);
+        a_data_ptr, out->data->data, N, axis_dim, inner_dim, outer_dim);
+
+    if (a_temp_data)
+    {
+        cudaFree(a_temp_data);
+    }
 
     CHECK_CUDA();
     LOG_INFO("max operation on cuda done.");

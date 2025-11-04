@@ -14,7 +14,10 @@ __global__ void noncontig_exp_kernel(const float* a, float* b, int n, const int*
     {
         int a_idx = get_idx(a_shape, a_strides, a_ndim, i);
         int out_idx = get_idx(out_shape, out_strides, out_ndim, i);
-        b[out_idx] = expf(a[a_idx]);
+        float x = a[a_idx];
+        x = fminf(x, 80.0f);
+        x = fmaxf(x, -80.0f);
+        b[out_idx] = expf(x);
     }
 }
 
@@ -25,7 +28,10 @@ __global__ void contig_exp_kernel(const float* a, float* b, int n)
 
     for (int i = idx; i < n; i += stride)
     {
-        b[i] = expf(a[i]);
+        float x = a[i];
+        x = fminf(x, 80.0f);
+        x = fmaxf(x, -80.0f);
+        b[i] = expf(x);
     }
 }
 
@@ -62,10 +68,9 @@ extern "C" void exp_op_cuda(Tensor* in, Tensor* out)
     }
     else
     {
-        noncontig_exp_kernel<<<num_blocks, num_threads_per_block>>>(in->data->data, out->data->data,
-                                                                 N, in->shape, in->strides,
-                                                                 in->ndim, out->shape, out->strides,
-                                                                 out->ndim);
+        noncontig_exp_kernel<<<num_blocks, num_threads_per_block>>>(
+            in->data->data, out->data->data, N, in->shape, in->strides, in->ndim, out->shape,
+            out->strides, out->ndim);
     }
 
     CHECK_CUDA();

@@ -1,5 +1,6 @@
 #include "ops/cuda/init.h" // For smalloc, gmalloc (if needed)
 #include "ops/cuda/reduction.h"
+#include "utils/indexing.cuh"
 
 template <int block_size>
 __global__ void sum_kernel(float* a, float* out, int n, int axis_dim, int outer_dim, int inner_dim)
@@ -62,6 +63,20 @@ extern "C" void sum_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
 {
     LOG_INFO("Sum operation on cuda starting......");
 
+    float* a_data_ptr = a->data->data;
+    float* a_temp_data = NULL;
+    if (!is_contiguous(a))
+    {
+        int num_elements = numel(a->shape, a->ndim);
+        cudaMalloc((void**) &a_temp_data, num_elements * sizeof(float));
+        int num_threads_per_block = 256;
+        int num_blocks = (num_elements + num_threads_per_block - 1) / num_threads_per_block;
+        copy_non_contiguous_to_contiguous_kernel<<<num_blocks, num_threads_per_block>>>(
+            a->data->data, a_temp_data, a->shape, a->strides, a->ndim, num_elements);
+        a_data_ptr = a_temp_data;
+        CHECK_CUDA();
+    }
+
     int N = numel(a->shape, a->ndim);
 
     if (axis < 0 || axis >= a->ndim)
@@ -94,6 +109,7 @@ extern "C" void sum_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
     if (!out->data)
     {
         LOG_ERROR("Failed to allocate Storage for out tensor in sum_op_cuda");
+        if (a_temp_data) cudaFree(a_temp_data);
         return;
     }
     out->data->counter = 1;
@@ -105,11 +121,17 @@ extern "C" void sum_op_cuda(Tensor* a, Tensor* out, int axis, bool keepdim)
         LOG_ERROR("Failed to allocate CUDA memory for out->data->data in sum_op_cuda: %s",
                   cudaGetErrorString(err));
         SAFE_FREE(&out->data, free);
+        if (a_temp_data) cudaFree(a_temp_data);
         return;
     }
 
     sum_kernel<256><<<grid_dims, num_threads_per_block, num_threads_per_block * sizeof(float)>>>(
-        a->data->data, out->data->data, N, axis_dim, outer_dim, inner_dim);
+        a_data_ptr, out->data->data, N, axis_dim, outer_dim, inner_dim);
+
+    if (a_temp_data)
+    {
+        cudaFree(a_temp_data);
+    }
 
     CHECK_CUDA();
     LOG_INFO("Sum operation on cuda done.");

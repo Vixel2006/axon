@@ -28,4 +28,6 @@
         }                                                                                          \
     } while (0)
 
+void unsqueeze_op(Tensor* in, Tensor* out, int dim);
+
 #endif // AXON_OPS_CPU_MOVEMENT_H
